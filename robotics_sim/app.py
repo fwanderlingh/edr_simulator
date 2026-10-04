@@ -27,6 +27,7 @@ from .label_image import solid_rgba_png
 
 
 class SimulatorApp:
+    _notice = ""
     def __init__(self, root, *, lesson=None, duration=None, dt=1 / 240, csv_path=None, settings_path=DEFAULT_PATH):
         self.root = root
         self.settings_path = settings_path
@@ -299,6 +300,7 @@ class SimulatorApp:
         else:
             self.camera.target = (0.8, 0.7, 0.1)
         self.description.set(DESCRIPTIONS[task])
+        self._notice = ""
         self._accumulator = 0
         self._last_tick = time.perf_counter()
         self._redraw()
@@ -317,7 +319,7 @@ class SimulatorApp:
 
     def single_step(self):
         self.session.pause()
-        self.session.step(single=True)
+        self._guarded_step(single=True)
         self._after_steps()
 
     def _after_steps(self):
@@ -330,19 +332,40 @@ class SimulatorApp:
         self._redraw()
         self._update_status()
 
+    def _guarded_step(self, *, single=False):
+        """Step the session; pause with a hint if an exercise is still a TODO stub."""
+        try:
+            self.session.step(single=single)
+        except NotImplementedError as error:
+            self.session.pause()
+            self._notice = f"Exercise not implemented yet: {error}"
+            return False
+        return True
+
+    def _planar_output(self):
+        try:
+            return solve_planar_task(
+                PLANAR_WORLD_FROM_ROBOT, PLANAR_ROBOT_FROM_SENSOR,
+                PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR,
+                PLANAR_GOAL_IN_WORLD)
+        except NotImplementedError:
+            return None
+
     def _update_status(self):
         pose = self.session.robot.pose()
         self.values.set(f"Time: {self.session.sim.time:.2f} s    x: {pose.x:.3f} m    y: {pose.y:.3f} m    yaw: {pose.yaw:.3f} rad")
         if self.session.task == "planar":
-            point, direction, goal = solve_planar_task(
-                PLANAR_WORLD_FROM_ROBOT, PLANAR_ROBOT_FROM_SENSOR,
-                PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR,
-                PLANAR_GOAL_IN_WORLD)
-            self.values.set(self.values.get() +
-                f"\nModule 1 output: point in world ({point[0]:.2f}, {point[1]:.2f}) m"
-                f" | direction in world ({direction[0]:.2f}, {direction[1]:.2f})")
-            self.values.set(self.values.get() +
-                f"\nGoal in robot: ({goal[0]:.2f}, {goal[1]:.2f}) m")
+            output = self._planar_output()
+            if output is None:
+                self.values.set(self.values.get() +
+                    "\nModule 1 not implemented yet: complete solve_planar_task in exercises/lesson02/planar.py")
+            else:
+                point, direction, goal = output
+                self.values.set(self.values.get() +
+                    f"\nModule 1 output: point in world ({point[0]:.2f}, {point[1]:.2f}) m"
+                    f" | direction in world ({direction[0]:.2f}, {direction[1]:.2f})")
+                self.values.set(self.values.get() +
+                    f"\nGoal in robot: ({goal[0]:.2f}, {goal[1]:.2f}) m")
         if self.session.lesson == "3":
             left, right = self.session.robot.wheel_velocities
             command = self.session.robot.command
@@ -362,7 +385,7 @@ class SimulatorApp:
                 "Running": "Running - Pause to inspect the scene.",
                 "Paused": "Paused - inspect, single-step, or resume.",
                 "Completed": "Completed - the scene remains open. Reset to repeat or choose another task."}
-        self.status.set(text[state])
+        self.status.set(self._notice or text[state])
         self.start_button.configure(text="Pause" if state == "Running" else "Resume" if state == "Paused" else "Start",
                                     state="disabled" if state == "Completed" else "normal")
         self.step_button.configure(state="disabled" if state in ("Running", "Completed") else "normal")
@@ -376,7 +399,8 @@ class SimulatorApp:
         if self.session.state == "Running":
             self._accumulator += elapsed
             while self._accumulator >= self.dt and self.session.state == "Running":
-                self.session.step()
+                if not self._guarded_step():
+                    break
                 self._accumulator -= self.dt
             self._after_steps()
         if self._dirty:
@@ -583,28 +607,31 @@ class SimulatorApp:
                 robot_from_sensor[:2, 3] = PLANAR_ROBOT_FROM_SENSOR[:2, 2]
                 world_from_sensor = world_from_robot @ robot_from_sensor
                 self._frame(world_from_sensor, "Sensor", scale=0.3, offset=(12, -55))
-                point, direction, _ = solve_planar_task(
-                    PLANAR_WORLD_FROM_ROBOT, PLANAR_ROBOT_FROM_SENSOR,
-                    PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR,
-                    PLANAR_GOAL_IN_WORLD)
-                point_world = (*point, 0.03)
-                goal_world = (*PLANAR_GOAL_IN_WORLD, 0.03)
-                direction_world = (*direction, 0)
-                self._line(world_from_sensor[:3, 3], point_world, "#773baa")
-                self._line(world_from_sensor[:3, 3],
-                           world_from_sensor[:3, 3] + np.asarray(direction_world), "#1976a5", arrow=True)
-                self._line(world_from_robot[:3, 3], goal_world, "#b5660b")
-                self._label(point_world, "Sensor point", offset=(12, 20))
-                self._label(goal_world, "World goal", offset=(12, 20))
-                self._label(world_from_sensor[:3, 3] + np.asarray(direction_world),
-                            "Direction (no translation)", offset=(12, -15))
+                output = self._planar_output()
+                if output is not None:
+                    point, direction, _ = output
+                    point_world = (*point, 0.03)
+                    goal_world = (*PLANAR_GOAL_IN_WORLD, 0.03)
+                    direction_world = (*direction, 0)
+                    self._line(world_from_sensor[:3, 3], point_world, "#773baa")
+                    self._line(world_from_sensor[:3, 3],
+                               world_from_sensor[:3, 3] + np.asarray(direction_world), "#1976a5", arrow=True)
+                    self._line(world_from_robot[:3, 3], goal_world, "#b5660b")
+                    self._label(point_world, "Sensor point", offset=(12, 20))
+                    self._label(goal_world, "World goal", offset=(12, 20))
+                    self._label(world_from_sensor[:3, 3] + np.asarray(direction_world),
+                                "Direction (no translation)", offset=(12, -15))
             elif self.session.lesson == "2":
                 sensor_frame = homogeneous(rot_z(np.pi / 4), (0.25, 0, 0.3))
                 world_sensor = robot_frame @ sensor_frame
                 self._frame(world_sensor, "Sensor", scale=0.3, offset=(12, -55))
-                point = point_in_world(robot_frame, sensor_frame, np.array([0.6, 0.2, 0.1]))
-                self._line(world_sensor[:3, 3], point, "#773baa")
-                self._label(point, "Sensor point", offset=(12, 20))
+                try:
+                    point = point_in_world(robot_frame, sensor_frame, np.array([0.6, 0.2, 0.1]))
+                except NotImplementedError:
+                    point = None
+                if point is not None:
+                    self._line(world_sensor[:3, 3], point, "#773baa")
+                    self._label(point, "Sensor point", offset=(12, 20))
 
     def export(self):
         destination = filedialog.asksaveasfilename(parent=self.root, title="Export measurements",

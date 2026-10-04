@@ -23,4 +23,4 @@ def solve_planar_task(world_from_robot, robot_from_sensor, point_in_sensor,
     """Return the world point, world direction, and robot-frame goal coordinates."""
     # TODO: compose the poses, map the point (homogeneous 1), rotate the
     # direction (homogeneous 0), and invert the robot pose for the goal.
-    return point_in_sensor, direction_in_sensor, goal_in_world
+    raise NotImplementedError("complete solve_planar_task in exercises/lesson02/planar.py")

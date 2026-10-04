@@ -25,7 +25,6 @@ Estimation, control, planning, and manipulation are planned for later lessons.
 Keep the complete `simulator` folder in a writable location. The first launch
 downloads a private Python 3.12 runtime and precompiled dependencies; later runs
 can work offline. This is self-contained after setup, **not an offline installer**.
-Allow roughly 600 MB of free disk space.
 
 **Ubuntu Linux 22.04+:** open a terminal in the folder and run:
 
@@ -46,6 +45,22 @@ let each computer create its own environment.
 For the notes' Module 1, choose **Lesson 2 - Frames and transformations** and
 then **Module 1: Planar transforms**.
 
+### Exercises you complete
+
+Each lesson has one Python file with `TODO` markers; the simulator reads it on
+the next launch. Until you complete it, the app shows
+"not implemented yet" in the status bar instead of results. Lesson 1 is the
+exception: its stub keeps the robot stopped.
+
+| Lesson | File | Complete |
+|---|---|---|
+| 1 | `robotics_sim/exercises/lesson01/program.py` | `SquareProgram.update` (open-loop square) |
+| 2 | `robotics_sim/exercises/lesson02/planar.py` | `solve_planar_task` (Module 1) |
+| 2 | `robotics_sim/exercises/lesson02/frames.py` | `point_in_world` (3D extension) |
+| 3 | `robotics_sim/exercises/lesson03/kinematics.py` | `forward`, `inverse` (select **student**) |
+| 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |
+
+Finished solutions are provided by the instructor.
 ## Using the desktop app
 
 Choose a lesson and task, then press **Start**. **Pause**, **Step**,
@@ -206,8 +221,8 @@ w_right = (v + omega * L / 2) / r
 
 Edit [StudentDifferentialDrive](robotics_sim/exercises/lesson03/kinematics.py)
 and select **student** in the Lesson 3 kinematics selector. Restart the application
-after editing. A working implementation is supplied so students can
-replace one formula at a time and compare with **reference**. Both implement
+after editing. The **reference** model is supplied so you can compare your
+formulas with it. Both implement
 `forward(w_left, w_right)` and `inverse(v, omega)`; geometry belongs to the model.
 The robot API exposes `set_wheel_velocities(w_left, w_right)` and `set_twist(v, omega)`.
 To replace the model in Python, assign `robot.motor_model` before issuing commands

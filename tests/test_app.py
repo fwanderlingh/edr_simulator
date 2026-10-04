@@ -269,3 +269,29 @@ def test_maximized_state_preserves_normal_window_dimensions(tmp_path):
         assert (app._normal_window["width"], app._normal_window["height"]) == normal_size
     finally:
         app.close()
+
+@desktop_process
+def test_unimplemented_exercises_show_a_hint_instead_of_crashing(tmp_path):
+    import tkinter as tk
+    import robotics_sim.app as application
+    from robotics_sim.session import LESSONS
+
+    def todo(*args, **kwargs):
+        raise NotImplementedError("complete the exercise")
+
+    application.solve_planar_task = todo
+    application.point_in_world = todo
+    application.enable_high_dpi()
+    root = tk.Tk()
+    app = application.SimulatorApp(root, duration=0.04, dt=0.01, settings_path=tmp_path / "settings.json")
+    try:
+        app.lesson.set(LESSONS["2"])
+        app.select_lesson()
+        app._render()
+        assert "Module 1 not implemented yet" in app.values.get()
+        app.session.step = todo
+        app.step_button.invoke()
+        assert "Exercise not implemented yet: complete the exercise" in app.status.get()
+        assert app.session.state == "Ready"
+    finally:
+        app.close()
