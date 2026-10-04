@@ -11,6 +11,7 @@ Estimation, control, planning, and manipulation are planned for later lessons.
 - [Headless runs and CSV](#headless-runs-and-csv)
 - [Developer setup](#developer-setup)
 - [Minimal API](#minimal-api)
+- [Math to NumPy cheat sheet](#math-to-numpy-cheat-sheet)
 - [Lessons](#lessons)
   - [Lesson 1: System overview](#lesson-1-system-overview)
   - [Lesson 2: Frames and transformations](#lesson-2-frames-and-transformations)
@@ -136,6 +137,51 @@ connection; the context manager disconnects it even if an exercise raises an
 exception. All backend calls belong to `sim/` or `robots/`. Geometry and exercise
 code do not call PyBullet.
 
+## Math to NumPy cheat sheet
+
+Naming convention: `a_from_b` is the transform $T_{ab}$ that converts coordinates
+from frame `b` to frame `a` (the pose of `b` expressed in `a`); `p_in_a` is point
+`p` expressed in frame `a`. Frame names cancel along a chain:
+`world_from_robot @ robot_from_sensor` gives `world_from_sensor`.
+
+```python
+import numpy as np
+```
+
+| Math | Python (NumPy) | Notes |
+|---|---|---|
+| $\mathbf{p}=(x,y)^T$ | `p = np.array([x, y])` | 1D `float` array |
+| homogeneous point $(x,y,1)^T$ | `np.append(p, 1)` | translation applies |
+| homogeneous direction $(v_x,v_y,0)^T$ | `np.append(v, 0)` | free vector ignores translation |
+| back to Cartesian | `ph[:2]` | drop the last component |
+| $\cos\theta,\ \sin\theta$ | `np.cos(theta)`, `np.sin(theta)` | radians (`np.deg2rad(degrees)`) |
+| $R(\theta)=\begin{bmatrix}c&-s\\ s&c\end{bmatrix}$ | `R = np.array([[c, -s], [s, c]])` | |
+| $T=\begin{bmatrix}R&t\\0&1\end{bmatrix}$ | `T = np.eye(3); T[:2, :2] = R; T[:2, 2] = t` | block assignment by slicing |
+| rotation block of $T$ | `T[:2, :2]` | |
+| translation of $T$ | `T[:2, 2]` | |
+| matrix-vector product $A\mathbf{x}$ | `A @ x` | **not** `*` (element-wise) |
+| composition $T_{ac}=T_{ab}\,T_{bc}$ | `a_from_c = a_from_b @ b_from_c` | order matters: $T_{ab}T_{bc}\ne T_{bc}T_{ab}$ |
+| transpose $R^T$ | `R.T` | |
+| rotation inverse $R^{-1}=R^T$ | `R.T` | rotations only |
+| homogeneous inverse $T^{-1}$ | `np.linalg.inv(T)` | in general $T^{-1}\ne T^T$ |
+| $T_{ba}=T_{ab}^{-1}$ | `b_from_a = np.linalg.inv(a_from_b)` | |
+
+Worked examples:
+
+| Math | Python |
+|---|---|
+| $T_{ws}=T_{wr}T_{rs}$ | `world_from_sensor = world_from_robot @ robot_from_sensor` |
+| point: $\tilde{p}_w=T_{ws}\begin{bmatrix}p_s\\1\end{bmatrix}$ | `point_in_world = world_from_sensor @ np.append(point_in_sensor, 1)` |
+| direction: $\tilde{d}_w=T_{ws}\begin{bmatrix}d_s\\0\end{bmatrix}$ | `direction_in_world = world_from_sensor @ np.append(direction_in_sensor, 0)` |
+| inverse: $\tilde{g}_r=T_{wr}^{-1}\begin{bmatrix}g_w\\1\end{bmatrix}$ | `goal_in_robot = np.linalg.inv(world_from_robot) @ np.append(goal_in_world, 1)` |
+
+The result of a homogeneous transform has one extra component (3 elements in
+2D); take `[:2]` for Cartesian coordinates, e.g.
+`point_in_world = (world_from_sensor @ np.append(point_in_sensor, 1))[:2]`.
+
+Sanity check: the "from" frame of the matrix must match the frame of the vector
+(`_from_sensor` with `_in_sensor`), and the result is in the "to" frame
+(`world_from_` gives `_in_world`).
 ## Lessons
 
 ### Lesson 1: System overview
