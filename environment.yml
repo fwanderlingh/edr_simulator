@@ -1,0 +1,9 @@
+name: edr-simulator
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - tk>=8.6,<9
+  - numpy>=1.24,<3
+  - pybullet=3.25
+  - libblas=*=*openblas

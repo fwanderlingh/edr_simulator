@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edr-robotics-sim"
+version = "0.1.0"
+description = "An incremental robotics teaching laboratory"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24,<3", "pybullet>=3.2.5,<4"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+robotics-sim = "robotics_sim.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["robotics_sim*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["solution: needs the student exercises to be implemented (skipped in the public export)"]

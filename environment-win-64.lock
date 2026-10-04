@@ -1,0 +1,31 @@
+# Resolved Python 3.12 teaching environment for Windows x86-64.
+# Regenerate from environment.yml when updating dependencies.
+@EXPLICIT
+https://conda.anaconda.org/conda-forge/noarch/python_abi-3.12-9_cp312.conda#4c32076993e6270825441d059ab5c18b
+https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda#fcb489df604d100968b737f2cb6076c6
+https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-h4c7d964_0.conda#e27d2ac27b096dc51fedfcf775a53f9b
+https://conda.anaconda.org/conda-forge/win-64/ucrt-10.0.26100.0-h57928b3_0.conda#71b24316859acd00bdb8b38f5e2ce328
+https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda#350bb67a5c8e5f1c53347ac544ab6600
+https://conda.anaconda.org/conda-forge/win-64/vc14_runtime-14.51.36247-habf1de7_41.conda#ac5333bb3d429361f23adf704cc49a78
+https://conda.anaconda.org/conda-forge/win-64/vc-14.5-ha367084_41.conda#aa805b5522c2a98fa286e551a1f48546
+https://conda.anaconda.org/conda-forge/win-64/bzip2-1.0.8-h0ad9c76_10.conda#c3301c058362f340100d91cd8be0393f
+https://conda.anaconda.org/conda-forge/win-64/libzlib-1.3.2-hfd05255_3.conda#5d2ff29d465097458cc3ff6569151991
+https://conda.anaconda.org/conda-forge/win-64/libexpat-2.8.5-hac47afa_0.conda#4969128c45f9e71adbb6a1696679ce7f
+https://conda.anaconda.org/conda-forge/win-64/openssl-3.6.5-hf411b9b_0.conda#f002ec2237836867bfd3d1299a6005da
+https://conda.anaconda.org/conda-forge/win-64/libffi-3.7.0-h3d046cb_1.conda#ceb38b0ba900847d8da4289c3c8e5708
+https://conda.anaconda.org/conda-forge/win-64/libsqlite-3.53.4-hf5d6505_1.conda#a72d495965b144bb7da033642d389047
+https://conda.anaconda.org/conda-forge/win-64/liblzma-5.8.3-hfd05255_1.conda#880a0c8549479b198af21ba5dc49b109
+https://conda.anaconda.org/conda-forge/win-64/libopenblas-0.3.34-pthreads_h952cde7_2.conda#0a5ac276fca5648d0a7e1e70f34a8d7f
+https://conda.anaconda.org/conda-forge/win-64/tk-8.6.13-h967ab96_4.conda#dd9eb33c99d352b6356f86964d6040f7
+https://conda.anaconda.org/conda-forge/win-64/libpython-3.12.14-hcc31f7b_3_cpython.conda#2a7b3fc2441dc4df29a5804d677fb720
+https://conda.anaconda.org/conda-forge/win-64/libblas-3.11.0-11_h0adab6e_openblas.conda#33c7f7e9c63eaebaa05e2b3d3b10345c
+https://conda.anaconda.org/conda-forge/win-64/python-3.12.14-hb12b558_3_cpython.conda#ca6b5db05602d2a98f8694c2ad6aa6fb
+https://conda.anaconda.org/conda-forge/win-64/libcblas-3.11.0-11_h2a8eebe_openblas.conda#aaf231ec20a5e0521e3a460cc2100b58
+https://conda.anaconda.org/conda-forge/win-64/liblapack-3.11.0-11_hd232482_openblas.conda#d90cd8cda6c69b8221e5fbefad5e554d
+https://conda.anaconda.org/conda-forge/win-64/numpy-2.5.3-py312ha3f287d_0.conda#78895c70424556e2bf7bf2f628fc8778
+https://conda.anaconda.org/conda-forge/win-64/bullet-cpp-3.25-hc128f0a_5.conda#c99dd819d6c0b58284f0e6a93c616354
+https://conda.anaconda.org/conda-forge/win-64/pybullet-3.25-py312h3d6c809_5.conda#b9720678a55505d5518d4278162c49f9
+https://conda.anaconda.org/conda-forge/noarch/packaging-26.3-pyhc364b38_0.conda#936687ed80f295a1f5dbcf8bd34c252c
+https://conda.anaconda.org/conda-forge/noarch/setuptools-84.0.0-pyh332efcf_0.conda#62ac906f1cd582c6c264c95625cb9d6f
+https://conda.anaconda.org/conda-forge/noarch/wheel-0.48.0-pyhd8ed1ab_0.conda#9a2124517bfd5d792e0f7b86eefdfeb8
+https://conda.anaconda.org/conda-forge/noarch/pip-26.2.1-pyh8b19718_0.conda#77b6cf3b0689d9fc68561df0db9b856d

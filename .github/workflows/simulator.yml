@@ -1,0 +1,25 @@
+name: Simulator
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Ubuntu launcher, simulator, and desktop UI
+        if: runner.os == 'Linux'
+        env:
+          ROBOTICS_SIM_GUI_TEST: '1'
+        run: xvfb-run -a bash start-simulator.sh --test
+      - name: Test Windows student launcher and headless simulator
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./start-simulator.cmd -Test

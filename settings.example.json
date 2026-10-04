@@ -1,0 +1,21 @@
+{
+  "width": 1120,
+  "height": 760,
+  "x": 40,
+  "y": 40,
+  "maximized": false,
+  "lesson": "1",
+  "task": "square",
+  "kinematics": "reference",
+  "sensor_mode": "ideal",
+  "duration": 16,
+  "show_frames": true,
+  "label_size": 12,
+  "label_color": "#172d3d",
+  "label_background": true,
+  "label_background_color": "#ffffff",
+  "label_background_transparency": 0,
+  "camera_yaw": 35,
+  "camera_pitch": -55,
+  "camera_distance": 5.5
+}
