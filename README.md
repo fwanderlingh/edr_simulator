@@ -225,11 +225,21 @@ the transformed point, the direction, and the path to the world goal. This
 planar activity is the core Module 1 exercise; the other Lesson 2 activities
 are explicitly labelled as 3D extensions.
 
-Choose **Extension: Rotating 3D frames** or **Extension: Fixed 3D transform**
-to inspect the existing 3D World, Robot, and Sensor frame demonstrations. Edit
-[point_in_world](robotics_sim/exercises/lesson02/frames.py) to implement the
-sensor-point composition in the rotating demo. Reference geometry functions
-are in `geometry/`.
+The 3D extensions are optional. **Extension: Fixed 3D transform** only shows
+the World, Robot, and Sensor frames; it has no code to complete.
+
+In **Extension: Rotating 3D frames**, edit
+[point_in_world](robotics_sim/exercises/lesson02/frames.py), which receives
+4×4 matrices `world_from_robot` and `robot_from_sensor` and a 3D
+`point_in_sensor`:
+
+1. Compose `world_from_sensor = world_from_robot @ robot_from_sensor`.
+2. Append homogeneous coordinate `1` to the point and multiply.
+3. Return the 3D world coordinates (drop the last component).
+
+Until the function is implemented the sensor point is not drawn; afterwards a
+purple line from the sensor origin to the point appears. Reference geometry
+functions are in `geometry/`.
 
 Conventions:
 
