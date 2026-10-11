@@ -186,174 +186,26 @@ Sanity check: the "from" frame of the matrix must match the frame of the vector
 
 ### Lesson 1: System overview
 
-A first look at the environment, robot, commands, state, and simulation time.
-The scripted activities preview the system that later lessons will extend with
-sensing, estimation, planning, and feedback control.
-
-The square preview moves a body around a 2 m square using four constant
-world-frame velocity commands, each held for 4 seconds. The central obstacle
-is clear of the intended route. This is an **open-loop schedule**, not waypoint
-feedback control; changing velocities or timing changes where the robot ends up.
-
-Select **Preview: straight-line motion**, **Preview: circular motion**, then
-**Preview: square motion** in the UI and press **Start**. The square preview
-needs at least 16 seconds of activity time to complete all four sides.
-Compare the path and measured state across the three previews.
-As an optional extension, modify
-[SquareProgram.update](robotics_sim/exercises/lesson01/program.py) and restart
-the app to explore other velocity schedules.
-
-The initial robot is a dynamic box with ideal imposed planar velocity, zero
-damping, and **gravity disabled**. PyBullet still resolves collisions, so contact
-can make measured motion differ from prescribed motion. This is not a wheeled
-robot or a motor model. Wheel kinematics and actuation belong to lesson 3.
+[Lesson 1 exercise details](robotics_sim/exercises/lesson01/README.md) cover
+the scripted motion previews and the optional velocity-schedule extension.
 
 ### Lesson 2: frames and transformations
 
-Open the simulator with the usual launcher (on Windows, double-click
-`start-simulator.cmd`). Select **Lesson 2 - Frames and transformations**, then
-**Module 1: Planar transforms** to explore worked example 3.5 from the notes.
-The sensor offset is `(0.5, 0)` and the sensor-frame point is `(1, 0)`.
-
-In the student version, complete
-[solve_planar_task](robotics_sim/exercises/lesson02/planar.py) to:
-
-1. Compose `world_from_robot @ robot_from_sensor` and transform the point
-   using homogeneous coordinate `1`.
-2. Transform the direction using homogeneous coordinate `0`.
-3. Return the two Cartesian components of the point and direction.
-
-Save the file, close and reopen the simulator, and select the same activity.
-Unimplemented exercises display a yellow warning. Compare the **World**,
-**Robot**, and **Sensor** frames with the notes' diagram. The sensor origin is
-`(2, 1.5) m`; **Sensor point** and the live `point in world` readout should show
-`(2, 2.5) m`. **Direction (no translation)** and `direction in world` should
-show `(0, 1)`. The direction arrow starts at the sensor for visualization;
-its components contain no translation.
-
-This planar activity is the core Module 1 exercise; the other Lesson 2
-activities are explicitly labelled as 3D extensions.
-
-The 3D extensions are optional. **Extension: Fixed 3D transform** only shows
-the World, Robot, and Sensor frames; it has no code to complete.
-
-In **Extension: Rotating 3D frames**, edit
-[point_in_world](robotics_sim/exercises/lesson02/frames.py), which receives
-4×4 matrices `world_from_robot` and `robot_from_sensor` and a 3D
-`point_in_sensor`:
-
-1. Compose `world_from_sensor = world_from_robot @ robot_from_sensor`.
-2. Append homogeneous coordinate `1` to the point and multiply.
-3. Return the 3D world coordinates (drop the last component).
-
-Until the function is implemented the sensor point is not drawn; afterwards a
-purple line from the sensor origin to the point appears. Reference geometry
-functions are in `geometry/`.
-
-Conventions:
-
-- Metres, seconds, radians; right-handed frames; z points up.
-- Column vectors: `T_A_B` maps coordinates expressed in B into A.
-- Composition reads right to left: `T_W_S = T_W_R @ T_R_S`.
-- A point uses homogeneous coordinate `1`; a direction uses `0`.
-- The 3D extension uses fixed-axis RPY: `R = Rz(yaw) @ Ry(pitch) @ Rx(roll)`.
-- Quaternions use `(x, y, z, w)` and are normalized on input.
-- At RPY gimbal lock, the inverse conversion chooses roll zero.
-- `Pose` is a body-centre pose; its default z is 0.16 m above the floor.
-- Body-frame planar velocity uses the robot's current yaw.
-
-`Visualizer` provides `draw_frame`, `draw_vector`, `draw_point`, `draw_path`, and
-`draw_text`. Reusing a name updates the annotation. Annotations are no-ops in
-headless mode. The geometry tests compare composition and rotations against
-PyBullet's independent transform operations.
+[Lesson 2 exercise details](robotics_sim/exercises/lesson02/README.md) cover
+the planar transformation activity, the standalone Example 3.5 script, and
+the optional 3D extensions.
 
 ### Lesson 3: mobile base kinematics
 
-Four tasks demonstrate equal wheel speeds (straight line), unequal speeds
-(circle), opposite speeds (rotation in place), and inverse kinematics from a body
-twist. The orange trail shows the measured path. The readout and CSV include
-left/right wheel speeds, forward speed, and yaw rate, with explicit units.
-
-The robot uses wheel radius `r = 0.12 m` and track width `L = 0.42 m`.
-Positive wheel speed moves forward; positive yaw turns left:
-
-```text
-v = r * (w_right + w_left) / 2
-omega = r * (w_right - w_left) / L
-w_left  = (v - omega * L / 2) / r
-w_right = (v + omega * L / 2) / r
-```
-
-Edit [StudentDifferentialDrive](robotics_sim/exercises/lesson03/kinematics.py)
-and select **student** in the Lesson 3 kinematics selector. Restart the application
-after editing. The **reference** model is supplied so you can compare your
-formulas with it. Both implement
-`forward(w_left, w_right)` and `inverse(v, omega)`; geometry belongs to the model.
-The robot API exposes `set_wheel_velocities(w_left, w_right)` and `set_twist(v, omega)`.
-To replace the model in Python, assign `robot.motor_model` before issuing commands
-(keep its geometry unchanged after creating the robot).
-
-Predict straight-line distance `v*t`, circle radius `v/omega`, and spin angle
-`omega*t`, then compare with exported ground-truth poses. Small circular-path
-errors decrease with the fixed timestep. This is ideal no-slip planar kinematics:
-PyBullet integrates the commanded chassis velocity; the cylindrical wheels are
-visual geometry, without wheel joints, rolling contact, slip, or motor dynamics.
-No feedback controller or odometry estimator is involved.
+[Lesson 3 exercise details](robotics_sim/exercises/lesson03/README.md) describe
+the differential-drive tasks, equations, reference model, and expected
+ideal-kinematics assumptions.
 
 ### Lesson 4: sensors and noise
 
-Choose **Lesson 4 - Sensors and noise**. Its three activities are:
-
-- **Wheel encoders and forward range:** drive toward a wall and compare encoder
-  increments with wheel speed times the sampling interval. The front rangefinder
-  initially reads 2.9 m. With the default 16-second activity the robot stops before
-  reaching the wall; longer runs let you observe a blocked chassis.
-- **Scan obstacles with 2D lidar:** rotate in place with 37 rays spanning -90° to
-  +90°, in 5° increments. Green rays hit geometry; gray rays are misses within
-  the 4 m maximum range. The centre ray is the forward range.
-- **IMU during changing motion:** observe yaw rate and forward/lateral acceleration
-  while the robot follows a curve with smoothly changing forward speed.
-
-The **Sensor mode** selector offers `ideal`, `noisy`, and `student`. Selecting a
-mode resets the activity and is remembered in `settings.json`. Student mode uses
-ideal encoders/IMU and [StudentLidar](robotics_sim/exercises/lesson04/lidar.py).
-Replace its working ray-direction formula to implement the rotation from sensor
-bearings to world-space unit vectors, then restart the application. The inherited
-sampler calls the world's ray-casting interface and converts hit fractions to
-distances. Sensor and exercise code do not need PyBullet API calls.
-
-Sensor readings are cached: reading, rendering, or pausing does not consume noise
-or generate new measurements. Sensors sample every `ceil(0.1 / dt)` physics steps
-(10 Hz at the default timestep), plus initial and final samples. For a timestep
-that does not divide 0.1 seconds, use exported timestamps as the actual interval.
-The displayed scan stays at its acquisition pose until the next sample.
-
-| Sensor | Measurement | Noisy-mode model |
-| --- | --- | --- |
-| Encoder | Left/right shaft-angle increments, rad | 360 ticks/turn; Gaussian angle noise of 1/4 tick before cumulative-angle quantization |
-| Rangefinder/lidar | Range, m, plus explicit hit flag | Gaussian 0.02 m standard deviation on hits; clipped to 0–4 m; misses remain 4 m |
-| IMU | Yaw rate, rad/s; body x/y acceleration, m/s² | Gyro bias 0.01 rad/s, noise 0.005 rad/s; acceleration biases +0.02/-0.02 m/s² and noise 0.03 m/s² |
-
-Each sensor uses its own fixed random seed, so resetting repeats the same noise
-sequence. The models and constants are in `robotics_sim/exercises/lesson04/sensors/`. Encoder angles
-integrate ideal shaft commands; they are not measured wheel joints, and still
-increase if the chassis is blocked. The IMU reads physics velocity and computes
-finite-difference world acceleration before expressing it in the current body
-frame. It excludes gravity, roll/pitch sensing, and a full inertial sensor model.
-Initial acceleration is zero; starting an ideal velocity source can produce a
-large first-sample acceleration. There is no odometry or filtering yet.
-
-**Export CSV** writes ground-truth poses to the chosen file and sensor samples to
-a companion file, e.g. `run.csv` and `run_sensors.csv`. Existing files are
-overwritten. The sensor file includes timestamps, measured and ideal encoder/IMU
-values, and `range_i_m`, `true_range_i_m`, `hit_i` for each ray in bearing order.
-Encoder deltas cover the interval since the preceding sensor sample. The initial
-ideal deltas are zero. Compare measured and ideal columns to study quantization,
-bias, noise, and the distinction between sensor rate and physics rate.
-
-Public interfaces: `EncoderSensor.read()`, `LidarSensor.scan()`, and
-`ImuSensor.read()` return the latest sampled measurements. `SensorSuite` handles
-advancing shaft angles and sampling on the simulation clock.
+[Lesson 4 exercise details](robotics_sim/exercises/lesson04/README.md) cover
+the encoder, lidar, and IMU activities, sensor modes, sampling behavior, noise
+models, and exported sensor data.
 
 ## Next increments
 
