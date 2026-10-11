@@ -251,8 +251,17 @@ class SimulatorApp:
         self.canvas.bind("<Button-4>", lambda event: self._zoom(1))
         self.canvas.bind("<Button-5>", lambda event: self._zoom(-1))
         ttk.Label(panel, text="Drag to orbit  |  Scroll to zoom  |  Axes: x red, y green, z blue").grid(row=5, column=0, sticky="w", pady=(6, 0))
-        ttk.Label(panel, textvariable=self.values, font=("TkFixedFont", 11)).grid(row=6, column=0, sticky="w", pady=6)
-        ttk.Label(panel, textvariable=self.status, wraplength=1000).grid(row=7, column=0, sticky="ew")
+        ttk.Style(panel).configure("NotImplemented.TLabel", background="#fff59d", foreground="#000000")
+        self.values_label = ttk.Label(panel, textvariable=self.values, font=("TkFixedFont", 11))
+        self.values_label.grid(row=6, column=0, sticky="w", pady=6)
+        self.status_label = ttk.Label(panel, textvariable=self.status, wraplength=1000)
+        self.status_label.grid(row=7, column=0, sticky="ew")
+        for variable, label in ((self.values, self.values_label), (self.status, self.status_label)):
+            def highlight_notice(*_, variable=variable, label=label):
+                label.configure(style="NotImplemented.TLabel"
+                                if "not implemented" in variable.get().lower() else "TLabel")
+            variable.trace_add("write", highlight_notice)
+            highlight_notice()
 
     def select_lesson(self, event=None):
         self.lesson_id = next(key for key, value in LESSONS.items() if value == self.lesson.get())

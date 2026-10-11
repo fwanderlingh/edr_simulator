@@ -208,9 +208,29 @@ robot or a motor model. Wheel kinematics and actuation belong to lesson 3.
 
 ### Lesson 2: frames and transformations
 
+The notes' worked example 3.5 is available as
+[example_3_5.py](robotics_sim/exercises/lesson02/example_3_5.py).
+From `simulator/`, run:
+
+```bash
+python -m robotics_sim.exercises.lesson02.example_3_5
+```
+
+On Windows, the launcher-managed environment can be used directly:
+
+```powershell
+.\.conda\python.exe -m robotics_sim.exercises.lesson02.example_3_5
+```
+
+It uses homogeneous matrices throughout, checks both transformation paths and
+the 30-degree lidar observation, and compares the result with `solve_planar_task`.
+Its sensor offset is `(0.5, 0)` and its local point is `(1, 0)`, yielding `(2, 2.5)`
+in the world. The activity below uses these same inputs and expected result.
+
+
 Choose **Module 1: Planar transforms** for the activity that follows the notes'
 Module 1. The robot and sensor frames are planar and use the same example values
-as the notes' sensor-composition and navigation-goal exercises. Edit
+as worked example 3.5, plus the notes' navigation goal. Edit
 [solve_planar_task](robotics_sim/exercises/lesson02/planar.py) to:
 
 1. Compose `T_W_R @ T_R_S` and transform a sensor-frame point into the world.
@@ -219,7 +239,7 @@ as the notes' sensor-composition and navigation-goal exercises. Edit
 3. Invert `T_W_R` to express a world-frame goal in robot coordinates.
 
 The live readout shows your function's point, direction, and goal coordinates.
-Check them against the expected values: world point `(2.8, 2.5) m`, world
+Check them against the expected values: world point `(2, 2.5) m`, world
 direction `(0, 1)`, and robot-frame goal `(2, -2) m`. The diagrams distinguish
 the transformed point, the direction, and the path to the world goal. This
 planar activity is the core Module 1 exercise; the other Lesson 2 activities

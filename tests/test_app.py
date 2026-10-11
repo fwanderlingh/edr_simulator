@@ -95,7 +95,7 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
         labels = {app.canvas.itemcget(item, "text") for item in text_items}
         assert {"World", "Robot", "Sensor", "Sensor point", "World goal",
                 "Direction (no translation)"} <= labels
-        assert "Module 1 output: point in world (2.80, 2.50) m" in app.values.get()
+        assert "Module 1 output: point in world (2.00, 2.50) m" in app.values.get()
         assert "direction in world (0.00, 1.00)" in app.values.get()
         assert "Goal in robot: (2.00, -2.00) m" in app.values.get()
         assert all("16" in app.canvas.itemcget(item, "font") for item in text_items)

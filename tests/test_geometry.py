@@ -46,6 +46,6 @@ def test_planar_module_composes_points_rotates_directions_and_inverts_goal():
         PLANAR_WORLD_FROM_ROBOT, PLANAR_ROBOT_FROM_SENSOR,
         PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR,
         PLANAR_GOAL_IN_WORLD)
-    np.testing.assert_allclose(point, [2.8, 2.5], atol=1e-12)
+    np.testing.assert_allclose(point, [2, 2.5], atol=1e-12)
     np.testing.assert_allclose(direction, [0, 1], atol=1e-12)
     np.testing.assert_allclose(goal, [2, -2], atol=1e-12)

@@ -10,10 +10,10 @@ PLANAR_WORLD_FROM_ROBOT = np.array([
 ], dtype=float)
 PLANAR_ROBOT_FROM_SENSOR = np.array([
     [1, 0, 0.5],
-    [0, 1, 0.2],
+    [0, 1, 0],
     [0, 0, 1],
 ], dtype=float)
-PLANAR_POINT_IN_SENSOR = np.array([1, -1], dtype=float)
+PLANAR_POINT_IN_SENSOR = np.array([1, 0], dtype=float)
 PLANAR_DIRECTION_IN_SENSOR = np.array([1, 0], dtype=float)
 PLANAR_GOAL_IN_WORLD = np.array([4, 3], dtype=float)
 
