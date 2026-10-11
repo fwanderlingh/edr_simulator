@@ -48,14 +48,14 @@ then **Module 1: Planar transforms**.
 
 ### Exercises you complete
 
-Each lesson has one Python file with `TODO` markers; the simulator reads it on
-the next launch. Until you complete it, the app shows
-"not implemented yet" in the status bar instead of results. Lesson 1 is the
-exception: its stub keeps the robot stopped.
+Lesson 1 provides ready-to-run motion previews, including the square; no code
+changes are needed. Select **Preview: square motion** and press **Start**.
+Lessons 2–4 contain exercises with `TODO` markers; the simulator reads your
+changes on the next launch. Until you complete an exercise, the app shows
+"not implemented yet" with a yellow background instead of results.
 
 | Lesson | File | Complete |
 |---|---|---|
-| 1 | `robotics_sim/exercises/lesson01/program.py` | `SquareProgram.update` (open-loop square) |
 | 2 | `robotics_sim/exercises/lesson02/planar.py` | `solve_planar_task` (Module 1) |
 | 2 | `robotics_sim/exercises/lesson02/frames.py` | `point_in_world` (3D extension) |
 | 3 | `robotics_sim/exercises/lesson03/kinematics.py` | `forward`, `inverse` (select **student**) |
@@ -71,7 +71,8 @@ measurements, so export first if you need to keep them. The duration applies on
 reset or when selecting another task. Close the window or choose **File > Exit**
 to quit.
 
-Drag to orbit the 3D view, scroll to zoom, or choose **View > Reset camera**.
+Left-drag to orbit the 3D view, **Shift + left-drag** to pan, and scroll to zoom.
+Choose **View > Reset camera** to restore the activity's original centre, angles, and zoom.
 **Labels...** controls label size and colors. Axes are x red, y green, z blue;
 the ground grid is 1 m × 1 m.
 
@@ -173,7 +174,6 @@ Worked examples:
 | $T_{ws}=T_{wr}T_{rs}$ | `world_from_sensor = world_from_robot @ robot_from_sensor` |
 | point: $\tilde{p}_w=T_{ws}\begin{bmatrix}p_s\\1\end{bmatrix}$ | `point_in_world = world_from_sensor @ np.append(point_in_sensor, 1)` |
 | direction: $\tilde{d}_w=T_{ws}\begin{bmatrix}d_s\\0\end{bmatrix}$ | `direction_in_world = world_from_sensor @ np.append(direction_in_sensor, 0)` |
-| inverse: $\tilde{g}_r=T_{wr}^{-1}\begin{bmatrix}g_w\\1\end{bmatrix}$ | `goal_in_robot = np.linalg.inv(world_from_robot) @ np.append(goal_in_world, 1)` |
 
 The result of a homogeneous transform has one extra component (3 elements in
 2D); take `[:2]` for Cartesian coordinates, e.g.
@@ -190,16 +190,18 @@ A first look at the environment, robot, commands, state, and simulation time.
 The scripted activities preview the system that later lessons will extend with
 sensing, estimation, planning, and feedback control.
 
-The default exercise moves a body around a 2 m square using four constant
+The square preview moves a body around a 2 m square using four constant
 world-frame velocity commands, each held for 4 seconds. The central obstacle
 is clear of the intended route. This is an **open-loop schedule**, not waypoint
 feedback control; changing velocities or timing changes where the robot ends up.
 
-Edit [SquareProgram.update](robotics_sim/exercises/lesson01/program.py), or pass
-your own object with `update(time, dt) -> Velocity` to `Simulator(program=...)`.
-Try a straight line, a diagonal, and a body-frame circular motion. Compare CSV
-measurements with your predicted positions and investigate different timesteps.
-Without a program, the last `robot.set_velocity(...)` command remains active.
+Select **Preview: straight-line motion**, **Preview: circular motion**, then
+**Preview: square motion** in the UI and press **Start**. The square preview
+needs at least 16 seconds of activity time to complete all four sides.
+Compare the path and measured state across the three previews.
+As an optional extension, modify
+[SquareProgram.update](robotics_sim/exercises/lesson01/program.py) and restart
+the app to explore other velocity schedules.
 
 The initial robot is a dynamic box with ideal imposed planar velocity, zero
 damping, and **gravity disabled**. PyBullet still resolves collisions, so contact
@@ -208,42 +210,29 @@ robot or a motor model. Wheel kinematics and actuation belong to lesson 3.
 
 ### Lesson 2: frames and transformations
 
-The notes' worked example 3.5 is available as
-[example_3_5.py](robotics_sim/exercises/lesson02/example_3_5.py).
-From `simulator/`, run:
+Open the simulator with the usual launcher (on Windows, double-click
+`start-simulator.cmd`). Select **Lesson 2 - Frames and transformations**, then
+**Module 1: Planar transforms** to explore worked example 3.5 from the notes.
+The sensor offset is `(0.5, 0)` and the sensor-frame point is `(1, 0)`.
 
-```bash
-python -m robotics_sim.exercises.lesson02.example_3_5
-```
-
-On Windows, the launcher-managed environment can be used directly:
-
-```powershell
-.\.conda\python.exe -m robotics_sim.exercises.lesson02.example_3_5
-```
-
-It uses homogeneous matrices throughout, checks both transformation paths and
-the 30-degree lidar observation, and compares the result with `solve_planar_task`.
-Its sensor offset is `(0.5, 0)` and its local point is `(1, 0)`, yielding `(2, 2.5)`
-in the world. The activity below uses these same inputs and expected result.
-
-
-Choose **Module 1: Planar transforms** for the activity that follows the notes'
-Module 1. The robot and sensor frames are planar and use the same example values
-as worked example 3.5, plus the notes' navigation goal. Edit
+In the student version, complete
 [solve_planar_task](robotics_sim/exercises/lesson02/planar.py) to:
 
-1. Compose `T_W_R @ T_R_S` and transform a sensor-frame point into the world.
-2. Transform a direction with homogeneous coordinate `0`, so translation does
-   not affect it.
-3. Invert `T_W_R` to express a world-frame goal in robot coordinates.
+1. Compose `world_from_robot @ robot_from_sensor` and transform the point
+   using homogeneous coordinate `1`.
+2. Transform the direction using homogeneous coordinate `0`.
+3. Return the two Cartesian components of the point and direction.
 
-The live readout shows your function's point, direction, and goal coordinates.
-Check them against the expected values: world point `(2, 2.5) m`, world
-direction `(0, 1)`, and robot-frame goal `(2, -2) m`. The diagrams distinguish
-the transformed point, the direction, and the path to the world goal. This
-planar activity is the core Module 1 exercise; the other Lesson 2 activities
-are explicitly labelled as 3D extensions.
+Save the file, close and reopen the simulator, and select the same activity.
+Unimplemented exercises display a yellow warning. Compare the **World**,
+**Robot**, and **Sensor** frames with the notes' diagram. The sensor origin is
+`(2, 1.5) m`; **Sensor point** and the live `point in world` readout should show
+`(2, 2.5) m`. **Direction (no translation)** and `direction in world` should
+show `(0, 1)`. The direction arrow starts at the sensor for visualization;
+its components contain no translation.
+
+This planar activity is the core Module 1 exercise; the other Lesson 2
+activities are explicitly labelled as 3D extensions.
 
 The 3D extensions are optional. **Extension: Fixed 3D transform** only shows
 the World, Robot, and Sensor frames; it has no code to complete.
@@ -346,7 +335,7 @@ The displayed scan stays at its acquisition pose until the next sample.
 | IMU | Yaw rate, rad/s; body x/y acceleration, m/s² | Gyro bias 0.01 rad/s, noise 0.005 rad/s; acceleration biases +0.02/-0.02 m/s² and noise 0.03 m/s² |
 
 Each sensor uses its own fixed random seed, so resetting repeats the same noise
-sequence. The models and constants are in `robotics_sim/sensors/`. Encoder angles
+sequence. The models and constants are in `robotics_sim/exercises/lesson04/sensors/`. Encoder angles
 integrate ideal shaft commands; they are not measured wheel joints, and still
 increase if the chassis is blocked. The IMU reads physics velocity and computes
 finite-difference world acceleration before expressing it in the current body
@@ -409,7 +398,7 @@ contains all supported keys with default values:
 | `camera_yaw`, `camera_pitch`, `camera_distance` | Camera angles in degrees and distance in metres |
 
 Colors can be hexadecimal RGB strings, such as `"#172d3d"`. Task IDs are
-`square`, `straight`, `circle` for lesson 1; `planar`, `frames`, `static` for
+`straight`, `circle`, `square` for lesson 1; `planar`, `frames`, `static` for
 lesson 2; `drive_line`, `drive_circle`, `drive_spin`, `drive_inverse` for lesson 3;
 and `sensor_encoders`, `sensor_lidar`, `sensor_imu` for lesson 4. Missing or
 invalid values fall back to defaults. Windows

@@ -81,7 +81,7 @@ class BoxScene:
                 self.shapes.append((body, vertices, sides, normals, np.asarray(shape[5]),
                                     quaternion_to_matrix(shape[6]), np.asarray(shape[7][:3])))
 
-    def faces(self, camera):
+    def faces(self, camera, ground_paths=()):
         faces = []
         for index, (body, local_vertices, sides, local_normals, offset, local_rotation, color) in enumerate(self.shapes):
             position, orientation = bullet.getBasePositionAndOrientation(body, physicsClientId=self.world.physics.client)
@@ -114,8 +114,35 @@ class BoxScene:
         # The floor is necessarily behind the other bodies; its large extent
         # makes mean-depth sorting inaccurate when the camera crosses its edge.
         faces.extend(self.ground_grid(camera))
+        faces.extend(self.ground_paths(camera, ground_paths))
         return sorted(faces, key=lambda face: (
-            0 if face.key[0] == 0 else 1 if face.key[0] == -1 else 2, face.depth))
+            {0: 0, -1: 1, -2: 2}.get(face.key[0], 3), face.depth))
+
+    def ground_paths(self, camera, paths):
+        """Project flat guide strips above the grid and below solid bodies.
+
+        These paths lie on the floor, like the grid; they are not general
+        elevated 3D lines. Clip their polygons before projecting them.
+        """
+        faces = []
+        for path_index, (points, color) in enumerate(paths):
+            for segment, (start, end) in enumerate(zip(points, points[1:])):
+                start, end = np.asarray(start[:2]), np.asarray(end[:2])
+                delta = end - start
+                length = np.linalg.norm(delta)
+                if length == 0:
+                    continue
+                half_width = 0.0125 * np.array([-delta[1], delta[0]]) / length
+                corners = np.array([start - half_width, end - half_width,
+                                    end + half_width, start + half_width])
+                vertices = np.column_stack((corners, np.full(4, 0.002), np.ones(4)))
+                polygon = clip_polygon(vertices @ camera.transform.T)
+                if len(polygon) < 3:
+                    continue
+                ndc = polygon[:, :2] / polygon[:, 3, None]
+                pixels = (ndc + (1, -1)) * (camera.width / 2, -camera.height / 2)
+                faces.append(Face((-2, path_index, segment), tuple(pixels.ravel()), 0, color))
+        return faces
 
     def ground_grid(self, camera):
         """One-metre grey grid on the 10 m floor, cached until the view changes."""
@@ -152,7 +179,7 @@ class SceneRenderer:
         self._values = {}
         self._order = ()
 
-    def draw(self, world, camera, width, height):
+    def draw(self, world, camera, width, height, *, ground_paths=()):
         if self.scene is None or self.scene.world is not world:
             self.canvas.delete("scene")
             self.scene = BoxScene(world)
@@ -160,7 +187,7 @@ class SceneRenderer:
             self._values.clear()
             self._order = ()
         camera.prepare(width, height)
-        faces = self.scene.faces(camera)
+        faces = self.scene.faces(camera, ground_paths)
         visible = {face.key for face in faces}
         for key in self.items.keys() - visible:
             if self._values.get(key) is not None:

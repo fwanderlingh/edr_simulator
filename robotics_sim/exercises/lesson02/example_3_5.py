@@ -35,13 +35,12 @@ def main():
     print("Distance from sensor =", distance)
 
     # Simulator API: points/directions have two Cartesian components.
-    point, direction, goal = solve_planar_task(
-        T_w_b, T_b_s, P_s[:2], np.array([1, 0]), np.array([4, 3])
+    point, direction = solve_planar_task(
+        T_w_b, T_b_s, P_s[:2], np.array([1, 0])
     )
     np.testing.assert_allclose(point, P_w[:2])
     np.testing.assert_allclose(direction, [0, 1])
-    np.testing.assert_allclose(goal, [2, -2])
-    print("Simulator: point, direction, goal =", point, direction, goal)
+    print("Simulator: point, direction =", point, direction)
 
 
 if __name__ == "__main__":

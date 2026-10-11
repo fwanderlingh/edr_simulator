@@ -11,7 +11,6 @@ import numpy as np
 from .exercises.lesson02.frames import point_in_world
 from .exercises.lesson02.planar import (
     PLANAR_DIRECTION_IN_SENSOR,
-    PLANAR_GOAL_IN_WORLD,
     PLANAR_POINT_IN_SENSOR,
     PLANAR_ROBOT_FROM_SENSOR,
     PLANAR_WORLD_FROM_ROBOT,
@@ -19,7 +18,7 @@ from .exercises.lesson02.planar import (
 )
 from .geometry.rotations import rot_z
 from .geometry.transforms import homogeneous
-from .session import ActivitySession, DESCRIPTIONS, LESSONS, TASKS
+from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS
 from .sim.camera import Camera
 from .sim.scene_renderer import SceneRenderer
 from .preferences import DEFAULT_PATH, load_preferences, save_preferences
@@ -174,21 +173,30 @@ class SimulatorApp:
         menu.add_cascade(label="File", menu=file_menu)
         lesson_menu = tk.Menu(menu, tearoff=False)
         for title in LESSONS.values():
-            lesson_menu.add_radiobutton(label=title, variable=self.lesson, value=title, command=self.select_lesson)
+            lesson_menu.add_radiobutton(
+                label=f"   {title}", variable=self.lesson, value=title,
+                command=self.select_lesson, indicatoron=True, hidemargin=False)
         menu.add_cascade(label="Lessons", menu=lesson_menu)
         view_menu = tk.Menu(menu, tearoff=False)
-        view_menu.add_checkbutton(label="Show coordinate frames", variable=self.show_frames, command=self._display_settings_changed)
+        view_menu.add_checkbutton(
+            label="   Show coordinate frames", variable=self.show_frames,
+            command=self._display_settings_changed, indicatoron=True,
+            hidemargin=False)
         view_menu.add_command(label="Label settings...", command=self.label_settings)
         view_menu.add_command(label="Reset camera", command=self.reset_camera)
         menu.add_cascade(label="View", menu=view_menu)
         help_menu = tk.Menu(menu, tearoff=False)
         help_menu.add_command(label="How to use", command=lambda: messagebox.showinfo(
             "Robotics Laboratory", "Select a lesson and a task, then press Start.\n\n"
-            "Pause freezes simulation time. Step advances one physics step.\n"
-            "Reset starts a fresh activity and clears measurements.\n"
-            "Completed activities stay open for inspection.\n\n"
-            "Drag the view to orbit; scroll to zoom.\n"
-            "Use View > Label settings to change label size, colors, and backgrounds.", parent=self.root))
+            "Start runs the activity; Pause freezes time; Resume continues it.\n"
+            "Step advances one physics step while paused.\n"
+            "Reset / Apply length starts the selected task again and clears its measurements.\n"
+            "Completed activities remain open for inspection.\n\n"
+            "In the 3D view, drag to orbit, Shift + drag to pan, and scroll to zoom.\n"
+            "Use View > Reset camera to restore the default view.\n"
+            "Use View > Label settings to change label size, colors, and backgrounds.\n\n"
+            "Use File > Export measurements... to save the recorded data.\n"
+            "After editing a student exercise, save the file and restart the simulator.", parent=self.root))
         menu.add_cascade(label="Help", menu=help_menu)
         self.root.configure(menu=menu)
 
@@ -228,9 +236,18 @@ class SimulatorApp:
         ttk.Label(self.sensor_controls, text="Nominal 10 Hz | Student mode replaces lidar | Mode change resets activity").pack(side="left")
         selectors.columnconfigure(0, weight=1)
         selectors.columnconfigure(1, weight=1)
-        description = ttk.Label(panel, textvariable=self.description, wraplength=980)
-        description.grid(row=2, column=0, sticky="ew", pady=(0, 10))
-        panel.bind("<Configure>", lambda event: description.configure(wraplength=max(300, event.width - 32)))
+        description_panel = ttk.Frame(panel)
+        description_panel.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        description = ttk.Label(description_panel, textvariable=self.description, wraplength=980)
+        description.pack(anchor="w", fill="x")
+        self.edit_hint = ttk.Label(description_panel, wraplength=980)
+        self.edit_hint.pack(anchor="w", fill="x", pady=(5, 0))
+        self.edit_file = ttk.Label(description_panel, font=("TkDefaultFont", 10, "bold"), wraplength=980)
+        self.edit_file.pack(anchor="w", fill="x")
+        def resize_description(event):
+            for label in (description, self.edit_hint, self.edit_file):
+                label.configure(wraplength=max(300, event.width - 32))
+        panel.bind("<Configure>", resize_description)
         controls = ttk.Frame(panel)
         controls.grid(row=3, column=0, sticky="ew", pady=(0, 10))
         self.start_button = ttk.Button(controls, text="Start", command=self.toggle_running)
@@ -250,7 +267,7 @@ class SimulatorApp:
         self.canvas.bind("<MouseWheel>", lambda event: self._zoom(1 if event.delta > 0 else -1))
         self.canvas.bind("<Button-4>", lambda event: self._zoom(1))
         self.canvas.bind("<Button-5>", lambda event: self._zoom(-1))
-        ttk.Label(panel, text="Drag to orbit  |  Scroll to zoom  |  Axes: x red, y green, z blue").grid(row=5, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(panel, text="Drag to orbit  |  Shift + drag to pan  |  Scroll to zoom  |  Axes: x red, y green, z blue").grid(row=5, column=0, sticky="w", pady=(6, 0))
         ttk.Style(panel).configure("NotImplemented.TLabel", background="#fff59d", foreground="#000000")
         self.values_label = ttk.Label(panel, textvariable=self.values, font=("TkFixedFont", 11))
         self.values_label.grid(row=6, column=0, sticky="w", pady=6)
@@ -308,7 +325,11 @@ class SimulatorApp:
             self.camera.target = (2, 1, 0.2) if task == "planar" else (0.25, 0, 0.2)
         else:
             self.camera.target = (0.8, 0.7, 0.1)
+        self._camera_home_target = self.camera.target
         self.description.set(DESCRIPTIONS[task])
+        hint, path = ACTIVITY_FILES[task]
+        self.edit_hint.configure(text=hint)
+        self.edit_file.configure(text=f"File (relative to simulator/): {path}")
         self._notice = ""
         self._accumulator = 0
         self._last_tick = time.perf_counter()
@@ -355,8 +376,7 @@ class SimulatorApp:
         try:
             return solve_planar_task(
                 PLANAR_WORLD_FROM_ROBOT, PLANAR_ROBOT_FROM_SENSOR,
-                PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR,
-                PLANAR_GOAL_IN_WORLD)
+                PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR)
         except NotImplementedError:
             return None
 
@@ -369,12 +389,10 @@ class SimulatorApp:
                 self.values.set(self.values.get() +
                     "\nModule 1 not implemented yet: complete solve_planar_task in exercises/lesson02/planar.py")
             else:
-                point, direction, goal = output
+                point, direction = output
                 self.values.set(self.values.get() +
                     f"\nModule 1 output: point in world ({point[0]:.2f}, {point[1]:.2f}) m"
                     f" | direction in world ({direction[0]:.2f}, {direction[1]:.2f})")
-                self.values.set(self.values.get() +
-                    f"\nGoal in robot: ({goal[0]:.2f}, {goal[1]:.2f}) m")
         if self.session.lesson == "3":
             left, right = self.session.robot.wheel_velocities
             command = self.session.robot.command
@@ -427,7 +445,11 @@ class SimulatorApp:
 
     def _orbit(self, event):
         if self._drag_position:
-            self.camera.orbit(event.x - self._drag_position[0], event.y - self._drag_position[1])
+            dx, dy = event.x - self._drag_position[0], event.y - self._drag_position[1]
+            if event.state & 0x0001:  # Tk Shift modifier, on Windows and Linux.
+                self.camera.pan(dx, dy, self.canvas.winfo_width(), self.canvas.winfo_height())
+            else:
+                self.camera.orbit(dx, dy)
             self._drag_position = event.x, event.y
             self._redraw()
             self._queue_save()
@@ -438,6 +460,7 @@ class SimulatorApp:
         self._queue_save()
 
     def reset_camera(self):
+        self.camera.target = self._camera_home_target
         self.camera.reset()
         self._redraw()
         self._queue_save()
@@ -581,7 +604,10 @@ class SimulatorApp:
 
     def _render(self):
         width, height = max(2, self.canvas.winfo_width()), max(2, self.canvas.winfo_height())
-        self.renderer.draw(self.session.world, self.camera, width, height)
+        ground_paths = ()
+        if self.session.task == "square":
+            ground_paths = (([(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)], "#b5660b"),)
+        self.renderer.draw(self.session.world, self.camera, width, height, ground_paths=ground_paths)
         self.canvas.delete("overlay")
         self._label_bounds = []
         if self.session.sensors is not None:
@@ -599,10 +625,6 @@ class SimulatorApp:
                 points.append((samples[-1][1], samples[-1][2], 0.02))
             for start, end in zip(points, points[1:]):
                 self._line(start, end, "#b5660b")
-        if self.session.task == "square":
-            path = [(0, 0, 0.02), (2, 0, 0.02), (2, 2, 0.02), (0, 2, 0.02), (0, 0, 0.02)]
-            for start, end in zip(path, path[1:]):
-                self._line(start, end, "#b5660b")
         if self.show_frames.get():
             robot_frame = self.session.robot.pose().matrix()
             self._frame(np.eye(4), "World", offset=(-70, 35))
@@ -618,16 +640,13 @@ class SimulatorApp:
                 self._frame(world_from_sensor, "Sensor", scale=0.3, offset=(12, -55))
                 output = self._planar_output()
                 if output is not None:
-                    point, direction, _ = output
+                    point, direction = output
                     point_world = (*point, 0.03)
-                    goal_world = (*PLANAR_GOAL_IN_WORLD, 0.03)
                     direction_world = (*direction, 0)
                     self._line(world_from_sensor[:3, 3], point_world, "#773baa")
                     self._line(world_from_sensor[:3, 3],
                                world_from_sensor[:3, 3] + np.asarray(direction_world), "#1976a5", arrow=True)
-                    self._line(world_from_robot[:3, 3], goal_world, "#b5660b")
                     self._label(point_world, "Sensor point", offset=(12, 20))
-                    self._label(goal_world, "World goal", offset=(12, 20))
                     self._label(world_from_sensor[:3, 3] + np.asarray(direction_world),
                                 "Direction (no translation)", offset=(12, -15))
             elif self.session.lesson == "2":

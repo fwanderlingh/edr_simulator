@@ -5,7 +5,7 @@ import math
 from .encoder import EncoderSensor
 from .imu import ImuSensor
 from .lidar import LidarSensor
-from ..exercises.lesson04.lidar import StudentLidar
+from ..lidar import StudentLidar
 
 
 class SensorSuite:

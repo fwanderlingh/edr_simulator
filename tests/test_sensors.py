@@ -6,8 +6,8 @@ import pytest
 
 from robotics_sim import Pose, World
 from robotics_sim.session import ActivitySession
-from robotics_sim.sensors.encoder import EncoderSensor
-from robotics_sim.sensors.lidar import LidarSensor
+from robotics_sim.exercises.lesson04.sensors.encoder import EncoderSensor
+from robotics_sim.exercises.lesson04.sensors.lidar import LidarSensor
 
 
 def test_encoder_increments_quantization_and_cached_reads():

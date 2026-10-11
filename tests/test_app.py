@@ -93,11 +93,12 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
         app._render()
         text_items = [item for item in app.canvas.find_all() if app.canvas.type(item) == "text"]
         labels = {app.canvas.itemcget(item, "text") for item in text_items}
-        assert {"World", "Robot", "Sensor", "Sensor point", "World goal",
+        assert {"World", "Robot", "Sensor", "Sensor point",
                 "Direction (no translation)"} <= labels
         assert "Module 1 output: point in world (2.00, 2.50) m" in app.values.get()
         assert "direction in world (0.00, 1.00)" in app.values.get()
-        assert "Goal in robot: (2.00, -2.00) m" in app.values.get()
+        assert "World goal" not in labels
+        assert "Goal in robot" not in app.values.get()
         assert all("16" in app.canvas.itemcget(item, "font") for item in text_items)
         assert all(app.canvas.itemcget(item, "fill") == "#803399" for item in text_items)
         assert not app.canvas.find_withtag("label-background")
@@ -233,7 +234,7 @@ def test_settings_restore_after_closing_and_reopening(tmp_path):
     app = SimulatorApp(root, lesson="1", duration=3, settings_path=path)
     try:
         assert app.session.lesson == "1"
-        assert app.session.task == "square"
+        assert app.session.task == "straight"
         assert app.session.duration == 3
     finally:
         app.close()

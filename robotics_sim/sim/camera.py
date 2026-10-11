@@ -17,6 +17,15 @@ class Camera:
         self.yaw += dx * 0.4
         self.pitch = float(np.clip(self.pitch + dy * 0.4, -89, -5))
 
+    def pan(self, dx, dy, width, height):
+        """Drag the scene in the camera plane, scaled to pixels at the target."""
+        width, height = max(2, width), max(2, height)
+        self.prepare(width, height)
+        units_per_pixel = 2 * self.distance * np.tan(np.deg2rad(50) / 2) / height
+        right, up = self.view[0, :3], self.view[1, :3]
+        offset = units_per_pixel * (-dx * right + dy * up)
+        self.target = tuple(np.asarray(self.target) + offset)
+
     def zoom(self, direction):
         self.distance = float(np.clip(self.distance * (0.9 ** direction), 1.5, 14))
 

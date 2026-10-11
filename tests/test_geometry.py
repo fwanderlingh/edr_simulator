@@ -33,19 +33,16 @@ def test_sensor_chain_against_bullet_oracle():
 
 
 @pytest.mark.solution
-def test_planar_module_composes_points_rotates_directions_and_inverts_goal():
+def test_planar_module_composes_points_and_rotates_directions():
     from robotics_sim.exercises.lesson02.planar import (
         PLANAR_DIRECTION_IN_SENSOR,
-        PLANAR_GOAL_IN_WORLD,
         PLANAR_POINT_IN_SENSOR,
         PLANAR_ROBOT_FROM_SENSOR,
         PLANAR_WORLD_FROM_ROBOT,
     )
 
-    point, direction, goal = solve_planar_task(
+    point, direction = solve_planar_task(
         PLANAR_WORLD_FROM_ROBOT, PLANAR_ROBOT_FROM_SENSOR,
-        PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR,
-        PLANAR_GOAL_IN_WORLD)
+        PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR)
     np.testing.assert_allclose(point, [2, 2.5], atol=1e-12)
     np.testing.assert_allclose(direction, [0, 1], atol=1e-12)
-    np.testing.assert_allclose(goal, [2, -2], atol=1e-12)

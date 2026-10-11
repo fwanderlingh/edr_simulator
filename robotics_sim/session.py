@@ -5,16 +5,16 @@ import math
 from pathlib import Path
 
 from . import Pose, Robot, Simulator, Velocity, World
-from .exercises.lesson01.program import SquareProgram
+from .exercises.lesson01.program import CircleProgram, ConstantProgram, SquareProgram, StraightProgram
 from .robots.differential_drive import DifferentialDriveRobot, ReferenceDifferentialDrive
 from .exercises.lesson03.kinematics import StudentDifferentialDrive
-from .sensors.suite import SensorSuite
+from .exercises.lesson04.sensors.suite import SensorSuite
 
 
 LESSONS = {"1": "Lesson 1 - System overview", "2": "Lesson 2 - Frames and transformations",
            "3": "Lesson 3 - Mobile base kinematics", "4": "Lesson 4 - Sensors and noise"}
 TASKS = {
-    "1": {"square": "Preview: square motion", "straight": "Preview: straight-line motion", "circle": "Preview: circular motion"},
+    "1": {"straight": "Preview: straight-line motion", "circle": "Preview: circular motion", "square": "Preview: square motion"},
     "2": {"planar": "Module 1: Planar transforms",
           "frames": "Extension: Rotating 3D frames",
           "static": "Extension: Fixed 3D transform"},
@@ -30,9 +30,9 @@ DESCRIPTIONS = {
     "square": "A first look at the world, robot, commands, and measured state. Watch a scripted square motion; later lessons will build sensing, estimation, planning, and feedback control.",
     "straight": "Explore the simulator with a scripted straight-line motion. Observe the robot's pose and simulation time as a preview of the system we will develop.",
     "circle": "Explore a scripted circular motion and the robot's changing orientation. This is a system preview; feedback control will be introduced in a later lesson.",
-    "planar": "Module 1 (planar frames and transformations): edit solve_planar_task in exercises/lesson02/planar.py. Compose the sensor pose to map a point into the world, rotate a direction without translating it, and invert the robot pose to express the world goal in robot coordinates. Compare your output with the checks in the simulator README.",
-    "frames": "Optional 3D extension: a sensor is attached to a rotating 3D robot. Edit point_in_world in exercises/lesson02/frames.py (4x4 matrices): compose world_from_sensor = world_from_robot @ robot_from_sensor, append homogeneous coordinate 1 to the sensor point, and return its 3D world coordinates. The purple line shows your point once implemented. For the Module 1 exercise, choose Planar transforms.",
-    "static": "Optional 3D extension: inspect fixed 3D World, Robot, and Sensor frames. This view has no code to complete; the sensor-point exercise is point_in_world in exercises/lesson02/frames.py, shown in Rotating 3D frames. For the Module 1 exercise, choose Planar transforms.",
+    "planar": "Module 1 (planar frames and transformations): edit solve_planar_task. Compose the sensor pose to map a point into the world, rotate a direction without translating it. Compare your output with the checks in the simulator README.",
+    "frames": "Optional 3D extension: a sensor is attached to a rotating 3D robot. Edit point_in_world (4x4 matrices): compose world_from_sensor = world_from_robot @ robot_from_sensor, append homogeneous coordinate 1 to the sensor point, and return its 3D world coordinates. The purple line shows your point once implemented. For the Module 1 exercise, choose Planar transforms.",
+    "static": "Optional 3D extension: inspect fixed 3D World, Robot, and Sensor frames. This view has no code to complete; the sensor-point exercise is point_in_world, shown in Rotating 3D frames. For the Module 1 exercise, choose Planar transforms.",
     "drive_line": "Equal wheel speeds produce straight motion. Compare distance with v * time. Wheel radius r = 0.12 m; track width L = 0.42 m.",
     "drive_circle": "Unequal wheel speeds produce a circle of radius v / omega. Positive yaw turns left; the right wheel travels farther.",
     "drive_spin": "Equal and opposite wheel speeds rotate the robot about its centre. Forward velocity is zero.",
@@ -43,12 +43,22 @@ DESCRIPTIONS = {
 }
 
 
-class ConstantProgram:
-    def __init__(self, command):
-        self.command = command
-
-    def update(self, time, dt):
-        return self.command
+# Paths are relative to the simulator folder; previews need no implementation.
+ACTIVITY_FILES = {
+    "straight": ("Optional: customize StraightProgram.", "robotics_sim/exercises/lesson01/program.py"),
+    "circle": ("Optional: customize CircleProgram.", "robotics_sim/exercises/lesson01/program.py"),
+    "square": ("Optional: customize SquareProgram.update.", "robotics_sim/exercises/lesson01/program.py"),
+    "planar": ("Edit solve_planar_task; save and restart the simulator.", "robotics_sim/exercises/lesson02/planar.py"),
+    "frames": ("Edit point_in_world; save and restart the simulator.", "robotics_sim/exercises/lesson02/frames.py"),
+    "static": ("Optional: customize the fixed sensor frame in _render.", "robotics_sim/app.py"),
+    "drive_line": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_circle": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_spin": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_inverse": ("Edit StudentDifferentialDrive.forward and inverse; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "sensor_encoders": ("Optional: inspect or customize the encoder model; restart after editing.", "robotics_sim/exercises/lesson04/sensors/encoder.py"),
+    "sensor_lidar": ("Edit StudentLidar.directions; select student sensor mode and restart after editing.", "robotics_sim/exercises/lesson04/lidar.py"),
+    "sensor_imu": ("Optional: inspect or customize the IMU model; restart after editing.", "robotics_sim/exercises/lesson04/sensors/imu.py"),
+}
 
 
 class ActivitySession:
@@ -90,8 +100,8 @@ class ActivitySession:
                                      else ReferenceDifferentialDrive)())
         programs = {
             "square": SquareProgram(),
-            "straight": ConstantProgram(Velocity(vx=0.2)),
-            "circle": ConstantProgram(Velocity(vx=0.3, omega=0.5, frame="body")),
+            "straight": StraightProgram(),
+            "circle": CircleProgram(),
             "frames": ConstantProgram(Velocity(omega=0.3)),
             "static": ConstantProgram(Velocity()),
         }

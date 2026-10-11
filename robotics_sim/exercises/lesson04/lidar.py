@@ -5,7 +5,7 @@ The sensor backend handles ray casting and range conversion.
 Angles are radians, x is forward, y is left, z is up.
 """
 
-from ...sensors.lidar import LidarSensor
+from .sensors.lidar import LidarSensor
 
 
 class StudentLidar(LidarSensor):
