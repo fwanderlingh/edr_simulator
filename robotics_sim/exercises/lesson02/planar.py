@@ -3,20 +3,6 @@
 import numpy as np
 
 
-PLANAR_WORLD_FROM_ROBOT = np.array([
-    [0, -1, 2],
-    [1, 0, 1],
-    [0, 0, 1],
-], dtype=float)
-PLANAR_ROBOT_FROM_SENSOR = np.array([
-    [1, 0, 0.5],
-    [0, 1, 0],
-    [0, 0, 1],
-], dtype=float)
-PLANAR_POINT_IN_SENSOR = np.array([1, 0], dtype=float)
-PLANAR_DIRECTION_IN_SENSOR = np.array([1, 0], dtype=float)
-
-
 def solve_planar_task(world_from_robot, robot_from_sensor, point_in_sensor,
                       direction_in_sensor):
     """Return the point and direction expressed in world coordinates."""

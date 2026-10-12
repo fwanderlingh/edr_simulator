@@ -104,6 +104,8 @@ class ActivitySession:
                 options["kinematics"] = kinematics
             self.robot = example.setup(self.world, **options)
             update = partial(example.update, task=self.task)
+        self.planar_scene = (frames_activity.setup_planar_scene(self.robot)
+                             if self.task == "planar" else None)
         self.sim = Simulator(self.world, self.robot, update=update)
         if self.lesson == "4":
             self.sensors = example.setup_sensors(

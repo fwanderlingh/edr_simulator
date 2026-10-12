@@ -34,7 +34,7 @@ def test_sensor_chain_against_bullet_oracle():
 
 @pytest.mark.solution
 def test_planar_module_composes_points_and_rotates_directions():
-    from robotics_sim.exercises.lesson02.planar import (
+    from robotics_sim.exercises.lesson02.activity import (
         PLANAR_DIRECTION_IN_SENSOR,
         PLANAR_POINT_IN_SENSOR,
         PLANAR_ROBOT_FROM_SENSOR,

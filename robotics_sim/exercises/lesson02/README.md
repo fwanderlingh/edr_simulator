@@ -84,3 +84,12 @@ The formula exercises remain in their separate files listed above. Each
 callback receives its robot explicitly; additional robots can be registered
 with `Simulator.register_robot(name, robot, update=...)` to share the same
 world and clock. The current UI and pose CSV still display the primary robot.
+
+The planar scene data (`PLANAR_WORLD_FROM_ROBOT`, `PLANAR_ROBOT_FROM_SENSOR`,
+the point, and the direction) are defined in **activity.py**. The first matrix
+sets the robot's initial pose. `setup_planar_scene(robot)` attaches the sensor
+frame and local observations to that specific robot. Both the drawing and the
+exercise inputs use its current simulated pose, so the sensor follows any
+translation or rotation you add in `update`. Reset recreates the attachment.
+**planar.py** contains only the mathematical exercise, with its inputs supplied
+by the scene. Editing the initial scene data requires restarting the app.

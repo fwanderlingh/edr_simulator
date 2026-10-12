@@ -10,13 +10,7 @@ import numpy as np
 
 from .exercises.lesson02.frames import point_in_world
 from .exercises.lesson02 import activity as frames_activity
-from .exercises.lesson02.planar import (
-    PLANAR_DIRECTION_IN_SENSOR,
-    PLANAR_POINT_IN_SENSOR,
-    PLANAR_ROBOT_FROM_SENSOR,
-    PLANAR_WORLD_FROM_ROBOT,
-    solve_planar_task,
-)
+from .exercises.lesson02.planar import solve_planar_task
 from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS
 from .sim.camera import Camera
 from .sim.scene_renderer import SceneRenderer
@@ -377,10 +371,11 @@ class SimulatorApp:
         return True
 
     def _planar_output(self):
+        scene = self.session.planar_scene
         try:
             return solve_planar_task(
-                PLANAR_WORLD_FROM_ROBOT, PLANAR_ROBOT_FROM_SENSOR,
-                PLANAR_POINT_IN_SENSOR, PLANAR_DIRECTION_IN_SENSOR)
+                scene.world_from_robot(), scene.robot_from_sensor,
+                scene.point_in_sensor, scene.direction_in_sensor)
         except NotImplementedError:
             return None
 
@@ -634,13 +629,7 @@ class SimulatorApp:
             self._frame(np.eye(4), "World", offset=(-70, 35))
             self._frame(robot_frame, "Robot", offset=(12, -25))
             if self.session.task == "planar":
-                world_from_robot = np.eye(4)
-                world_from_robot[:2, :2] = PLANAR_WORLD_FROM_ROBOT[:2, :2]
-                world_from_robot[:2, 3] = PLANAR_WORLD_FROM_ROBOT[:2, 2]
-                robot_from_sensor = np.eye(4)
-                robot_from_sensor[:2, :2] = PLANAR_ROBOT_FROM_SENSOR[:2, :2]
-                robot_from_sensor[:2, 3] = PLANAR_ROBOT_FROM_SENSOR[:2, 2]
-                world_from_sensor = world_from_robot @ robot_from_sensor
+                world_from_sensor = self.session.planar_scene.sensor_frame()
                 self._frame(world_from_sensor, "Sensor", scale=0.3, offset=(12, -55))
                 output = self._planar_output()
                 if output is not None:

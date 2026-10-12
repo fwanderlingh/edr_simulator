@@ -116,3 +116,44 @@ def test_lesson_callbacks_preserve_motion_and_reset(lesson, task, vx, omega):
             assert session.sim.steps == 3
         finally:
             session.close()
+
+
+def test_planar_attachment_and_exercise_follow_moving_robot(monkeypatch):
+    from robotics_sim import app
+    from robotics_sim.exercises.lesson02 import activity
+
+    def move(robot, time, dt, *, task):
+        robot.set_velocity(vx=0.2, omega=0.4, frame="world")
+
+    monkeypatch.setattr(activity, "update", move)
+    solver = Mock(return_value=(np.zeros(2), np.zeros(2)))
+    monkeypatch.setattr(app, "solve_planar_task", solver)
+    for _ in range(2):
+        session = ActivitySession("2", "planar", duration=1, dt=0.1)
+        try:
+            scene = session.planar_scene
+            assert scene.robot is session.robot
+            np.testing.assert_allclose(scene.sensor_frame()[:2, 3], [2, 1.5])
+            session.step(single=True)
+            angle = np.pi / 2 + 0.04
+            expected_robot = np.array([
+                [np.cos(angle), -np.sin(angle), 2.02],
+                [np.sin(angle), np.cos(angle), 1], [0, 0, 1]])
+            np.testing.assert_allclose(scene.world_from_robot(), expected_robot, atol=1e-6)
+            sensor = scene.sensor_frame()
+            np.testing.assert_allclose(sensor[:2, 3],
+                [2.02 + 0.5 * np.cos(angle), 1 + 0.5 * np.sin(angle)], atol=1e-6)
+            np.testing.assert_allclose(sensor[:2, :2], expected_robot[:2, :2], atol=1e-6)
+            # Exercise inputs come from the same live attachment used for drawing.
+            viewer = app.SimulatorApp.__new__(app.SimulatorApp)
+            viewer.session = session
+            viewer._planar_output()
+            world_robot, robot_sensor, point, direction = solver.call_args.args
+            np.testing.assert_allclose(world_robot, expected_robot, atol=1e-6)
+            np.testing.assert_allclose(robot_sensor, scene.robot_from_sensor)
+            np.testing.assert_allclose(point, [1, 0])
+            np.testing.assert_allclose(direction, [1, 0])
+            # Per-session attachment edits must not affect future resets.
+            scene.robot_from_sensor[0, 2] = 10
+        finally:
+            session.close()
