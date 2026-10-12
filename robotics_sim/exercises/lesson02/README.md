@@ -70,3 +70,17 @@ functions are in [`../../geometry/`](../../geometry/).
 and `draw_text`. Reusing a name updates the annotation. Annotations are
 no-ops in headless mode. The geometry tests compare composition and rotations
 against PyBullet's independent transform operations.
+
+## Scene and robot commands
+
+Open **[activity.py](activity.py)** to see `setup(world, ...)` explicitly
+create the robot and `update(robot, time, dt, ...)` issue commands to it.
+The `task` argument selects the example chosen in the UI. Edit this file to
+change the initial scene or motion, then save and restart the application.
+Use **Reset / Apply length** to recreate the scene and **Start** to run it. The UI
+owns simulation time and calls `update` before every physics step.
+
+The formula exercises remain in their separate files listed above. Each
+callback receives its robot explicitly; additional robots can be registered
+with `Simulator.register_robot(name, robot, update=...)` to share the same
+world and clock. The current UI and pose CSV still display the primary robot.

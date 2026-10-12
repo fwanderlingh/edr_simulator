@@ -3,12 +3,13 @@
 import csv
 import math
 from pathlib import Path
+from functools import partial
 
-from . import Pose, Robot, Simulator, Velocity, World
-from .exercises.lesson01.program import CircleProgram, ConstantProgram, SquareProgram, StraightProgram
-from .robots.differential_drive import DifferentialDriveRobot, ReferenceDifferentialDrive
-from .exercises.lesson03.kinematics import StudentDifferentialDrive
-from .exercises.lesson04.sensors.suite import SensorSuite
+from . import Simulator, World
+from .exercises.lesson01 import circle, square, straight
+from .exercises.lesson02 import activity as frames_activity
+from .exercises.lesson03 import activity as drive_activity
+from .exercises.lesson04 import activity as sensors_activity
 
 
 LESSONS = {"1": "Lesson 1 - System overview", "2": "Lesson 2 - Frames and transformations",
@@ -45,12 +46,12 @@ DESCRIPTIONS = {
 
 # Paths are relative to the simulator folder; previews need no implementation.
 ACTIVITY_FILES = {
-    "straight": ("Optional: customize StraightProgram.", "robotics_sim/exercises/lesson01/program.py"),
-    "circle": ("Optional: customize CircleProgram.", "robotics_sim/exercises/lesson01/program.py"),
-    "square": ("Optional: customize SquareProgram.update.", "robotics_sim/exercises/lesson01/program.py"),
+    "straight": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/straight.py"),
+    "circle": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/circle.py"),
+    "square": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/square.py"),
     "planar": ("Edit solve_planar_task; save and restart the simulator.", "robotics_sim/exercises/lesson02/planar.py"),
     "frames": ("Edit point_in_world; save and restart the simulator.", "robotics_sim/exercises/lesson02/frames.py"),
-    "static": ("Optional: customize the fixed sensor frame in _render.", "robotics_sim/app.py"),
+    "static": ("Optional: customize ROBOT_FROM_SENSOR and POINT_IN_SENSOR.", "robotics_sim/exercises/lesson02/activity.py"),
     "drive_line": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
     "drive_circle": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
     "drive_spin": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
@@ -91,34 +92,22 @@ class ActivitySession:
         self.samples = []
 
     def _build_activity(self, kinematics):
-        lesson, task = self.lesson, self.task
-        if lesson not in ("3", "4"):
-            self.world.add_box(Pose(x=1, y=1, z=0.3), size=(0.6, 0.6, 0.6))
-        initial_pose = Pose(x=2, y=1, yaw=math.pi / 2) if task == "planar" else Pose()
-        self.robot = Robot(self.world, initial_pose) if lesson not in ("3", "4") else DifferentialDriveRobot(
-            self.world, motor_model=(StudentDifferentialDrive if kinematics == "student" and lesson == "3"
-                                     else ReferenceDifferentialDrive)())
-        programs = {
-            "square": SquareProgram(),
-            "straight": StraightProgram(),
-            "circle": CircleProgram(),
-            "frames": ConstantProgram(Velocity(omega=0.3)),
-            "static": ConstantProgram(Velocity()),
-        }
-        if lesson == "3":
-            if task == "drive_inverse":
-                self.robot.set_twist(0.24, 0.4)
-            else:
-                self.robot.set_wheel_velocities(*{
-                    "drive_line": (2, 2), "drive_circle": (1.3, 2.7),
-                    "drive_spin": (-1, 1)}[task])
-        self.sim = Simulator(self.world, self.robot, program=programs.get(task))
-        if lesson == "4":
-            self.world.add_box(Pose(x=3, z=0.5), size=(0.2, 3, 1))
-            self.world.add_box(Pose(x=-1.5, y=2, z=0.5), size=(0.8, 0.8, 1))
-            self.world.add_box(Pose(x=0.8, y=-2, z=0.4), size=(0.6, 0.6, 0.8))
-            self.sensors = SensorSuite(self.robot, self.sensor_mode, self.dt,
-                                       rangefinder=task == "sensor_encoders")
+        if self.lesson == "1":
+            example = {"straight": straight, "circle": circle, "square": square}[self.task]
+            self.robot = example.setup(self.world)
+            update = example.update
+        else:
+            example = {"2": frames_activity, "3": drive_activity,
+                       "4": sensors_activity}[self.lesson]
+            options = {"task": self.task}
+            if self.lesson == "3":
+                options["kinematics"] = kinematics
+            self.robot = example.setup(self.world, **options)
+            update = partial(example.update, task=self.task)
+        self.sim = Simulator(self.world, self.robot, update=update)
+        if self.lesson == "4":
+            self.sensors = example.setup_sensors(
+                self.robot, task=self.task, mode=self.sensor_mode, dt=self.dt)
 
     def start(self):
         if self.state in ("Ready", "Paused"):
@@ -133,13 +122,6 @@ class ActivitySession:
             return
         if self.state != "Running" and not single:
             return
-        if self.lesson == "4":
-            if self.task == "sensor_encoders":
-                self.robot.set_twist(0.15, 0)
-            elif self.task == "sensor_lidar":
-                self.robot.set_twist(0, 0.3)
-            else:
-                self.robot.set_twist(0.2 + 0.1 * math.sin(self.sim.time), 0.4)
         pose = self.sim.step()
         if self.sensors is not None:
             self.sensors.advance(self.sim.time, self.sim.steps, self.dt,
@@ -150,7 +132,7 @@ class ActivitySession:
                                  self.robot.command.vx, self.robot.command.omega)
         if self.sim.steps >= self.total_steps:
             self.state = "Completed"
-            self.robot.set_velocity()
+            self.sim.stop()
         elif single:
             self.state = "Paused"
 

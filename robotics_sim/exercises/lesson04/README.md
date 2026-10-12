@@ -56,3 +56,20 @@ and physics rate.
 Public interfaces: `EncoderSensor.read()`, `LidarSensor.scan()`, and
 `ImuSensor.read()` return the latest sampled measurements. `SensorSuite` handles
 advancing shaft angles and sampling on the simulation clock.
+
+## Scene and robot commands
+
+Open **[activity.py](activity.py)** to see `setup(world, ...)` explicitly
+create the robot and `update(robot, time, dt, ...)` issue commands to it.
+The `task` argument selects the example chosen in the UI. Edit this file to
+change the initial scene or motion, then save and restart the application.
+Use **Reset / Apply length** to recreate the scene and **Start** to run it. The UI
+owns simulation time and calls `update` before every physics step.
+
+The formula exercises remain in their separate files listed above. Each
+callback receives its robot explicitly; additional robots can be registered
+with `Simulator.register_robot(name, robot, update=...)` to share the same
+world and clock. The current UI and pose CSV still display the primary robot.
+
+`setup_sensors(robot, ...)` attaches the sensor suite to that robot. The
+session samples it after each physics step according to its sampling rate.

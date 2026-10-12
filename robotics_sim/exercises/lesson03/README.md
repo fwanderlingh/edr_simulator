@@ -31,3 +31,17 @@ errors decrease with the fixed timestep. This is ideal no-slip planar
 kinematics: PyBullet integrates the commanded chassis velocity; the cylindrical
 wheels are visual geometry, without wheel joints, rolling contact, slip, or
 motor dynamics. No feedback controller or odometry estimator is involved.
+
+## Scene and robot commands
+
+Open **[activity.py](activity.py)** to see `setup(world, ...)` explicitly
+create the robot and `update(robot, time, dt, ...)` issue commands to it.
+The `task` argument selects the example chosen in the UI. Edit this file to
+change the initial scene or motion, then save and restart the application.
+Use **Reset / Apply length** to recreate the scene and **Start** to run it. The UI
+owns simulation time and calls `update` before every physics step.
+
+The formula exercises remain in their separate files listed above. Each
+callback receives its robot explicitly; additional robots can be registered
+with `Simulator.register_robot(name, robot, update=...)` to share the same
+world and clock. The current UI and pose CSV still display the primary robot.

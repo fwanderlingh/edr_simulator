@@ -3,7 +3,7 @@ import math
 import pytest
 
 from robotics_sim import Pose, Robot, Simulator, Velocity, World
-from robotics_sim.exercises.lesson01.program import SquareProgram
+from robotics_sim.exercises.lesson01 import square
 
 
 def test_body_frame_command():
@@ -20,11 +20,12 @@ def test_body_frame_command():
 def test_square_program_returns_to_start():
     with World(gui=False) as world:
         robot = Robot(world)
-        sim = Simulator(world, robot, program=SquareProgram())
-        for _ in range(3840):
-            pose = sim.step()
-        assert pose.x == pytest.approx(0, abs=1e-6)
-        assert pose.y == pytest.approx(0, abs=1e-6)
+        sim = Simulator(world, robot, update=square.update)
+        for x, y in ((2, 0), (2, 2), (0, 2), (0, 0)):
+            for _ in range(960):
+                pose = sim.step()
+            assert pose.x == pytest.approx(x, abs=1e-6)
+            assert pose.y == pytest.approx(y, abs=1e-6)
         assert sim.step().x == pytest.approx(0, abs=1e-6)
 
 

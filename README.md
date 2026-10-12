@@ -220,8 +220,26 @@ models, and exported sensor data.
 
 Each new block should expose a small Python interface so a student implementation
 can replace the reference without editing the simulation loop. The first such
-interface is `VelocityProgram`; later controller/estimator interfaces will be
-introduced with their lessons rather than represented by empty implementations.
+interface is `setup(world)` plus `update(robot, time, dt)`; later controller and
+estimator interfaces will be introduced with their lessons rather than
+represented by empty implementations.
+
+All four lessons now declare robots and issue commands inside their lesson
+folders. Lesson 1 has one file per preview (`straight.py`, `circle.py`,
+`square.py`); Lessons 2, 3, and 4 each use `activity.py`, whose `task` argument
+selects the UI example. Lesson 4 also declares obstacles and attaches sensors
+there. The UI lists these paths in bold alongside the formula exercise file.
+Edit and save the source, then restart the application to load changes.
+
+The simulation core already supports `sim.register_robot(name, robot,
+update=callback)` before the first step. Robots must belong to the same world
+and have unique names and bodies. Each callback receives its robot, simulation
+time, and timestep; all callbacks run before commands are applied and the shared
+world advances once. `sim.stop()` clears commands for every registered robot.
+`sim.robot` remains the primary robot used by today's UI and CSV output;
+`sim.robots` exposes a read-only registry. Multi-robot selection, labels, and
+measurements remain future UI work. Existing `program=` command sources remain
+supported for compatibility, but new examples use explicit `update` callbacks.
 
 Backend reference: [official PyBullet quickstart guide](https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html).
 

@@ -9,6 +9,7 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 import numpy as np
 
 from .exercises.lesson02.frames import point_in_world
+from .exercises.lesson02 import activity as frames_activity
 from .exercises.lesson02.planar import (
     PLANAR_DIRECTION_IN_SENSOR,
     PLANAR_POINT_IN_SENSOR,
@@ -16,8 +17,6 @@ from .exercises.lesson02.planar import (
     PLANAR_WORLD_FROM_ROBOT,
     solve_planar_task,
 )
-from .geometry.rotations import rot_z
-from .geometry.transforms import homogeneous
 from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS
 from .sim.camera import Camera
 from .sim.scene_renderer import SceneRenderer
@@ -329,7 +328,12 @@ class SimulatorApp:
         self.description.set(DESCRIPTIONS[task])
         hint, path = ACTIVITY_FILES[task]
         self.edit_hint.configure(text=hint)
-        self.edit_file.configure(text=f"File (relative to simulator/): {path}")
+        files = f"File (relative to simulator/): {path}"
+        if self.lesson_id != "1":
+            scene_path = f"robotics_sim/exercises/lesson{int(self.lesson_id):02d}/activity.py"
+            if scene_path != path:
+                files += f"\nScene and robot commands: {scene_path}"
+        self.edit_file.configure(text=files)
         self._notice = ""
         self._accumulator = 0
         self._last_tick = time.perf_counter()
@@ -650,11 +654,11 @@ class SimulatorApp:
                     self._label(world_from_sensor[:3, 3] + np.asarray(direction_world),
                                 "Direction (no translation)", offset=(12, -15))
             elif self.session.lesson == "2":
-                sensor_frame = homogeneous(rot_z(np.pi / 4), (0.25, 0, 0.3))
+                sensor_frame = frames_activity.ROBOT_FROM_SENSOR
                 world_sensor = robot_frame @ sensor_frame
                 self._frame(world_sensor, "Sensor", scale=0.3, offset=(12, -55))
                 try:
-                    point = point_in_world(robot_frame, sensor_frame, np.array([0.6, 0.2, 0.1]))
+                    point = point_in_world(robot_frame, sensor_frame, frames_activity.POINT_IN_SENSOR)
                 except NotImplementedError:
                     point = None
                 if point is not None:
