@@ -52,7 +52,7 @@ def test_module2_menu_readouts_render_and_todo(tmp_path):
     root = tk.Tk()
     app = SimulatorApp(root, lesson="2", settings_path=tmp_path / "settings.json")
     try:
-        for task, example in (("spatial", "E2.3"), ("rpy", "E2.1"), ("quaternions", "E2.2")):
+        for task, example in (("spatial", "Sensor origin"), ("rpy", "RPY (rad)"), ("quaternions", "Quaternions (wxyz)")):
             app.task.set(TASKS["2"][task])
             app.load_task()
             root.update()

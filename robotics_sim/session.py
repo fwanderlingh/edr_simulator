@@ -18,8 +18,8 @@ TASKS = {
     "1": {"straight": "Preview: straight-line motion", "circle": "Preview: circular motion", "square": "Preview: square motion"},
     "2": {"planar": "Module 1: Planar transforms",
           "spatial": "Module 2: Spatial transforms",
-          "rpy": "Module 2: RPY, order and gimbal lock",
-          "quaternions": "Module 2: Quaternions ",
+          "rpy": "Module 2: RPY sensor to world",
+          "quaternions": "Module 2: Quaternions",
           "frames": "Extension: Rotating 3D frames",
           "static": "Extension: Fixed 3D transform"},
     "3": {"drive_line": "Equal wheel speeds: straight line",
@@ -32,7 +32,7 @@ TASKS = {
 }
 DESCRIPTIONS = {
     "spatial": "Compose T_world_base and T_base_sensor, then transform P_sensor=(0,1,0). Base: Rz(90 deg), (1,2,0) m; sensor: Rx(90 deg), (0.2,0,0.5) m. Expected sensor origin (1,2.2,0.5), point (1,2.2,1.5) m. Edit solve_spatial_task. The base frame is at ground level as in the notes; the robot body centre is above it.",
-    "rpy": "roll=90 deg, pitch=0, yaw=90 deg. Build R=Rz Ry Rx and compare Rx Ry Rz: the x axis maps to y versus z. Also compare (0,90,0) and (30,90,30) degrees at gimbal lock. The readout also reports v_w=R v_s for v_s=(1,0,0) and (roll,pitch,yaw)=(pi/6,-pi/9,2pi/9). Edit solve_rpy_task; inputs are radians. Frames are drawn side by side for comparison; their offsets are only visual.",
+    "rpy": "Assignment: sensor angles (roll,pitch,yaw)=(pi/6,-pi/9,2pi/9) rad and v_s=(1,0,0). Implement the expanded RPY matrix and Rz Ry Rx in solve_rpy_task. The sensor frame and purple vector show your result for this assignment. Compare v_w with (0.719846,0.604023,0.342020). Checks compare the full matrix with the expected rotation and your product, and test orthogonality and determinant. The drawing origin is offset vertically for visibility; directions are not translated.",
     "quaternions": "q=(sqrt(2)/2,0,0,sqrt(2)/2) in wxyz order, v=(0,1,0). Compute inverse, q*q, q*(0,v)*q_inverse and distance(q,-q). Expected rotated vector (-1,0,0), distance 0 rad. Edit solve_quaternion_task and hamilton. The exercise uses scalar-first quaternions, exactly as in the notes.",
     "square": "A first look at the world, robot, commands, and measured state. Watch a scripted square motion; later lessons will build sensing, estimation, planning, and feedback control.",
     "straight": "Explore the simulator with a scripted straight-line motion. Observe the robot's pose and simulation time as a preview of the system we will develop.",

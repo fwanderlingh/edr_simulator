@@ -196,8 +196,8 @@ the scripted motion previews and the optional velocity-schedule extension.
 
 [Lesson 2 exercise details](robotics_sim/exercises/lesson02/README.md) cover
 the planar transformation activity, the standalone Example 3.5 script,
-Module 2 exercises on spatial transforms (E2.3), RPY (E2.1), and quaternions
-(E2.2), and the optional 3D extensions.
+Module 2 exercises on spatial transforms, RPY sensor-to-world conversion, and
+quaternions, plus the optional 3D extensions.
 
 ### Lesson 3: mobile base kinematics
 

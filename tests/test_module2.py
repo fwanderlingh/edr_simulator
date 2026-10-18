@@ -23,9 +23,9 @@ def test_spatial_sensor_pose_and_quaternion_cross_check():
 
 @pytest.mark.solution
 def test_rpy_order_and_singularity():
-    rotation, reverse = rpy.solve_rpy_task(np.pi / 2, 0, np.pi / 2)
+    rotation, product = rpy.solve_rpy_task(np.pi / 2, 0, np.pi / 2)
     np.testing.assert_allclose(rotation, [[0, 0, 1], [1, 0, 0], [0, 1, 0]], atol=1e-12)
-    np.testing.assert_allclose(reverse, [[0, -1, 0], [0, 0, -1], [1, 0, 0]], atol=1e-12)
+    np.testing.assert_allclose(product, rotation, atol=1e-12)
     for angles in ((0, np.pi/2, 0), (np.pi/6, np.pi/2, np.pi/6)):
         rotation, _ = rpy.solve_rpy_task(*angles)
         np.testing.assert_allclose(rotation, [[0, 0, 1], [0, 1, 0], [-1, 0, 0]], atol=1e-12)
@@ -73,8 +73,7 @@ def test_module2_lifecycle_and_unfinished_exercise(task, monkeypatch):
 def test_scene_annotations_are_finite(task):
     frames, arrows, readout = module2.evaluate(task)
     if task == "rpy":
-        reported_direction = np.fromstring(readout.rsplit("v_w for ", 1)[1].split(": ", 1)[1].strip("[]"),
-                                           sep=" ")
+        reported_direction = np.fromstring(readout.split("v_w: [", 1)[1].split("]", 1)[0], sep=" ")
         np.testing.assert_allclose(reported_direction, [.719846, .604023, .342020], atol=1e-6)
     for transform, _ in frames:
         assert transform.shape == (4, 4)
@@ -82,3 +81,35 @@ def test_scene_annotations_are_finite(task):
     for start, end, _, _ in arrows:
         assert np.shape(start) == np.shape(end) == (3,)
         assert np.all(np.isfinite(end))
+
+
+@pytest.mark.solution
+def test_rpy_scene_uses_only_assignment_and_draws_reported_result(monkeypatch):
+    from unittest.mock import Mock
+    solver = Mock(wraps=rpy.solve_rpy_task)
+    monkeypatch.setattr(rpy, "solve_rpy_task", solver)
+    frames, arrows, readout = module2.evaluate("rpy")
+    solver.assert_called_once_with(np.pi/6, -np.pi/9, 2*np.pi/9)
+    assert len(frames) == len(arrows) == 1
+    frame, _ = frames[0]
+    start, end, _, _ = arrows[0]
+    np.testing.assert_allclose(end-start, [.719846, .604023, .342020], atol=1e-6)
+    np.testing.assert_allclose(frame[:3, :3] @ [1, 0, 0], end-start)
+    assert "CHECK" not in readout
+    assert readout.count("OK") == 4
+    assert "Gimbal" not in readout
+
+
+def test_rpy_feedback_rejects_wrong_rotation_even_when_both_methods_agree(monkeypatch):
+    monkeypatch.setattr(rpy, "solve_rpy_task", lambda *angles: (np.eye(3), np.eye(3)))
+    _, _, readout = module2.evaluate("rpy")
+    assert "R vs expected CHECK" in readout
+    assert "R vs product OK" in readout
+    assert "R^T R = I OK" in readout
+    assert "det(R) = 1 OK" in readout
+
+
+def test_rpy_feedback_detects_non_rotation_and_disagreement(monkeypatch):
+    monkeypatch.setattr(rpy, "solve_rpy_task", lambda *angles: (2*np.eye(3), np.eye(3)))
+    _, _, readout = module2.evaluate("rpy")
+    assert readout.count("CHECK") == 4

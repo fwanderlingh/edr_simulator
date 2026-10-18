@@ -1,4 +1,4 @@
-"""Module 2, E2.2: Hamilton quaternions in NOTES order (w, x, y, z)."""
+"""Module 2: Hamilton quaternions in NOTES order (w, x, y, z)."""
 
 import numpy as np
 
