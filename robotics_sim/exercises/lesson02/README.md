@@ -2,7 +2,7 @@
 
 Open the simulator with the usual launcher and select **Lesson 2 - Frames and
 transformations**. This directory contains the planar exercise, a standalone
-calculation for worked Example 3.5, and optional 3D extensions.
+calculation for worked Example 3.5, three Module 2 exercises, and optional 3D extensions.
 
 ## Module 1: Planar transforms
 
@@ -26,7 +26,7 @@ show `(0, 1)`. The direction arrow starts at the sensor for visualization;
 its components contain no translation.
 
 This planar activity is the core Module 1 exercise; the other Lesson 2
-activities are explicitly labelled as 3D extensions.
+core activities are listed below under Module 2; optional activities are labelled as extensions.
 
 ### Standalone Example 3.5 script
 
@@ -35,6 +35,41 @@ the calculations from Example 3.5 and checks their numerical results,
 including the distinction between a point and a direction. It does not open
 the graphical interface or replace the simulator activity; it is a bridge
 between the calculation on paper and the interactive scene.
+
+## Module 2: spatial transforms, RPY and quaternions
+
+Select the corresponding **Module 2** activity in Lesson 2. Edit its exercise
+file, save and restart the simulator. The public student version contains TODO
+stubs and displays a warning until implemented. The private version includes
+worked solutions. All three scenes are static: inspect them immediately or use
+Start, Pause and Reset normally. Results appear below the scene.
+
+- **Spatial transforms (E2.3)** — [spatial.py](spatial.py): return the composed
+  4x4 pose and transformed point. Inputs are `Rz(90 deg)`, base origin `(1,2,0)`,
+  sensor rotation `Rx(90 deg)`, sensor offset `(0.2,0,0.5)` and point `(0,1,0)`.
+  Check sensor origin `(1,2.2,0.5)` and point `(1,2.2,1.5)` metres. The composed
+  rotation is `[[0,0,1],[1,0,0],[0,1,0]]`. The mathematical base origin is on
+  the ground, distinct from the rendered robot's body centre.
+- **RPY, order and gimbal lock (E2.1)** — [rpy.py](rpy.py): return `Rz Ry Rx`
+  and `Rx Ry Rz`. For `(roll,pitch,yaw)=(90,0,90)` degrees, the x axis maps
+  to `(0,1,0)` and `(0,0,1)` respectively. The two frames are offset only to
+  make comparison easier. The readout also checks that `(0,90,0)` and
+  `(30,90,30)` degrees produce the same orientation. Inputs to the function
+  are radians; gimbal lock affects the angle representation, not the matrix.
+- **Quaternions (E2.2)** — [quaternions.py](quaternions.py): implement Hamilton
+  multiplication, conjugate/inverse, composition, sandwich rotation and the
+  sign-invariant angular distance. With `a=sqrt(2)/2`, `q=(a,0,0,a)` and
+  `v=(0,1,0)`, expect inverse `(a,0,0,-a)`, square `(0,0,0,1)`, rotated vector
+  `(-1,0,0)` and distance between `q` and `-q` equal to zero radians.
+
+These exercises use **wxyz (scalar first)**, exactly as the notes. The lower-level
+geometry/PyBullet API uses **xyzw**; convert explicitly using `q[[1,2,3,0]]`
+when passing a notes-order quaternion to `quaternion_to_matrix`. Both conventions
+are common; changing component order does not change the Hamilton product.
+As a cross-check for E2.3, use `hamilton((a,0,0,a), (a,a,0,0))`: the result
+`(0.5,0.5,0.5,0.5)` yields the same composed rotation matrix.
+
+Scene inputs and annotation construction are in [module2.py](module2.py).
 
 ## 3D extensions
 
@@ -61,7 +96,8 @@ functions are in [`../../geometry/`](../../geometry/).
 - A point uses homogeneous coordinate `1`; a direction uses `0`.
 - The 3D extension uses fixed-axis RPY:
   `R = Rz(yaw) @ Ry(pitch) @ Rx(roll)`.
-- Quaternions use `(x, y, z, w)` and are normalized on input.
+- Geometry API quaternions use `(x, y, z, w)` and are normalized on input;
+  Module 2 exercise quaternions use the notes' `(w, x, y, z)` order.
 - At RPY gimbal lock, the inverse conversion chooses roll zero.
 - `Pose` is a body-centre pose; its default z is 0.16 m above the floor.
 - Body-frame planar velocity uses the robot's current yaw.

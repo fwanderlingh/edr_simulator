@@ -42,6 +42,35 @@ def wait_for_ui(root, condition, *, timeout=5, description="UI condition"):
 
 @desktop_process
 @pytest.mark.solution
+def test_module2_menu_readouts_render_and_todo(tmp_path):
+    import tkinter as tk
+    from unittest.mock import patch
+    from robotics_sim.app import SimulatorApp
+    from robotics_sim.exercises.lesson02 import module2
+    from robotics_sim.session import TASKS
+
+    root = tk.Tk()
+    app = SimulatorApp(root, lesson="2", settings_path=tmp_path / "settings.json")
+    try:
+        for task, example in (("spatial", "E2.3"), ("rpy", "E2.1"), ("quaternions", "E2.2")):
+            app.task.set(TASKS["2"][task])
+            app.load_task()
+            root.update()
+            app._render()
+            assert app.session.task == task
+            assert example in app.values.get()
+            assert app.canvas.find_withtag("scene")
+            with patch.object(module2, "evaluate", side_effect=NotImplementedError):
+                app._update_status()
+                app._render()
+                assert "not implemented" in app.values.get()
+                assert app.values_label.cget("style") == "NotImplemented.TLabel"
+    finally:
+        app.close()
+
+
+@desktop_process
+@pytest.mark.solution
 def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
     import tkinter as tk
     from robotics_sim.app import SimulatorApp, enable_high_dpi

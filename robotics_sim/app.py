@@ -11,6 +11,7 @@ import numpy as np
 from .exercises.lesson02.frames import point_in_world
 from .exercises.lesson02 import activity as frames_activity
 from .exercises.lesson02.planar import solve_planar_task
+from .exercises.lesson02 import module2
 from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS
 from .sim.camera import Camera
 from .sim.scene_renderer import SceneRenderer
@@ -262,8 +263,10 @@ class SimulatorApp:
         self.canvas.bind("<Button-5>", lambda event: self._zoom(-1))
         ttk.Label(panel, text="Drag to orbit  |  Shift + drag to pan  |  Scroll to zoom  |  Axes: x red, y green, z blue").grid(row=5, column=0, sticky="w", pady=(6, 0))
         ttk.Style(panel).configure("NotImplemented.TLabel", background="#fff59d", foreground="#000000")
-        self.values_label = ttk.Label(panel, textvariable=self.values, font=("TkFixedFont", 11))
+        self.values_label = ttk.Label(panel, textvariable=self.values, font=("TkFixedFont", 11), wraplength=980)
         self.values_label.grid(row=6, column=0, sticky="w", pady=6)
+        panel.bind("<Configure>", lambda event:
+                   self.values_label.configure(wraplength=max(300, event.width - 32)), add="+")
         self.status_label = ttk.Label(panel, textvariable=self.status, wraplength=1000)
         self.status_label.grid(row=7, column=0, sticky="ew")
         for variable, label in ((self.values, self.values_label), (self.status, self.status_label)):
@@ -315,7 +318,9 @@ class SimulatorApp:
         else:
             self.sensor_controls.grid_remove()
         if self.lesson_id == "2":
-            self.camera.target = (2, 1, 0.2) if task == "planar" else (0.25, 0, 0.2)
+            self.camera.target = ((2, 1, 0.2) if task == "planar" else
+                                  (1, 2, 0.7) if task == "spatial" else
+                                  (0.6, 0, 0.8) if task in module2.TASKS else (0.25, 0, 0.2))
         else:
             self.camera.target = (0.8, 0.7, 0.1)
         self._camera_home_target = self.camera.target
@@ -379,9 +384,19 @@ class SimulatorApp:
         except NotImplementedError:
             return None
 
+    def _module2_output(self):
+        try:
+            return module2.evaluate(self.session.task)
+        except NotImplementedError:
+            return None
+
     def _update_status(self):
         pose = self.session.robot.pose()
         self.values.set(f"Time: {self.session.sim.time:.2f} s    x: {pose.x:.3f} m    y: {pose.y:.3f} m    yaw: {pose.yaw:.3f} rad")
+        if self.session.task in module2.TASKS:
+            output = self._module2_output()
+            self.values.set(self.values.get() + "\n" + (output[2] if output else
+                "Module 2 not implemented yet: complete the exercise file shown above."))
         if self.session.task == "planar":
             output = self._planar_output()
             if output is None:
@@ -642,6 +657,15 @@ class SimulatorApp:
                     self._label(point_world, "Sensor point", offset=(12, 20))
                     self._label(world_from_sensor[:3, 3] + np.asarray(direction_world),
                                 "Direction (no translation)", offset=(12, -15))
+            elif self.session.task in module2.TASKS:
+                output = self._module2_output()
+                if output is not None:
+                    frames, arrows, _ = output
+                    for transform, name in frames:
+                        self._frame(transform, name, scale=0.4, offset=(12, -40))
+                    for start, end, name, color in arrows:
+                        self._line(start, end, color, arrow=True)
+                        self._label(end, name, offset=(12, 20))
             elif self.session.lesson == "2":
                 sensor_frame = frames_activity.ROBOT_FROM_SENSOR
                 world_sensor = robot_frame @ sensor_frame

@@ -17,6 +17,9 @@ LESSONS = {"1": "Lesson 1 - System overview", "2": "Lesson 2 - Frames and transf
 TASKS = {
     "1": {"straight": "Preview: straight-line motion", "circle": "Preview: circular motion", "square": "Preview: square motion"},
     "2": {"planar": "Module 1: Planar transforms",
+          "spatial": "Module 2: Spatial transforms",
+          "rpy": "Module 2: RPY, order and gimbal lock",
+          "quaternions": "Module 2: Quaternions ",
           "frames": "Extension: Rotating 3D frames",
           "static": "Extension: Fixed 3D transform"},
     "3": {"drive_line": "Equal wheel speeds: straight line",
@@ -28,6 +31,9 @@ TASKS = {
           "sensor_imu": "IMU during changing motion"},
 }
 DESCRIPTIONS = {
+    "spatial": "Compose T_world_base and T_base_sensor, then transform P_sensor=(0,1,0). Base: Rz(90 deg), (1,2,0) m; sensor: Rx(90 deg), (0.2,0,0.5) m. Expected sensor origin (1,2.2,0.5), point (1,2.2,1.5) m. Edit solve_spatial_task. The base frame is at ground level as in the notes; the robot body centre is above it.",
+    "rpy": "roll=90 deg, pitch=0, yaw=90 deg. Build R=Rz Ry Rx and compare Rx Ry Rz: the x axis maps to y versus z. Also compare (0,90,0) and (30,90,30) degrees at gimbal lock. Edit solve_rpy_task; inputs are radians. Frames are drawn side by side for comparison; their offsets are only visual.",
+    "quaternions": "q=(sqrt(2)/2,0,0,sqrt(2)/2) in wxyz order, v=(0,1,0). Compute inverse, q*q, q*(0,v)*q_inverse and distance(q,-q). Expected rotated vector (-1,0,0), distance 0 rad. Edit solve_quaternion_task and hamilton. The exercise uses scalar-first quaternions, exactly as in the notes.",
     "square": "A first look at the world, robot, commands, and measured state. Watch a scripted square motion; later lessons will build sensing, estimation, planning, and feedback control.",
     "straight": "Explore the simulator with a scripted straight-line motion. Observe the robot's pose and simulation time as a preview of the system we will develop.",
     "circle": "Explore a scripted circular motion and the robot's changing orientation. This is a system preview; feedback control will be introduced in a later lesson.",
@@ -46,6 +52,9 @@ DESCRIPTIONS = {
 
 # Paths are relative to the simulator folder; previews need no implementation.
 ACTIVITY_FILES = {
+    "spatial": ("Edit solve_spatial_task; save and restart.", "robotics_sim/exercises/lesson02/spatial.py"),
+    "rpy": ("Edit solve_rpy_task; save and restart.", "robotics_sim/exercises/lesson02/rpy.py"),
+    "quaternions": ("Edit solve_quaternion_task and hamilton (wxyz); save and restart.", "robotics_sim/exercises/lesson02/quaternions.py"),
     "straight": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/straight.py"),
     "circle": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/circle.py"),
     "square": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/square.py"),

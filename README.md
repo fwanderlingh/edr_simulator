@@ -57,6 +57,9 @@ changes on the next launch. Until you complete an exercise, the app shows
 | Lesson | File | Complete |
 |---|---|---|
 | 2 | `robotics_sim/exercises/lesson02/planar.py` | `solve_planar_task` (Module 1) |
+| 2 | `robotics_sim/exercises/lesson02/spatial.py` | `solve_spatial_task` (Module 2, E2.3) |
+| 2 | `robotics_sim/exercises/lesson02/rpy.py` | `solve_rpy_task` (Module 2, E2.1) |
+| 2 | `robotics_sim/exercises/lesson02/quaternions.py` | `hamilton`, `solve_quaternion_task` (Module 2, E2.2; wxyz) |
 | 2 | `robotics_sim/exercises/lesson02/frames.py` | `point_in_world` (3D extension) |
 | 3 | `robotics_sim/exercises/lesson03/kinematics.py` | `forward`, `inverse` (select **student**) |
 | 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |
@@ -192,8 +195,9 @@ the scripted motion previews and the optional velocity-schedule extension.
 ### Lesson 2: frames and transformations
 
 [Lesson 2 exercise details](robotics_sim/exercises/lesson02/README.md) cover
-the planar transformation activity, the standalone Example 3.5 script, and
-the optional 3D extensions.
+the planar transformation activity, the standalone Example 3.5 script,
+Module 2 exercises on spatial transforms (E2.3), RPY (E2.1), and quaternions
+(E2.2), and the optional 3D extensions.
 
 ### Lesson 3: mobile base kinematics
 

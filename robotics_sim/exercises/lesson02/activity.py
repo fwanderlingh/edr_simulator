@@ -28,6 +28,8 @@ def setup(world, *, task):
     """Declare the scene and spawn the robot once on load or Reset."""
     world.add_box(Pose(x=1, y=1, z=0.3), size=(0.6, 0.6, 0.6))
     pose = Pose()
+    if task == "spatial":
+        pose = Pose(x=1, y=2, yaw=math.pi / 2)
     if task == "planar":
         transform = PLANAR_WORLD_FROM_ROBOT
         pose = Pose(x=transform[0, 2], y=transform[1, 2],
@@ -37,7 +39,7 @@ def setup(world, *, task):
 
 
 def update(robot, time, dt, *, task):
-    """Only the rotating-frames example moves; the other two stay fixed."""
+    """Only the rotating-frames example moves; other activities stay fixed."""
     robot.set_velocity(omega=0.3 if task == "frames" else 0.0)
 
 
