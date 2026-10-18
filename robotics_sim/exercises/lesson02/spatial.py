@@ -1,4 +1,4 @@
-"""Module 2, E2.3: compose poses and transform a sensor observation."""
+"""Module 2: compose poses and transform a sensor observation."""
 
 import numpy as np
 

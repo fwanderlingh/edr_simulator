@@ -44,19 +44,19 @@ stubs and displays a warning until implemented. The private version includes
 worked solutions. All three scenes are static: inspect them immediately or use
 Start, Pause and Reset normally. Results appear below the scene.
 
-- **Spatial transforms (E2.3)** — [spatial.py](spatial.py): return the composed
+- **Spatial transforms** — [spatial.py](spatial.py): return the composed
   4x4 pose and transformed point. Inputs are `Rz(90 deg)`, base origin `(1,2,0)`,
   sensor rotation `Rx(90 deg)`, sensor offset `(0.2,0,0.5)` and point `(0,1,0)`.
   Check sensor origin `(1,2.2,0.5)` and point `(1,2.2,1.5)` metres. The composed
   rotation is `[[0,0,1],[1,0,0],[0,1,0]]`. The mathematical base origin is on
   the ground, distinct from the rendered robot's body centre.
-- **RPY, order and gimbal lock (E2.1)** — [rpy.py](rpy.py): return `Rz Ry Rx`
+- **RPY, order and gimbal lock** — [rpy.py](rpy.py): return `Rz Ry Rx`
   and `Rx Ry Rz`. For `(roll,pitch,yaw)=(90,0,90)` degrees, the x axis maps
   to `(0,1,0)` and `(0,0,1)` respectively. The two frames are offset only to
   make comparison easier. The readout also checks that `(0,90,0)` and
   `(30,90,30)` degrees produce the same orientation. Inputs to the function
   are radians; gimbal lock affects the angle representation, not the matrix.
-- **Quaternions (E2.2)** — [quaternions.py](quaternions.py): implement Hamilton
+- **Quaternions** — [quaternions.py](quaternions.py): implement Hamilton
   multiplication, conjugate/inverse, composition, sandwich rotation and the
   sign-invariant angular distance. With `a=sqrt(2)/2`, `q=(a,0,0,a)` and
   `v=(0,1,0)`, expect inverse `(a,0,0,-a)`, square `(0,0,0,1)`, rotated vector
@@ -66,7 +66,7 @@ These exercises use **wxyz (scalar first)**, exactly as the notes. The lower-lev
 geometry/PyBullet API uses **xyzw**; convert explicitly using `q[[1,2,3,0]]`
 when passing a notes-order quaternion to `quaternion_to_matrix`. Both conventions
 are common; changing component order does not change the Hamilton product.
-As a cross-check for E2.3, use `hamilton((a,0,0,a), (a,a,0,0))`: the result
+As a cross-check, use `hamilton((a,0,0,a), (a,a,0,0))`: the result
 `(0.5,0.5,0.5,0.5)` yields the same composed rotation matrix.
 
 Scene inputs and annotation construction are in [module2.py](module2.py).

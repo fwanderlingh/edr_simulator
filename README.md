@@ -57,9 +57,9 @@ changes on the next launch. Until you complete an exercise, the app shows
 | Lesson | File | Complete |
 |---|---|---|
 | 2 | `robotics_sim/exercises/lesson02/planar.py` | `solve_planar_task` (Module 1) |
-| 2 | `robotics_sim/exercises/lesson02/spatial.py` | `solve_spatial_task` (Module 2, E2.3) |
-| 2 | `robotics_sim/exercises/lesson02/rpy.py` | `solve_rpy_task` (Module 2, E2.1) |
-| 2 | `robotics_sim/exercises/lesson02/quaternions.py` | `hamilton`, `solve_quaternion_task` (Module 2, E2.2; wxyz) |
+| 2 | `robotics_sim/exercises/lesson02/spatial.py` | `solve_spatial_task` (Module 2) |
+| 2 | `robotics_sim/exercises/lesson02/rpy.py` | `solve_rpy_task` (Module 2) |
+| 2 | `robotics_sim/exercises/lesson02/quaternions.py` | `hamilton`, `solve_quaternion_task` (Module 2; wxyz) |
 | 2 | `robotics_sim/exercises/lesson02/frames.py` | `point_in_world` (3D extension) |
 | 3 | `robotics_sim/exercises/lesson03/kinematics.py` | `forward`, `inverse` (select **student**) |
 | 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |

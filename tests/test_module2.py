@@ -1,4 +1,4 @@
-"""Independent numerical checks against the notes' worked E2.1--E2.3."""
+"""Independent numerical checks against the notes."""
 
 import numpy as np
 import pytest
