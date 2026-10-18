@@ -54,8 +54,11 @@ Start, Pause and Reset normally. Results appear below the scene.
   and `Rx Ry Rz`. For `(roll,pitch,yaw)=(90,0,90)` degrees, the x axis maps
   to `(0,1,0)` and `(0,0,1)` respectively. The two frames are offset only to
   make comparison easier. The readout also checks that `(0,90,0)` and
-  `(30,90,30)` degrees produce the same orientation. Inputs to the function
-  are radians; gimbal lock affects the angle representation, not the matrix.
+  `(30,90,30)` degrees produce the same orientation. It also reports
+  `v_w = R v_s` for `v_s=(1,0,0)` and
+  `(roll,pitch,yaw)=(pi/6,-pi/9,2pi/9)`, expected to be approximately
+  `(0.719846,0.604023,0.342020)`. Inputs to the function are radians;
+  gimbal lock affects the angle representation, not the matrix.
 - **Quaternions** — [quaternions.py](quaternions.py): implement Hamilton
   multiplication, conjugate/inverse, composition, sandwich rotation and the
   sign-invariant angular distance. With `a=sqrt(2)/2`, `q=(a,0,0,a)` and

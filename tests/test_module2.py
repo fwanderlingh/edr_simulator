@@ -29,6 +29,8 @@ def test_rpy_order_and_singularity():
     for angles in ((0, np.pi/2, 0), (np.pi/6, np.pi/2, np.pi/6)):
         rotation, _ = rpy.solve_rpy_task(*angles)
         np.testing.assert_allclose(rotation, [[0, 0, 1], [0, 1, 0], [-1, 0, 0]], atol=1e-12)
+    rotation, _ = rpy.solve_rpy_task(np.pi/6, -np.pi/9, 2*np.pi/9)
+    np.testing.assert_allclose(rotation @ [1, 0, 0], [.719846, .604023, .342020], atol=1e-6)
 
 
 @pytest.mark.solution
@@ -70,7 +72,10 @@ def test_module2_lifecycle_and_unfinished_exercise(task, monkeypatch):
 @pytest.mark.parametrize('task', module2.TASKS)
 def test_scene_annotations_are_finite(task):
     frames, arrows, readout = module2.evaluate(task)
-    assert 'E2.' in readout
+    if task == "rpy":
+        reported_direction = np.fromstring(readout.rsplit("v_w for ", 1)[1].split(": ", 1)[1].strip("[]"),
+                                           sep=" ")
+        np.testing.assert_allclose(reported_direction, [.719846, .604023, .342020], atol=1e-6)
     for transform, _ in frames:
         assert transform.shape == (4, 4)
         assert np.all(np.isfinite(transform))

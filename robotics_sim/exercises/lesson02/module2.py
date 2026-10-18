@@ -31,13 +31,17 @@ def evaluate(task):
         rotation, reversed_order = rpy.solve_rpy_task(np.pi / 2, 0, np.pi / 2)
         lock_a, _ = rpy.solve_rpy_task(0, np.pi / 2, 0)
         lock_b, _ = rpy.solve_rpy_task(np.pi / 6, np.pi / 2, np.pi / 6)
+        custom_rotation, _ = rpy.solve_rpy_task(np.pi / 6, -np.pi / 9, 2 * np.pi / 9)
+        direction_in_world = custom_rotation @ np.array([1., 0., 0.])
         origin, other = np.array([0, 0, 0.8]), np.array([1.5, 0, 0.8])
         return ([(homogeneous(rotation, origin), "Rz Ry Rx"),
                  (homogeneous(reversed_order, other), "Rx Ry Rz")],
                 [(origin, origin + rotation[:, 0], "R i", "#773baa"),
                  (other, other + reversed_order[:, 0], "Reverse i", "#1976a5")],
                 f"E2.1 | R i: {fmt(rotation[:, 0])} | Reverse i: {fmt(reversed_order[:, 0])}"
-                f" | Gimbal lock: same R = {np.allclose(lock_a, lock_b)}")
+                f" | Gimbal lock: same R = {np.allclose(lock_a, lock_b)}"
+                f" | v_w for (pi/6,-pi/9,2pi/9): "
+                f"{np.array2string(direction_in_world, precision=6, suppress_small=True)}")
     if task == "quaternions":
         a = np.sqrt(0.5)
         q, vector = np.array([a, 0, 0, a]), np.array([0, 1, 0])
