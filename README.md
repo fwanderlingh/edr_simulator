@@ -1,6 +1,6 @@
 # Robotics teaching simulator
 
-A Python laboratory for the course, currently covering **lessons 1–4**:
+A Python laboratory for the course "Elementi di Robotica - Mod. 1" (Università di Genova), currently covering **lessons 1–4**:
 simulation basics, coordinate frames, mobile-base kinematics, and sensors.
 Estimation, control, planning, and manipulation are planned for later lessons.
 
