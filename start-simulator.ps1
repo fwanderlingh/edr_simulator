@@ -29,12 +29,11 @@ try {
     if (-not (Test-Path -LiteralPath $mambaExecutable)) {
         Write-Host 'First-time setup: downloading the local environment manager.'
         Write-Host 'An internet connection is required for setup. Nothing is installed globally.'
-        New-Item -ItemType Directory -Force -Path $toolsDirectory | Out-Null
-        $archive = Join-Path $toolsDirectory 'micromamba.tar.bz2'
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $mambaExecutable) | Out-Null
+        $partialDownload = "$mambaExecutable.download"
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest -UseBasicParsing -Uri 'https://micro.mamba.pm/api/micromamba/win-64/latest' -OutFile $archive
-        & tar.exe -xjf $archive -C $toolsDirectory Library/bin/micromamba.exe
-        if ($LASTEXITCODE -ne 0) { throw 'Could not extract the runtime manager. Windows tar.exe is required.' }
+        Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/mamba-org/micromamba-releases/releases/latest/download/micromamba-win-64.exe' -OutFile $partialDownload
+        Move-Item -LiteralPath $partialDownload -Destination $mambaExecutable -Force
     }
 
     $runtimeReady = $false
