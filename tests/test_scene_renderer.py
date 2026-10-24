@@ -41,3 +41,29 @@ def test_clipping_handles_a_face_crossing_near_plane():
     assert len(clipped) == 4
     assert np.all(clipped[:, 2] >= -clipped[:, 3])
     assert np.isfinite(clipped).all()
+
+
+def test_contact_shadows_follow_physics_and_stay_below_guides():
+    session = ActivitySession(lesson="1", task="square")
+    try:
+        camera = Camera()
+        camera.prepare(1000, 700)
+        scene = BoxScene(session.world)
+        guide = (([(0, 0), (2, 0)], "#b5660b"),)
+        first = scene.faces(camera, guide)
+        static_shadow = scene._shadow_cache[1]
+        robot_shadow = scene._shadow_cache[2]
+        shadow_positions = [i for i, face in enumerate(first) if face.key[0] == -3]
+        guide_positions = [i for i, face in enumerate(first) if face.key[0] == -2]
+        assert shadow_positions
+        assert max(shadow_positions) < min(guide_positions)
+        assert all(face.outline for face in first if face.key[0] > 0)
+        session.start()
+        for _ in range(20):
+            session.step()
+        scene.faces(camera, guide)
+        assert scene._shadow_cache[1] is static_shadow
+        assert scene._shadow_cache[2] is not robot_shadow
+        assert scene._shadow_cache[2][0].coordinates != robot_shadow[0].coordinates
+    finally:
+        session.close()

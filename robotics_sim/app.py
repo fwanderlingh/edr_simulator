@@ -15,8 +15,11 @@ from .exercises.lesson02 import module2
 from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS
 from .sim.camera import Camera
 from .sim.scene_renderer import SceneRenderer
+from .exercises.lesson04.gui import SENSOR_EXERCISES
 from .preferences import DEFAULT_PATH, load_preferences, save_preferences
+from .experiment_data import capture_experiment
 from .label_image import solid_rgba_png
+from .ui_theme import configure_theme, ACCENT, SURFACE, VIEWPORT
 
 
 class SimulatorApp:
@@ -33,6 +36,12 @@ class SimulatorApp:
         duration = duration if duration is not None else saved.get("duration", 16)
         self.dt, self.csv_path = dt, csv_path
         self.session = None
+        self.last_experiment = None
+        self._recorded_experiment_key = None
+        self._experiment_generation = 0
+        self._plot_window = None
+        self._plot_canvas = None
+        self._plot_figure = None
         self.camera = Camera()
         self.closed = False
         self._accumulator = 0.0
@@ -49,8 +58,13 @@ class SimulatorApp:
                                      if saved.get("kinematics") in ("reference", "student") else "reference")
         self.sensor_mode = tk.StringVar(value=saved.get("sensor_mode", "ideal")
                                        if saved.get("sensor_mode") in ("ideal", "noisy", "student") else "ideal")
+        self.exercise_model = tk.StringVar(value=saved.get("exercise_model", "reference")
+            if saved.get("exercise_model") in ("reference", "student") else "reference")
+        self.goal_x = tk.StringVar(value="1")
+        self.goal_y = tk.StringVar(value="1")
+        self.goal_yaw = tk.StringVar(value="0")
         self.show_frames = tk.BooleanVar(value=saved.get("show_frames", True))
-        self.label_size = int(saved.get("label_size", 12))
+        self.label_size = int(saved.get("label_size", 10))
         self.label_color = self._valid_color(saved.get("label_color"), "#172d3d")
         self.label_background = saved.get("label_background", True)
         self.label_background_color = self._valid_color(saved.get("label_background_color"), "#ffffff")
@@ -68,6 +82,8 @@ class SimulatorApp:
         root.geometry(f"{width}x{height}+{x}+{y}")
         root.minsize(900, 620)
         root.protocol("WM_DELETE_WINDOW", self.close)
+        self.style = configure_theme(root)
+        self.time_readout = tk.StringVar(value="0.00 / 0.00 s")
         self._build_menu()
         self._build_widgets()
         self.select_lesson()
@@ -141,7 +157,7 @@ class SimulatorApp:
         data = {**self._normal_window, "maximized": self._is_maximized(),
                 "lesson": self.session.lesson, "task": self.session.task, "duration": duration,
                 "kinematics": self.kinematics.get(),
-                "sensor_mode": self.sensor_mode.get(),
+                "sensor_mode": self.sensor_mode.get(), "exercise_model": self.exercise_model.get(),
                 "show_frames": self.show_frames.get(), "label_size": self.label_size,
                 "label_color": self.label_color, "label_background": self.label_background,
                 "label_background_color": self.label_background_color,
@@ -195,65 +211,63 @@ class SimulatorApp:
         self.root.configure(menu=menu)
 
     def _build_widgets(self):
-        panel = ttk.Frame(self.root, padding=16)
+        panel = ttk.Frame(self.root, padding=(16, 12))
         panel.pack(fill="both", expand=True)
         panel.columnconfigure(0, weight=1)
-        panel.rowconfigure(4, weight=1)
-        ttk.Label(panel, text="Robotics Laboratory", font=("TkDefaultFont", 20, "bold")).grid(row=0, column=0, sticky="w")
-        selectors = ttk.Frame(panel)
-        selectors.grid(row=1, column=0, sticky="ew", pady=(12, 8))
-        ttk.Label(selectors, text="Lesson").grid(row=0, column=0, sticky="w")
-        ttk.Label(selectors, text="Task").grid(row=0, column=1, sticky="w", padx=12)
-        ttk.Label(selectors, text="Activity length (s)").grid(row=0, column=2, sticky="w")
-        lessons = ttk.Combobox(selectors, textvariable=self.lesson, values=list(LESSONS.values()), state="readonly", width=34)
-        lessons.grid(row=1, column=0, sticky="ew")
-        lessons.bind("<<ComboboxSelected>>", self.select_lesson)
-        self.tasks = ttk.Combobox(selectors, textvariable=self.task, state="readonly", width=32)
+        panel.rowconfigure(2, weight=1)
+
+        header = ttk.Frame(panel)
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        header.columnconfigure(1, weight=1)
+        mark = tk.Label(header, text="R", background=ACCENT, foreground=SURFACE,
+                        font=("TkDefaultFont", 20, "bold"), width=2, padx=6, pady=5)
+        mark.grid(row=0, column=0, rowspan=2, padx=(0, 12))
+        title = ttk.Label(header, text="Robotics Laboratory", style="Title.TLabel")
+        title.grid(row=0, column=1, sticky="w")
+        subtitle = ttk.Label(header, text="Observe the model. Predict the motion. Test your implementation.",
+                             style="Subtitle.TLabel")
+        subtitle.grid(row=1, column=1, sticky="w")
+        self.state_badge = ttk.Label(header, text="Ready", style="Ready.Badge.TLabel")
+        self.state_badge.grid(row=0, column=2, rowspan=2, sticky="e")
+
+        selectors = ttk.Frame(panel, style="Card.TFrame", padding=(14, 10))
+        selectors.grid(row=1, column=0, sticky="ew", pady=(0, 12))
+        selectors.columnconfigure(0, weight=2, minsize=200)
+        selectors.columnconfigure(1, weight=3, minsize=230)
+        ttk.Label(selectors, text="LESSON", style="Section.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 5))
+        ttk.Label(selectors, text="ACTIVITY", style="Section.TLabel").grid(row=0, column=1, sticky="w", padx=12, pady=(0, 5))
+        ttk.Label(selectors, text="DURATION · s", style="Section.TLabel").grid(row=0, column=2, sticky="w", pady=(0, 5))
+        self.lesson_selector = ttk.Combobox(selectors, textvariable=self.lesson,
+            values=list(LESSONS.values()), state="readonly", width=1)
+        self.lesson_selector.grid(row=1, column=0, sticky="ew")
+        self.lesson_selector.bind("<<ComboboxSelected>>", self.select_lesson)
+        self.tasks = ttk.Combobox(selectors, textvariable=self.task, state="readonly", width=1)
         self.tasks.grid(row=1, column=1, sticky="ew", padx=12)
         self.tasks.bind("<<ComboboxSelected>>", self.load_task)
-        duration_entry = ttk.Entry(selectors, textvariable=self.duration, width=12)
-        duration_entry.grid(row=1, column=2, sticky="w")
+        duration_entry = ttk.Entry(selectors, textvariable=self.duration, width=8)
+        duration_entry.grid(row=1, column=2, sticky="ew")
         duration_entry.bind("<FocusOut>", self._queue_save)
         duration_entry.bind("<Return>", self._queue_save)
-        ttk.Label(selectors, text="Lesson 3 kinematics").grid(row=0, column=3, padx=12, sticky="w")
-        self.model_selector = ttk.Combobox(selectors, textvariable=self.kinematics,
-            values=("reference", "student"), state="readonly", width=12)
-        self.model_selector.grid(row=1, column=3, padx=12, sticky="w")
-        self.model_selector.bind("<<ComboboxSelected>>", self.load_task)
-        self.sensor_controls = ttk.Frame(selectors)
-        self.sensor_controls.grid(row=2, column=0, columnspan=4, sticky="w", pady=(8, 0))
-        ttk.Label(self.sensor_controls, text="Sensor mode").pack(side="left")
-        sensor_selector = ttk.Combobox(self.sensor_controls, textvariable=self.sensor_mode,
-            values=("ideal", "noisy", "student"), state="readonly", width=12)
-        sensor_selector.pack(side="left", padx=10)
-        sensor_selector.bind("<<ComboboxSelected>>", self.load_task)
-        ttk.Label(self.sensor_controls, text="Nominal 10 Hz | Student mode replaces lidar | Mode change resets activity").pack(side="left")
-        selectors.columnconfigure(0, weight=1)
-        selectors.columnconfigure(1, weight=1)
-        description_panel = ttk.Frame(panel)
-        description_panel.grid(row=2, column=0, sticky="ew", pady=(0, 10))
-        description = ttk.Label(description_panel, textvariable=self.description, wraplength=980)
-        description.pack(anchor="w", fill="x")
-        self.edit_hint = ttk.Label(description_panel, wraplength=980)
-        self.edit_hint.pack(anchor="w", fill="x", pady=(5, 0))
-        self.edit_file = ttk.Label(description_panel, font=("TkDefaultFont", 10, "bold"), wraplength=980)
-        self.edit_file.pack(anchor="w", fill="x")
-        def resize_description(event):
-            for label in (description, self.edit_hint, self.edit_file):
-                label.configure(wraplength=max(300, event.width - 32))
-        panel.bind("<Configure>", resize_description)
-        controls = ttk.Frame(panel)
-        controls.grid(row=3, column=0, sticky="ew", pady=(0, 10))
-        self.start_button = ttk.Button(controls, text="Start", command=self.toggle_running)
-        self.start_button.pack(side="left")
-        self.step_button = ttk.Button(controls, text="Step", command=self.single_step)
-        self.step_button.pack(side="left", padx=6)
-        ttk.Button(controls, text="Reset / Apply length", command=self.load_task).pack(side="left")
-        ttk.Button(controls, text="Export CSV...", command=self.export).pack(side="left", padx=6)
-        ttk.Button(controls, text="Reset camera", command=self.reset_camera).pack(side="right")
-        ttk.Button(controls, text="Labels...", command=self.label_settings).pack(side="right", padx=6)
-        self.canvas = tk.Canvas(panel, background="#edf1f4", highlightthickness=1, highlightbackground="#bcc8d0")
-        self.canvas.grid(row=4, column=0, sticky="nsew")
+
+        workspace = ttk.Frame(panel)
+        workspace.grid(row=2, column=0, sticky="nsew", pady=(0, 12))
+        workspace.columnconfigure(0, weight=1)
+        workspace.columnconfigure(1, minsize=294)
+        workspace.rowconfigure(0, weight=1)
+        viewport = ttk.Frame(workspace, style="Card.TFrame", padding=1)
+        viewport.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        viewport.columnconfigure(0, weight=1)
+        viewport.rowconfigure(1, weight=1)
+        tools = ttk.Frame(viewport, style="Card.TFrame", padding=(12, 6))
+        tools.grid(row=0, column=0, sticky="ew")
+        ttk.Label(tools, text="SCENE", style="Section.TLabel").pack(side="left")
+        ttk.Button(tools, text="Reset camera", command=self.reset_camera, width=12).pack(side="right")
+        ttk.Button(tools, text="Labels…", command=self.label_settings, width=7).pack(side="right", padx=6)
+        ttk.Checkbutton(tools, text="Frames", variable=self.show_frames,
+                        command=self._display_settings_changed).pack(side="right", padx=(5, 10))
+        self.canvas = tk.Canvas(viewport, background=VIEWPORT, highlightthickness=0,
+                                width=450, height=260)
+        self.canvas.grid(row=1, column=0, sticky="nsew")
         self.renderer = SceneRenderer(self.canvas)
         self.canvas.bind("<Configure>", self._redraw)
         self.canvas.bind("<ButtonPress-1>", self._begin_drag)
@@ -261,18 +275,140 @@ class SimulatorApp:
         self.canvas.bind("<MouseWheel>", lambda event: self._zoom(1 if event.delta > 0 else -1))
         self.canvas.bind("<Button-4>", lambda event: self._zoom(1))
         self.canvas.bind("<Button-5>", lambda event: self._zoom(-1))
-        ttk.Label(panel, text="Drag to orbit  |  Shift + drag to pan  |  Scroll to zoom  |  Axes: x red, y green, z blue").grid(row=5, column=0, sticky="w", pady=(6, 0))
-        ttk.Style(panel).configure("NotImplemented.TLabel", background="#fff59d", foreground="#000000")
-        self.values_label = ttk.Label(panel, textvariable=self.values, font=("TkFixedFont", 11), wraplength=980)
-        self.values_label.grid(row=6, column=0, sticky="w", pady=6)
+        legend = ttk.Frame(viewport, style="Card.TFrame", padding=(10, 6))
+        legend.grid(row=2, column=0, sticky="ew")
+        ttk.Label(legend, text="Drag: orbit  ·  Shift: pan  ·  Scroll: zoom", style="Muted.TLabel").pack(side="left")
+        for text, color in (("z", "#245dcc"), ("y", "#14823e"), ("x", "#c92d35")):
+            ttk.Label(legend, text=text, foreground=color, font=("TkDefaultFont", 9, "bold")).pack(side="right", padx=3)
+
+        inspector = ttk.Frame(workspace, style="Card.TFrame")
+        inspector.grid(row=0, column=1, sticky="nsew")
+        inspector.columnconfigure(0, weight=1)
+        inspector.rowconfigure(0, weight=1)
+        self.inspector_canvas = tk.Canvas(inspector, background=SURFACE,
+                                         highlightthickness=0, width=278)
+        self.inspector_canvas.grid(row=0, column=0, sticky="nsew")
+        scroll = ttk.Scrollbar(inspector, orient="vertical", command=self.inspector_canvas.yview)
+        scroll.grid(row=0, column=1, sticky="ns")
+        self.inspector_canvas.configure(yscrollcommand=scroll.set)
+        details = ttk.Frame(self.inspector_canvas, style="Card.TFrame", padding=(14, 12))
+        details.columnconfigure(0, weight=1)
+        window = self.inspector_canvas.create_window(0, 0, window=details, anchor="nw")
+        details.bind("<Configure>", lambda event:
+                     self.inspector_canvas.configure(scrollregion=self.inspector_canvas.bbox("all")))
+        self.inspector_canvas.bind("<Configure>", lambda event:
+                                  self.inspector_canvas.itemconfigure(window, width=event.width))
+        self.model_controls = ttk.Frame(details, style="Card.TFrame")
+        self.model_controls.grid(row=0, column=0, sticky="ew", pady=(0, 14))
+        self.model_heading = ttk.Label(self.model_controls, text="KINEMATICS MODEL", style="Section.TLabel")
+        self.model_heading.pack(anchor="w", pady=(0, 6))
+        self.model_selector = ttk.Combobox(self.model_controls, textvariable=self.kinematics,
+            values=("reference", "student"), state="readonly", width=16)
+        self.model_selector.pack(fill="x")
+        self.model_selector.bind("<<ComboboxSelected>>", self.load_task)
+        self.sensor_controls = ttk.Frame(details, style="Card.TFrame")
+        self.sensor_controls.grid(row=1, column=0, sticky="ew", pady=(0, 14))
+        ttk.Label(self.sensor_controls, text="SENSOR MODE", style="Section.TLabel").pack(anchor="w", pady=(0, 6))
+        self.sensor_selector = ttk.Combobox(self.sensor_controls, textvariable=self.sensor_mode,
+            values=("ideal", "noisy", "student"), state="readonly", width=16)
+        self.sensor_selector.pack(fill="x")
+        self.sensor_selector.bind("<<ComboboxSelected>>", self.load_task)
+        ttk.Label(self.sensor_controls, text="10 Hz nominal · A mode change resets the activity.",
+                  style="Muted.TLabel", wraplength=245).pack(anchor="w", pady=(6, 0))
+        self.goal_controls = ttk.Frame(details, style="Card.TFrame")
+        self.goal_controls.grid(row=2, column=0, sticky="ew", pady=(0, 14))
+        self.goal_controls.columnconfigure((0, 1), weight=1)
+        ttk.Label(self.goal_controls, text="TARGET", style="Section.TLabel").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+        for column, name, variable in ((0, "x · m", self.goal_x), (1, "y · m", self.goal_y)):
+            ttk.Label(self.goal_controls, text=name, style="Muted.TLabel").grid(row=1, column=column, sticky="w")
+            ttk.Entry(self.goal_controls, textvariable=variable, width=8).grid(row=2, column=column, sticky="ew", padx=(0, 5))
+        self.heading_controls = ttk.Frame(self.goal_controls, style="Card.TFrame")
+        self.heading_controls.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        ttk.Label(self.heading_controls, text="Heading · degrees", style="Muted.TLabel").pack(side="left")
+        ttk.Entry(self.heading_controls, textvariable=self.goal_yaw, width=7).pack(side="right")
+        ttk.Button(self.goal_controls, text="Apply / reset", command=self.load_task).grid(row=4, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        ttk.Label(details, text="LIVE MEASUREMENTS", style="Section.TLabel").grid(row=3, column=0, sticky="w", pady=(0, 8))
+        self.values_label = ttk.Label(details, textvariable=self.values, style="Readout.TLabel",
+                                      wraplength=246, justify="left")
+        self.values_label.grid(row=4, column=0, sticky="ew")
+        ttk.Separator(details).grid(row=5, column=0, sticky="ew", pady=16)
+        ttk.Label(details, text="THE EXPERIMENT", style="Section.TLabel").grid(row=6, column=0, sticky="w", pady=(0, 8))
+        description = ttk.Label(details, textvariable=self.description, wraplength=246, justify="left")
+        description.grid(row=7, column=0, sticky="ew")
+        ttk.Separator(details).grid(row=8, column=0, sticky="ew", pady=16)
+        ttk.Label(details, text="YOUR IMPLEMENTATION", style="Section.TLabel").grid(row=9, column=0, sticky="w", pady=(0, 8))
+        self.edit_hint = ttk.Label(details, wraplength=246, justify="left", style="Muted.TLabel")
+        self.edit_hint.grid(row=10, column=0, sticky="ew", pady=(0, 8))
+        self.edit_file = ttk.Label(details, wraplength=246, justify="left", style="Code.TLabel")
+        self.edit_file.grid(row=11, column=0, sticky="ew")
+
+        def scroll_details(event):
+            direction = -1 if getattr(event, "num", None) == 4 else 1
+            if getattr(event, "delta", 0):
+                direction = -1 if event.delta > 0 else 1
+            self.inspector_canvas.yview_scroll(direction * 3, "units")
+            return "break"
+        for widget in (self.inspector_canvas, details, self.values_label, description, self.edit_hint, self.edit_file):
+            widget.bind("<MouseWheel>", scroll_details)
+            widget.bind("<Button-4>", scroll_details)
+            widget.bind("<Button-5>", scroll_details)
+
+        transport = ttk.Frame(panel, style="Card.TFrame", padding=(12, 10))
+        transport.grid(row=3, column=0, sticky="ew")
+        self.start_button = ttk.Button(transport, text="Start", command=self.toggle_running,
+                                       style="Primary.TButton", width=9)
+        self.start_button.pack(side="left")
+        self.step_button = ttk.Button(transport, text="Step", command=self.single_step, width=6)
+        self.step_button.pack(side="left", padx=6)
+        ttk.Button(transport, text="Reset / Apply length", command=self.load_task).pack(side="left")
+        analysis = ttk.Frame(transport, style="Card.TFrame")
+        analysis.pack(side="right")
+        ttk.Button(analysis, text="Export CSV…", command=self.export).pack(side="left")
+        self.plot_button = ttk.Button(analysis, text="Plot results…", command=self.plot_results,
+                                       state="disabled")
+        self.plot_button.pack(side="left", padx=(6, 0))
+        timeline = ttk.Frame(transport, style="Card.TFrame")
+        timeline.pack(side="right", padx=(12, 20))
+        ttk.Label(timeline, textvariable=self.time_readout, style="Muted.TLabel").pack(anchor="e", pady=(0, 4))
+        self.progress = ttk.Progressbar(timeline, orient="horizontal", length=115, maximum=100)
+        self.progress.pack(fill="x")
+        self.status_label = ttk.Label(panel, textvariable=self.status, style="Footer.TLabel", wraplength=1000)
+        self.status_label.grid(row=4, column=0, sticky="ew", pady=(8, 0))
         panel.bind("<Configure>", lambda event:
-                   self.values_label.configure(wraplength=max(300, event.width - 32)), add="+")
-        self.status_label = ttk.Label(panel, textvariable=self.status, wraplength=1000)
-        self.status_label.grid(row=7, column=0, sticky="ew")
-        for variable, label in ((self.values, self.values_label), (self.status, self.status_label)):
-            def highlight_notice(*_, variable=variable, label=label):
+                   self.status_label.configure(wraplength=max(300, event.width - 32)))
+        self._compact_layout = None
+        title_font = self.root.tk.splitlist(self.style.lookup("Title.TLabel", "font"))[0]
+
+        def adapt_layout(event):
+            if event.widget is not self.root:
+                return
+            compact = event.height < 700
+            if compact == self._compact_layout:
+                return
+            self._compact_layout = compact
+            panel.configure(padding=(12, 8) if compact else (16, 12))
+            title.configure(font=(title_font, 16 if compact else 21, "bold"))
+            header.grid_configure(pady=(0, 8 if compact else 12))
+            selectors.configure(padding=(12, 6) if compact else (14, 10))
+            selectors.grid_configure(pady=(0, 8 if compact else 12))
+            workspace.grid_configure(pady=(0, 8 if compact else 12))
+            tools.configure(padding=(8, 4) if compact else (12, 6))
+            transport.configure(padding=(12, 8) if compact else (12, 10))
+            if compact:
+                subtitle.grid_remove()
+                legend.grid_remove()
+            else:
+                subtitle.grid()
+                legend.grid()
+        self.root.bind("<Configure>", adapt_layout, add="+")
+
+        for variable, label, default_style in (
+            (self.values, self.values_label, "Readout.TLabel"),
+            (self.status, self.status_label, "Footer.TLabel"),
+        ):
+            def highlight_notice(*_, variable=variable, label=label, default_style=default_style):
                 label.configure(style="NotImplemented.TLabel"
-                                if "not implemented" in variable.get().lower() else "TLabel")
+                                if "not implemented" in variable.get().lower() else default_style)
             variable.trace_add("write", highlight_notice)
             highlight_notice()
 
@@ -296,9 +432,22 @@ class SimulatorApp:
             messagebox.showerror("Activity length", "Enter a positive number of seconds.", parent=self.root)
             return
         task = next(key for key, value in TASKS[self.lesson_id].items() if value == self.task.get())
+        changed_task = (self.session is None or self.session.lesson != self.lesson_id or self.session.task != task)
+        editable_target = task in ("drive_goal", "drive_goal_behind", "sensor_avoidance") or self.lesson_id == "5"
+        if changed_task and editable_target:
+            default = ((1, 0.5, 90) if task == "drive_goal" else
+                       (-1, 0, 0) if task == "drive_goal_behind" else
+                       (3, 0, 0) if task == "sensor_avoidance" else (1, 1, 0))
+            for variable, value in zip((self.goal_x, self.goal_y, self.goal_yaw), default):
+                variable.set(str(value))
         try:
+            goal = (float(self.goal_x.get()), float(self.goal_y.get()),
+                    math.radians(float(self.goal_yaw.get()))) if editable_target else None
+            if task in SENSOR_EXERCISES and self.sensor_mode.get() == "student":
+                self.sensor_mode.set("ideal")
             new_session = ActivitySession(self.lesson_id, task, duration=duration, dt=self.dt,
-                                          kinematics=self.kinematics.get(), sensor_mode=self.sensor_mode.get())
+                                          kinematics=self.kinematics.get(), sensor_mode=self.sensor_mode.get(),
+                                          exercise_model=self.exercise_model.get(), goal=goal)
         except Exception as error:
             if self.session is None:
                 raise
@@ -310,9 +459,30 @@ class SimulatorApp:
                 f"{type(error).__name__}: {error}\nCheck your exercise implementation and try again.", parent=self.root)
             return
         if self.session:
+            self._remember_experiment()
             self.session.close()
         self.session = new_session
-        self.model_selector.configure(state="readonly" if self.lesson_id == "3" else "disabled")
+        self._experiment_generation += 1
+        self.model_selector.configure(state="readonly", textvariable=(self.kinematics
+                                      if self.lesson_id == "3" else self.exercise_model))
+        if self.lesson_id in ("3", "5") or task in SENSOR_EXERCISES:
+            self.model_controls.grid()
+            self.model_heading.configure(text=("CONTROLLER MODEL" if self.session.controller is not None else
+                "ARM MODEL" if self.lesson_id == "5" else "SUPERVISOR MODEL" if task == "sensor_avoidance" else
+                "ESTIMATOR MODEL" if task in SENSOR_EXERCISES else "KINEMATICS MODEL"))
+        else:
+            self.model_controls.grid_remove()
+        if editable_target:
+            self.goal_controls.grid()
+        else:
+            self.goal_controls.grid_remove()
+        if task in ("drive_goal", "drive_goal_behind"):
+            self.heading_controls.grid()
+        else:
+            self.heading_controls.grid_remove()
+        self.sensor_selector.configure(values=("ideal", "noisy") if task in SENSOR_EXERCISES
+                                       else ("ideal", "noisy", "student"))
+        self.inspector_canvas.yview_moveto(0)
         if self.lesson_id == "4":
             self.sensor_controls.grid()
         else:
@@ -329,7 +499,8 @@ class SimulatorApp:
         self.edit_hint.configure(text=hint)
         files = f"File (relative to simulator/): {path}"
         if self.lesson_id != "1":
-            scene_path = f"robotics_sim/exercises/lesson{int(self.lesson_id):02d}/activity.py"
+            scene_path = f"robotics_sim/exercises/lesson{int(self.lesson_id):02d}/" + (
+                "gui.py" if self.session.laboratory is not None else "activity.py")
             if scene_path != path:
                 files += f"\nScene and robot commands: {scene_path}"
         self.edit_file.configure(text=files)
@@ -338,12 +509,14 @@ class SimulatorApp:
         self._last_tick = time.perf_counter()
         self._redraw()
         self._update_status()
+        self._update_plot_button()
 
         self._queue_save()
 
     def toggle_running(self):
         if self.session.state == "Running":
             self.session.pause()
+            self._remember_experiment()
         else:
             self.session.start()
         self._accumulator = 0
@@ -356,6 +529,9 @@ class SimulatorApp:
         self._after_steps()
 
     def _after_steps(self):
+        self._update_plot_button()
+        if self.session.state == "Completed":
+            self._remember_experiment()
         if self.session.state == "Completed" and self.csv_path:
             try:
                 self.session.export_csv(self.csv_path)
@@ -371,7 +547,13 @@ class SimulatorApp:
             self.session.step(single=single)
         except NotImplementedError as error:
             self.session.pause()
+            self.session.sim.stop()
             self._notice = f"Exercise not implemented yet: {error}"
+            return False
+        except (ValueError, TypeError, ArithmeticError, np.linalg.LinAlgError) as error:
+            self.session.pause()
+            self.session.sim.stop()
+            self._notice = f"Check your implementation: {error}"
             return False
         return True
 
@@ -392,7 +574,7 @@ class SimulatorApp:
 
     def _update_status(self):
         pose = self.session.robot.pose()
-        self.values.set(f"Time: {self.session.sim.time:.2f} s    x: {pose.x:.3f} m    y: {pose.y:.3f} m    yaw: {pose.yaw:.3f} rad")
+        self.values.set(f"x     {pose.x:8.3f} m\ny     {pose.y:8.3f} m\nyaw   {pose.yaw:8.3f} rad")
         if self.session.task in module2.TASKS:
             output = self._module2_output()
             self.values.set(self.values.get() + "\n" + (output[2] if output else
@@ -421,11 +603,27 @@ class SimulatorApp:
             self.values.set(self.values.get() +
                 f"\nSample: {sensors.time:.2f} s | Encoder L/R: {left:.4f} / {right:.4f} rad | Front: {distance}"
                 f"\nGyro z: {gyro:.3f} rad/s | Accel x/y: {ax:.3f} / {ay:.3f} m/s² | {self.session.sensor_mode}")
+        if self.session.controller is not None:
+            ctrl = self.session.controller
+            active = min(ctrl.index, len(ctrl.goals) - 1)
+            gx, gy, gt = ctrl.goals[active]
+            distance = math.hypot(gx - pose.x, gy - pose.y)
+            heading = (gt - pose.yaw + math.pi) % (2 * math.pi) - math.pi
+            self.values.set(self.values.get() + f"\nWaypoints: {ctrl.index}/{len(ctrl.goals)}\nPhase: {ctrl.phase}"
+                            f"\nGoal error: {distance:.3f} m\nHeading error: {heading:.3f} rad\nOutcome: {self.session.outcome}")
+        if self.session.laboratory is not None:
+            self.values.set(self.values.get() + "\n" + self.session.laboratory.readout)
         state = self.session.state
+        self.state_badge.configure(text=state, style=f"{state}.Badge.TLabel")
+        self.progress.configure(value=(100 if state == "Completed" and self.session.outcome != "TIMEOUT"
+                                       else min(100, 100 * self.session.sim.time / self.session.duration)))
+        self.time_readout.set(f"{self.session.sim.time:.2f} / {self.session.duration:g} s")
         text = {"Ready": "Ready - select a task and press Start.",
                 "Running": "Running - Pause to inspect the scene.",
                 "Paused": "Paused - inspect, single-step, or resume.",
                 "Completed": "Completed - the scene remains open. Reset to repeat or choose another task."}
+        if state == "Completed" and self.session.outcome is not None:
+            text[state] = f"{self.session.outcome} — the scene remains open. Reset to repeat or choose another task."
         self.status.set(self._notice or text[state])
         self.start_button.configure(text="Pause" if state == "Running" else "Resume" if state == "Paused" else "Start",
                                     state="disabled" if state == "Completed" else "normal")
@@ -581,10 +779,10 @@ class SimulatorApp:
                            for old in self._label_bounds):
                     break
             self._label_bounds.append(bounds)
-            '''Dashed line from label to point, clipped to canvas bounds.'''
+            # Quiet leaders keep the geometric vectors visually dominant.
             self.canvas.create_line(*screen, max(bounds[0], min(screen[0], bounds[2])),
                                     max(bounds[1], min(screen[1], bounds[3])),
-                                    fill="#34495e", width=3, dash=(6, 3), tags="overlay")
+                                    fill="#93a5b4", width=1, dash=(2, 3), tags="overlay")
             if self.label_background and self.label_background_transparency < 100:
                 background = self._background_item((bounds[0]-4, bounds[1]-2, bounds[2]+4, bounds[3]+2))
                 self.canvas.tag_lower(background, item)
@@ -606,15 +804,26 @@ class SimulatorApp:
             self._label_images.popitem(last=False)
         return self.canvas.create_image(bounds[0], bounds[1], image=image, anchor="nw", tags=tags)
 
-    def _line(self, start, end, color, *, arrow=False):
+    def _line(self, start, end, color, *, arrow=False, width=3, dash=None):
         a, b = self.camera.project(start), self.camera.project(end)
         if a is not None and b is not None:
-            self.canvas.create_line(*a, *b, fill=color, width=3, arrow="last" if arrow else "none", tags="overlay")
+            self.canvas.create_line(*a, *b, fill=color, width=width, dash=dash, arrow="last" if arrow else "none",
+                                    arrowshape=(9, 11, 4), capstyle="round", tags="overlay")
 
     def _frame(self, transform, name, scale=0.5, offset=(8, -10)):
         for axis, color in enumerate(("#c92d35", "#14823e", "#245dcc")):
             self._line(transform[:3, 3], transform[:3, 3] + scale * transform[:3, axis], color, arrow=True)
         self._label(transform[:3, 3], name, offset=offset)
+
+    def _draw_goal(self, position, label, color, *, heading=None, radius=0.1):
+        circle = [(position[0] + radius * math.cos(a), position[1] + radius * math.sin(a), position[2])
+                  for a in np.linspace(0, 2 * math.pi, 25)]
+        for start, end in zip(circle, circle[1:]):
+            self._line(start, end, color, width=2)
+        if heading is not None:
+            end = (position[0] + 0.35 * math.cos(heading), position[1] + 0.35 * math.sin(heading), position[2])
+            self._line(position, end, color, arrow=True, width=2)
+        self._label(position, label, offset=(12, -18))
 
     def _render(self):
         width, height = max(2, self.canvas.winfo_width()), max(2, self.canvas.winfo_height())
@@ -624,10 +833,52 @@ class SimulatorApp:
         self.renderer.draw(self.session.world, self.camera, width, height, ground_paths=ground_paths)
         self.canvas.delete("overlay")
         self._label_bounds = []
+        laboratory = self.session.laboratory
+        if self.session.controller is not None:
+            controller = self.session.controller
+            for index, (gx, gy, heading) in enumerate(controller.goals):
+                color = "#53958a" if index < controller.index else "#dd8b24" if index == controller.index else "#8b9eb1"
+                self._draw_goal((gx, gy, 0.025), f"Goal {index + 1}", color, heading=heading)
+        if laboratory is not None and self.session.lesson == "4":
+            if laboratory.has_goal:
+                self._draw_goal((*laboratory.target, 0.025), "Goal", "#dd8b24")
+            else:
+                for key, color in (("encoder", "#c88925"), ("imu", "#8558ae")):
+                    points = laboratory.traces[key]
+                    stride = max(1, len(points) // 250)
+                    simplified = points[::stride] + [points[-1]]
+                    for start, end in zip(simplified, simplified[1:]):
+                        self._line(start, end, color, width=2)
+        if self.session.lesson == "5":
+            chains = laboratory.branches if len(laboratory.branches) else (laboratory.points,)
+            for index, chain in enumerate(chains):
+                color = "#087f83" if index == 0 else "#8558ae"
+                for start, end in zip(chain, chain[1:]):
+                    self._line(start, end, "#263f4b", width=11)
+                    self._line(start, end, color, width=8)
+                for joint in chain:
+                    point = self.camera.project(joint)
+                    if point is not None:
+                        x, y = point
+                        self.canvas.create_oval(x-5, y-5, x+5, y+5, fill="#f4f8fb", outline=color, width=2, tags="overlay")
+            self._draw_goal(laboratory.target, "Target", "#dd8b24")
+            for prediction in laboratory.predictions:
+                self._draw_goal(prediction, "Prediction", "#8558ae", radius=0.04)
+            if self.show_frames.get():
+                self._frame(np.eye(4), "Arm base", scale=0.35)
+                self._label(laboratory.points[-1], "End-effector")
+            return
         if self.session.sensors is not None:
             lidar = self.session.sensors.lidar
             for endpoint, hit in zip(lidar.endpoints, lidar.hits):
-                self._line(lidar.origin, endpoint, "#14823e" if hit else "#99a4ae")
+                self._line(lidar.origin, endpoint, "#32947d" if hit else "#aab8c5",
+                           width=1.5 if hit else 1, dash=None if hit else (3, 5))
+                if hit:
+                    screen = self.camera.project(endpoint)
+                    if screen is not None:
+                        x, y = screen
+                        self.canvas.create_oval(x-2.5, y-2.5, x+2.5, y+2.5,
+                                                fill="#16816c", outline=SURFACE, tags="overlay")
             if self.show_frames.get():
                 self._label(lidar.origin, "Rangefinder" if len(lidar.angles) == 1 else "Lidar", offset=(12, -55))
         if self.session.lesson == "3":
@@ -678,6 +929,67 @@ class SimulatorApp:
                     self._line(world_sensor[:3, 3], point, "#773baa")
                     self._label(point, "Sensor point", offset=(12, 20))
 
+    def _update_plot_button(self):
+        available = bool((self.session is not None and self.session.samples) or self.last_experiment)
+        self.plot_button.configure(state="normal" if available else "disabled")
+
+    def _remember_experiment(self):
+        if self.session is None or not self.session.samples:
+            return self.last_experiment
+        key = (self._experiment_generation, self.session.sim.steps)
+        if key != self._recorded_experiment_key:
+            self.last_experiment = capture_experiment(self.session)
+            self._recorded_experiment_key = key
+        return self.last_experiment
+
+    def _close_plot(self):
+        if self._plot_canvas is not None:
+            # A pending draw_idle must not outlive its Tk widget.
+            pending = getattr(self._plot_canvas, "_idle_draw_id", None)
+            if pending:
+                self._plot_canvas.get_tk_widget().after_cancel(pending)
+            self._plot_canvas = None
+        if self._plot_window is not None and self._plot_window.winfo_exists():
+            self._plot_window.destroy()
+        self._plot_window = self._plot_figure = None
+
+    def plot_results(self):
+        snapshot = self._remember_experiment()
+        if snapshot is None:
+            messagebox.showinfo("Plot results", "Run an experiment first, then plot its recorded measurements.", parent=self.root)
+            return
+        try:
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+            from .experiment_plots import create_experiment_figure
+        except ImportError as error:
+            messagebox.showerror("Plot results", "Matplotlib is required for experiment plots. "
+                "Restart using the simulator launcher to update its private environment.\n\n" + str(error), parent=self.root)
+            return
+        figure = create_experiment_figure(snapshot)
+        self._close_plot()
+        self._plot_figure = figure
+        window = tk.Toplevel(self.root)
+        self._plot_window = window
+        window.title("Experiment plots · " + TASKS[snapshot["lesson"]][snapshot["task"]])
+        width = min(1120, max(700, self.root.winfo_screenwidth() - 120))
+        height = min(820, max(520, self.root.winfo_screenheight() - 130))
+        window.geometry(f"{width}x{height}")
+        window.minsize(650, 480)
+        panel = ttk.Frame(window, padding=(12, 10))
+        panel.pack(fill="both", expand=True)
+        elapsed = snapshot["metadata"]["elapsed"]
+        ttk.Label(panel, text=f"Recorded experiment · {elapsed:.2f} s · "
+                  "fixed snapshot; rerun Plot results to refresh", style="Footer.TLabel").pack(anchor="w", pady=(0, 8))
+        canvas = FigureCanvasTkAgg(figure, master=panel)
+        self._plot_canvas = canvas
+        # Toolbar provides zoom/pan and saving the figure without exporting CSV first.
+        toolbar = NavigationToolbar2Tk(canvas, panel, pack_toolbar=False)
+        toolbar.update()
+        toolbar.pack(side="bottom", fill="x")
+        canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
+        canvas.draw()
+        window.protocol("WM_DELETE_WINDOW", self._close_plot)
+
     def export(self):
         destination = filedialog.asksaveasfilename(parent=self.root, title="Export measurements",
             defaultextension=".csv", filetypes=[("CSV measurements", "*.csv")],
@@ -701,6 +1013,7 @@ class SimulatorApp:
         self.root.after_cancel(self._restore_timer)
         if self.session:
             self.session.close()
+        self._close_plot()
         self._label_images.clear()
         self.root.destroy()
 

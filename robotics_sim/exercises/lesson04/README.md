@@ -1,6 +1,6 @@
 # Lesson 4: Sensors and noise
 
-Choose **Lesson 4 - Sensors and noise**. Its three activities are:
+Choose **Lesson 4 - Sensors and noise**. Start with these three measurement activities:
 
 - **Wheel encoders and forward range:** drive toward a wall and compare encoder
   increments with wheel speed times the sampling interval. The front rangefinder
@@ -42,7 +42,8 @@ IMU reads physics velocity and computes finite-difference world acceleration
 before expressing it in the current body frame. It excludes gravity, roll/pitch
 sensing, and a full inertial sensor model. Initial acceleration is zero;
 starting an ideal velocity source can produce a large first-sample
-acceleration. There is no odometry or filtering yet.
+acceleration. The comparison activities below reconstruct pose from these
+measurements. Sensor fusion and Kalman filtering remain later topics.
 
 **Export CSV** writes ground-truth poses to the chosen file and sensor samples
 to a companion file, e.g. `run.csv` and `run_sensors.csv`. Existing files are
@@ -73,3 +74,86 @@ world and clock. The current UI and pose CSV still display the primary robot.
 
 `setup_sensors(robot, ...)` attaches the sensor suite to that robot. The
 session samples it after each physics step according to its sampling rate.
+
+## Part I: guided encoder/IMU comparison
+
+Start with the questions at the end of Part I in the
+[course notes](../../../../dispense/EDR.04_Sensori_e_percezione.tex).
+Predict which information is needed to reconstruct position from each sensor,
+then edit [estimation.py](estimation.py):
+
+- `StudentOdometry.update`: update `x`, `y`, `yaw`, `speed`, and `yaw_rate`
+  from measured left/right angle increments over the supplied interval.
+- `StudentInertial.update`: update `x`, `y`, `yaw`, `vx`, and `vy` from gyro
+  and body-frame accelerations. Use `truth_yaw` only when explicitly supplied;
+  the standard experiment integrates the gyro instead of substituting true yaw.
+
+Both methods are intentionally unfinished. The application identifies the
+missing method instead of silently replacing your work. Initial pose,
+orientation, and velocity are zero. Accelerations are already in m/s² without
+gravity; do not convert them from g or remove gravity again.
+
+Save the file and restart the simulator. In **Lesson 4 - Sensors and noise**,
+set **ESTIMATOR MODEL** to **student**, then choose:
+
+1. **Compare encoder and IMU: straight motion** to verify direction, speed
+   integration and initial conditions.
+2. **Compare encoder and IMU: curved motion** to compare trajectories while
+   the body axes rotate.
+3. **Compare estimates: blocked robot** to observe commanded shaft motion
+   while the chassis stops at a wall.
+
+Press **Start**. **Pause** and **Step** let you inspect the same simulation
+instant; estimates change only at sensor acquisition times. **Sensor mode**
+selects **ideal** or **noisy** measurements independently of the estimator
+model. Changing the activity or model resets the experiment. Repeat identical
+conditions with noise, and use **Export CSV**: the main file contains the true
+pose plus encoder/IMU estimates, velocities and errors; the companion
+`_sensors.csv` contains sensor readings. Align sensor timestamps when comparing
+files. The comparison does not correct the estimates
+with ground truth during the run.
+
+Plot errors rather than expecting every numerical integrator to match the
+simulation exactly. Keep encoder and IMU reconstructions separate: this exercise
+prepares a discussion of sensor fusion without implementing it yet.
+
+## Part II: guided reactive supervisor
+
+Draw your state diagram and stopping conditions before editing
+[avoidance.py](avoidance.py). Complete:
+
+- `StudentSectors.summarize`: minima for `front`, `left`, and `right`, or
+  `None` for invalid/missing coverage. A valid miss observes to maximum range;
+  it is not an occupied point at that range.
+- `StudentObstacleSupervisor.command`: return `(v, omega)` and update `phase`.
+  Old or invalid data must stop the robot. Keep enough state to avoid turning
+  immediately back toward the same box. Report completion as `DONE`.
+
+Save and restart the simulator, choose **Reach a goal and avoid an obstacle**,
+set **SUPERVISOR MODEL** to **student** and **Sensor mode** to **ideal**, then
+press **Start**. The target is `(3, 0) m`, with an isolated box centred at
+`(1.5, 0) m`. Predict the initial path and stopping condition before running it.
+
+The activity supplies sensor scheduling, conversion to wheel speeds and a
+common 5 rad/s wheel-speed limit. Ground-truth pose isolates perception and
+action selection. Inspect the phase and target error in the measurements panel;
+use **Pause**, **Step** and **Export CSV** to connect decisions to sector
+readings and scan age. Repeat with **noisy** data and compare arrival time and
+phase changes. `DONE` and `TIMEOUT` are different outcomes; both stop the robot.
+
+The scenes for the estimation and avoidance activities are in
+[gui.py](gui.py). As an extension, replace the isolated box with a wide wall,
+save, restart and explain the observed failure. This local exercise is not a
+general path planner.
+
+## Instructor comparison after attempting the exercises
+
+The complete implementations are separate in [reference.py](reference.py),
+corresponding to the solutions appendix of the notes. After your own attempt,
+keep the activity and sensor mode unchanged, select **reference** under
+**ESTIMATOR MODEL** or **SUPERVISOR MODEL**, then restart the activity and
+compare exported measurements.
+
+The reference detour is designed for the supplied isolated-box scene; it does
+not guarantee success in every geometry. All of these practical activities are
+available from the application's activity selector.

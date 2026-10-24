@@ -40,17 +40,21 @@ fi
 runtime_ready=false
 if [[ -x "$runtime_directory/bin/python" ]]; then
     if "$python_executable" -c \
-        'import sys, numpy, pybullet, tkinter; assert sys.version_info[:2] == (3, 12)'; then
+        'import sys, numpy, pybullet, tkinter; from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg; assert sys.version_info[:2] == (3, 12)'; then
         runtime_ready=true
     fi
 fi
 if [[ "$runtime_ready" == false ]]; then
-    printf '%s\n' 'Setting up Python 3.12 and the precompiled physics engine. This may take a few minutes.'
+    printf '%s\n' 'Setting up Python 3.12, the physics engine and plotting tools. This may take a few minutes.'
     environment_file="$simulator_root/environment-$platform.lock"
     if [[ ! -f "$environment_file" ]]; then
         environment_file="$simulator_root/environment.yml"
     fi
-    "$mamba_executable" create --yes --no-rc --prefix "$runtime_directory" --file "$environment_file"
+    environment_command=create
+    if [[ -x "$python_executable" ]]; then
+        environment_command=install
+    fi
+    "$mamba_executable" "$environment_command" --yes --no-rc --prefix "$runtime_directory" --file "$environment_file"
     "$mamba_executable" clean --all --yes --no-rc > /dev/null
 fi
 

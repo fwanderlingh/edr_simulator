@@ -171,14 +171,18 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
         app.lesson.set(LESSONS["3"])
         app.select_lesson()
         app.kinematics.set("student")
-        for title in TASKS["3"].values():
+        for key, title in TASKS["3"].items():
+            app.kinematics.set("reference" if key in ("drive_goal", "drive_waypoints", "drive_goal_behind") else "student")
             app.task.set(title)
             app.load_task()
             app.single_step()
             app._render()
             assert len(app.renderer.scene.shapes) == 4
             assert "Wheels L/R" in app.values.get()
-            assert app.session.robot.motor_model.__class__.__name__ == "StudentDifferentialDrive"
+            if app.session.controller is not None:
+                assert app.session.controller.__class__.__name__ == "ReferenceWaypointController"
+            else:
+                assert app.session.robot.motor_model.__class__.__name__ == "StudentDifferentialDrive"
         app.lesson.set(LESSONS["4"])
         app.select_lesson()
         for mode, task in (("ideal", "sensor_encoders"), ("noisy", "sensor_imu"),
@@ -323,5 +327,191 @@ def test_unimplemented_exercises_show_a_hint_instead_of_crashing(tmp_path):
         app.step_button.invoke()
         assert "Exercise not implemented yet: complete the exercise" in app.status.get()
         assert app.session.state == "Ready"
+    finally:
+        app.close()
+
+
+@desktop_process
+def test_compact_layout_keeps_viewport_and_activity_controls_visible(tmp_path):
+    """Long instructions and sensor readouts must not squeeze the scene away."""
+    import tkinter as tk
+    from tkinter import ttk
+
+    from robotics_sim.app import SimulatorApp, enable_high_dpi
+    from robotics_sim.session import LESSONS
+
+    enable_high_dpi()
+    root = tk.Tk()
+    app = SimulatorApp(root, duration=0.2, dt=0.01,
+                       settings_path=tmp_path / "compact.json")
+
+    def descendants(widget):
+        for child in widget.winfo_children():
+            yield child
+            yield from descendants(child)
+
+    def assert_visible(widget):
+        assert widget.winfo_viewable(), str(widget)
+        x = widget.winfo_rootx() - root.winfo_rootx()
+        y = widget.winfo_rooty() - root.winfo_rooty()
+        assert 0 <= x < root.winfo_width(), (str(widget), x)
+        assert 0 <= y < root.winfo_height(), (str(widget), y)
+        assert x + widget.winfo_width() <= root.winfo_width(), str(widget)
+        assert y + widget.winfo_height() <= root.winfo_height(), str(widget)
+
+    try:
+        root.geometry("900x620+20+20")
+        root.update()
+        for lesson in LESSONS:
+            app.lesson.set(LESSONS[lesson])
+            app.select_lesson()
+            root.update()
+            app._render()
+            assert app.canvas.winfo_width() >= 450
+            assert app.canvas.winfo_height() >= 260
+            assert_visible(app.canvas)
+            assert_visible(app.start_button)
+            assert_visible(app.step_button)
+            assert_visible(app.tasks)
+            lesson_selector = next(
+                widget for widget in descendants(root)
+                if isinstance(widget, ttk.Combobox)
+                and str(widget.cget("textvariable")) == str(app.lesson)
+            )
+            assert_visible(lesson_selector)
+            assert "ready" in str(app.state_badge.cget("text")).lower()
+            assert float(app.progress.cget("maximum")) == 100
+            assert float(app.progress.cget("value")) == pytest.approx(0)
+            assert app.time_readout.get()
+            app.step_button.invoke()
+            assert 0 < float(app.progress.cget("value")) <= 100
+            assert app.session.state.lower() in str(app.state_badge.cget("text")).lower()
+
+        for _ in range(20):
+            if app.session.state == "Completed":
+                break
+            app.single_step()
+        assert app.session.state == "Completed"
+        assert "completed" in str(app.state_badge.cget("text")).lower()
+        assert float(app.progress.cget("value")) == pytest.approx(100)
+    finally:
+        app.close()
+
+
+@desktop_process
+def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
+    import tkinter as tk
+    from unittest.mock import patch
+    from robotics_sim.app import SimulatorApp, enable_high_dpi
+    from robotics_sim.session import LESSONS, TASKS
+    from robotics_sim.exercises.lesson03.control import StudentWaypointController
+
+    enable_high_dpi()
+    root = tk.Tk()
+    app = SimulatorApp(root, duration=30, dt=0.05, settings_path=tmp_path / "integrated.json")
+
+    def choose(lesson, task):
+        app.kinematics.set("reference")
+        app.exercise_model.set("reference")
+        app.duration.set("30")
+        app.lesson.set(LESSONS[lesson])
+        app.select_lesson()
+        app.task.set(TASKS[lesson][task])
+        app.load_task()
+        root.update()
+        app._render()
+
+    def finish():
+        for _ in range(650):
+            if app.session.state == "Completed":
+                break
+            app.single_step()
+        assert app.session.state == "Completed"
+        app._render()
+
+    try:
+        choose("3", "drive_waypoints")
+        assert any("Goal 1" == app.canvas.itemcget(i, "text")
+                   for i in app.canvas.find_withtag("label-text"))
+        finish()
+        assert app.session.outcome == "DONE"
+        assert len(app.session.arrivals) == 2
+        app.kinematics.set("student")
+        app.load_task()
+        with patch.object(StudentWaypointController, "nominal_command",
+                          side_effect=NotImplementedError("complete nominal_command")):
+            app.single_step()
+        assert "not implemented" in app.status.get().lower()
+        assert app.session.sim.time == 0
+
+        choose("4", "sensor_estimation_curve")
+        for _ in range(5):
+            app.single_step()
+        assert "Encoder error" in app.values.get()
+        assert app.session.sensors.time > 0
+        assert str(app.model_heading.cget("text")) == "ESTIMATOR MODEL"
+        choose("4", "sensor_avoidance")
+        app.single_step()
+        assert "Goal error" in app.values.get()
+        assert str(app.model_heading.cget("text")) == "SUPERVISOR MODEL"
+
+        choose("5", "arm_control")
+        finish()
+        assert app.session.outcome == "DONE"
+        assert app.session.laboratory.residual < 0.001
+        assert any(app.canvas.itemcget(i, "text") == "Target"
+                   for i in app.canvas.find_withtag("label-text"))
+        app.goal_x.set("3")
+        app.goal_y.set("0")
+        app.load_task()
+        app.single_step()
+        assert app.session.outcome == "UNREACHABLE"
+        assert "UNREACHABLE" in app.status.get()
+    finally:
+        app.close()
+
+
+@desktop_process
+def test_plots_use_latest_record_and_survive_activity_reset(tmp_path):
+    import tkinter as tk
+    from robotics_sim.app import SimulatorApp, enable_high_dpi
+    from robotics_sim.session import TASKS
+
+    enable_high_dpi()
+    root = tk.Tk()
+    app = SimulatorApp(root, lesson="3", duration=0.2, dt=0.05,
+                       settings_path=tmp_path / "plots.json")
+    try:
+        root.geometry("900x620+20+20")
+        root.update()
+        assert str(app.plot_button.cget("state")) == "disabled"
+        for _ in range(4):
+            app.single_step()
+        assert app.session.state == "Completed"
+        assert str(app.plot_button.cget("state")) == "normal"
+        app.plot_button.invoke()
+        root.update()
+        assert app._plot_window.winfo_exists()
+        assert len(app._plot_figure.axes) >= 2
+        assert app.last_experiment["task"] == "drive_line"
+        first_samples = app.last_experiment["samples"]
+
+        app.task.set(TASKS["3"]["drive_goal_behind"])
+        app.load_task()
+        assert not app.session.samples
+        app.plot_button.invoke()
+        root.update()
+        assert app.last_experiment["task"] == "drive_line"
+        assert app.last_experiment["samples"] == first_samples
+
+        app.single_step()
+        app.plot_button.invoke()
+        root.update()
+        assert app.last_experiment["task"] == "drive_goal_behind"
+        assert app._plot_canvas is not None
+        x = app.plot_button.winfo_rootx() - root.winfo_rootx()
+        assert x >= 0 and x + app.plot_button.winfo_width() <= root.winfo_width()
+        app._close_plot()
+        assert app._plot_window is None
     finally:
         app.close()

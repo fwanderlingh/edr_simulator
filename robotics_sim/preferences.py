@@ -18,7 +18,7 @@ def load_preferences(path):
     if not isinstance(data, dict):
         return {}
     result = {}
-    for key in ("lesson", "task", "kinematics", "sensor_mode", "label_color", "label_background_color"):
+    for key in ("lesson", "task", "kinematics", "sensor_mode", "exercise_model", "label_color", "label_background_color"):
         if isinstance(data.get(key), str):
             result[key] = data[key]
     for key in ("show_frames", "label_background", "maximized"):

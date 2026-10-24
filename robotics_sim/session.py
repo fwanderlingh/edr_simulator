@@ -10,10 +10,13 @@ from .exercises.lesson01 import circle, square, straight
 from .exercises.lesson02 import activity as frames_activity
 from .exercises.lesson03 import activity as drive_activity
 from .exercises.lesson04 import activity as sensors_activity
+from .exercises.lesson04.gui import SENSOR_EXERCISES, SensorActivity
+from .exercises.lesson05.gui import ArmActivity
 
 
 LESSONS = {"1": "Lesson 1 - System overview", "2": "Lesson 2 - Frames and transformations",
-           "3": "Lesson 3 - Mobile base kinematics", "4": "Lesson 4 - Sensors and noise"}
+           "3": "Lesson 3 - Mobile base kinematics", "4": "Lesson 4 - Sensors and noise",
+           "5": "Lesson 5 - Planar arm"}
 TASKS = {
     "1": {"straight": "Preview: straight-line motion", "circle": "Preview: circular motion", "square": "Preview: square motion"},
     "2": {"planar": "Module 1: Planar transforms",
@@ -25,10 +28,20 @@ TASKS = {
     "3": {"drive_line": "Equal wheel speeds: straight line",
           "drive_circle": "Unequal wheel speeds: circle",
           "drive_spin": "Opposite wheel speeds: spin",
-          "drive_inverse": "Inverse kinematics: body twist"},
+          "drive_inverse": "Inverse kinematics: body twist",
+          "drive_goal": "Reach a goal: pose control",
+          "drive_waypoints": "Follow two waypoints",
+          "drive_goal_behind": "Reach a goal behind the robot"},
     "4": {"sensor_encoders": "Wheel encoders and forward range",
           "sensor_lidar": "Scan obstacles with 2D lidar",
-          "sensor_imu": "IMU during changing motion"},
+          "sensor_imu": "IMU during changing motion",
+          "sensor_estimation_straight": "Compare encoder and IMU: straight motion",
+          "sensor_estimation_curve": "Compare encoder and IMU: curved motion",
+          "sensor_estimation_blocked": "Compare estimates: blocked robot",
+          "sensor_avoidance": "Reach a goal and avoid an obstacle"},
+    "5": {"arm_forward": "Forward kinematics: endpoint",
+          "arm_inverse": "Inverse kinematics: two branches",
+          "arm_control": "Control the end-effector"},
 }
 DESCRIPTIONS = {
     "spatial": "Compose T_world_base and T_base_sensor, then transform P_sensor=(0,1,0). Base: Rz(90 deg), (1,2,0) m; sensor: Rx(90 deg), (0.2,0,0.5) m. Expected sensor origin (1,2.2,0.5), point (1,2.2,1.5) m. Edit solve_spatial_task. The base frame is at ground level as in the notes; the robot body centre is above it.",
@@ -44,6 +57,9 @@ DESCRIPTIONS = {
     "drive_circle": "Unequal wheel speeds produce a circle of radius v / omega. Positive yaw turns left; the right wheel travels farther.",
     "drive_spin": "Equal and opposite wheel speeds rotate the robot about its centre. Forward velocity is zero.",
     "drive_inverse": "Convert v = 0.24 m/s and omega = 0.4 rad/s to wheel speeds, then apply forward kinematics. Compare with the circle task.",
+    "drive_goal": "Reach (x, y, yaw) = (1 m, 0.5 m, pi/2 rad). Turn toward the goal, drive within position tolerance, then align the final orientation. Select reference to inspect the working controller or student to run your nominal_command implementation.",
+    "drive_waypoints": "Reach (1 m, 0.5 m, pi/2 rad), then (1 m, 1.5 m, 0 rad). Complete position and orientation at each waypoint before advancing. The controller selector switches between the reference model and your implementation; DONE and TIMEOUT are distinct outcomes.",
+    "drive_goal_behind": "Reach (-1 m, 0 m, 0 rad), starting with a goal behind the robot. Predict the initial turn, then observe TURN, DRIVE and ALIGN. Use student to run nominal_command from control.py after completing the guided exercise.",
     "sensor_encoders": "Compare wheel angular increments with speed times sample interval. The forward rangefinder measures distance to the wall; encoder shafts keep turning if blocked.",
     "sensor_lidar": "A rotating robot scans a 180-degree field of view. Green rays hit obstacles; gray rays have no return within 4 m. Student mode uses your ray-direction formula.",
     "sensor_imu": "Observe yaw rate and body-frame acceleration during smoothly changing motion. Compare ideal and noisy readings; this planar IMU excludes gravity.",
@@ -65,16 +81,47 @@ ACTIVITY_FILES = {
     "drive_circle": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
     "drive_spin": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
     "drive_inverse": ("Edit StudentDifferentialDrive.forward and inverse; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_goal": ("Complete StudentWaypointController.nominal_command; select student controller and restart after editing.", "robotics_sim/exercises/lesson03/control.py"),
+    "drive_waypoints": ("Complete StudentWaypointController.nominal_command; advance only after both tolerances are met.", "robotics_sim/exercises/lesson03/control.py"),
+    "drive_goal_behind": ("Complete StudentWaypointController.nominal_command; test a target behind the robot without commanding lateral motion.", "robotics_sim/exercises/lesson03/control.py"),
     "sensor_encoders": ("Optional: inspect or customize the encoder model; restart after editing.", "robotics_sim/exercises/lesson04/sensors/encoder.py"),
     "sensor_lidar": ("Edit StudentLidar.directions; select student sensor mode and restart after editing.", "robotics_sim/exercises/lesson04/lidar.py"),
     "sensor_imu": ("Optional: inspect or customize the IMU model; restart after editing.", "robotics_sim/exercises/lesson04/sensors/imu.py"),
 }
 
+for task in SENSOR_EXERCISES:
+    DESCRIPTIONS[task] = (
+        "Complete the sector summary and supervisor. Reach the visible goal around one isolated box; "
+        "compare DONE and TIMEOUT. The reference is a local detour, not a general path planner."
+        if task == "sensor_avoidance" else
+        "Complete encoder odometry and inertial integration. Compare both estimates with the actual "
+        "robot on the same sensor stream; orange is encoder odometry, purple is the IMU estimate. "
+        "Use ideal data first, then noisy data. The blocked-robot task exposes wheel/chassis disagreement.")
+    ACTIVITY_FILES[task] = (
+        "Complete StudentSectors.summarize and StudentObstacleSupervisor.command; select student and restart."
+        if task == "sensor_avoidance" else
+        "Complete StudentOdometry.update and StudentInertial.update; select student and restart.",
+        "robotics_sim/exercises/lesson04/avoidance.py" if task == "sensor_avoidance" else
+        "robotics_sim/exercises/lesson04/estimation.py")
+for task, method in (("arm_forward", "forward"), ("arm_inverse", "inverse"), ("arm_control", "jacobian")):
+    DESCRIPTIONS[task] = {
+        "arm_forward": "Predict the endpoint from the joint configuration. The teal arm follows the independent plant; compare your predicted purple point with the real endpoint.",
+        "arm_inverse": "Find both joint configurations for the target. Inspect the two branches and their residuals; also try unreachable and degenerate targets.",
+        "arm_control": "Complete the Jacobian and the joint-velocity controller. Move the endpoint toward the target with damping and joint-speed limits; distinguish DONE, TIMEOUT and JOINT_LIMIT.",
+    }[task]
+    ACTIVITY_FILES[task] = (
+        "Complete StudentArmController.velocity and StudentPlanarArm.jacobian; save and restart."
+        if task == "arm_control" else f"Complete StudentPlanarArm.{method}; save and restart.",
+        "robotics_sim/exercises/lesson05/control.py" if task == "arm_control" else
+        "robotics_sim/exercises/lesson05/kinematics.py")
+
+
 
 class ActivitySession:
     """Completion freezes the world; only close() releases it."""
 
-    def __init__(self, lesson="1", task=None, *, duration=16.0, dt=1 / 240, kinematics="reference", sensor_mode="ideal"):
+    def __init__(self, lesson="1", task=None, *, duration=16.0, dt=1 / 240, kinematics="reference", sensor_mode="ideal",
+                 exercise_model="reference", goal=None):
         if lesson not in LESSONS:
             raise ValueError("Unknown lesson.")
         task = task or next(iter(TASKS[lesson]))
@@ -86,8 +133,17 @@ class ActivitySession:
             raise ValueError("Kinematics must be reference or student.")
         if sensor_mode not in ("ideal", "noisy", "student"):
             raise ValueError("Sensor mode must be ideal, noisy, or student.")
+        if exercise_model not in ("reference", "student"):
+            raise ValueError("Exercise model must be reference or student.")
+        if goal is not None and (len(goal) != 3 or not all(math.isfinite(v) for v in goal)):
+            raise ValueError("Goal must contain finite x, y and heading.")
+        self.exercise_model, self.goal = exercise_model, goal
+        self.laboratory = None
         self.sensor_mode = sensor_mode
         self.sensors = None
+        self.controller = None
+        self.outcome = None
+        self.arrivals = []
         self.lesson, self.task = lesson, task
         self.duration, self.dt = duration, dt
         self.world = World(gui=False, dt=dt)
@@ -101,7 +157,19 @@ class ActivitySession:
         self.samples = []
 
     def _build_activity(self, kinematics):
-        if self.lesson == "1":
+        if self.lesson == "5":
+            options = {"target": self.goal[:2]} if self.goal is not None else {}
+            self.laboratory = ArmActivity(self.world, self.task, model=self.exercise_model, **options)
+            self.robot = self.laboratory.robot
+            update = lambda robot, time, dt: self.laboratory.step(dt)
+        elif self.task in SENSOR_EXERCISES:
+            options = {"target": self.goal[:2]} if self.goal is not None else {}
+            self.laboratory = SensorActivity(self.world, self.task, model=self.exercise_model,
+                                             mode=self.sensor_mode, dt=self.dt, **options)
+            self.robot = self.laboratory.robot
+            self.sensors = self.laboratory.sensors
+            update = self.laboratory.update
+        elif self.lesson == "1":
             example = {"straight": straight, "circle": circle, "square": square}[self.task]
             self.robot = example.setup(self.world)
             update = example.update
@@ -113,10 +181,17 @@ class ActivitySession:
                 options["kinematics"] = kinematics
             self.robot = example.setup(self.world, **options)
             update = partial(example.update, task=self.task)
+        self.controller = getattr(self.robot, "waypoint_controller", None)
+        if self.controller is not None:
+            if self.goal is not None and self.task != "drive_waypoints":
+                self.controller.goals = (tuple(self.goal),)
+            self.outcome = "RUNNING"
+        elif self.laboratory is not None:
+            self.outcome = self.laboratory.outcome
         self.planar_scene = (frames_activity.setup_planar_scene(self.robot)
                              if self.task == "planar" else None)
         self.sim = Simulator(self.world, self.robot, update=update)
-        if self.lesson == "4":
+        if self.lesson == "4" and self.laboratory is None:
             self.sensors = example.setup_sensors(
                 self.robot, task=self.task, mode=self.sensor_mode, dt=self.dt)
 
@@ -133,29 +208,65 @@ class ActivitySession:
             return
         if self.state != "Running" and not single:
             return
+        goal_index = self.controller.index if self.controller is not None else None
         pose = self.sim.step()
-        if self.sensors is not None:
+        if self.task in SENSOR_EXERCISES:
+            self.laboratory.after_step(self.sim.time, self.sim.steps, self.dt,
+                                       final=self.sim.steps >= self.total_steps)
+        elif self.sensors is not None:
             self.sensors.advance(self.sim.time, self.sim.steps, self.dt,
                                  final=self.sim.steps >= self.total_steps)
+        if self.laboratory is not None:
+            if not self.laboratory.done and self.sim.steps >= self.total_steps:
+                self.laboratory.timeout()
+            self.outcome = self.laboratory.outcome
         self.samples.append((self.sim.time, pose.x, pose.y, pose.z, pose.roll, pose.pitch, pose.yaw))
         if self.lesson == "3":
             self.samples[-1] += (*self.robot.wheel_velocities,
                                  self.robot.command.vx, self.robot.command.omega)
-        if self.sim.steps >= self.total_steps:
+        if self.controller is not None:
+            gx, gy, gt = self.controller.goals[goal_index]
+            position_error = math.hypot(gx - pose.x, gy - pose.y)
+            angle_error = (gt - pose.yaw + math.pi) % (2 * math.pi) - math.pi
+            if self.controller.index > goal_index:
+                self.arrivals.append({"index": goal_index, "time_s": self.sim.time,
+                                      "position_error_m": position_error,
+                                      "angle_error_rad": angle_error})
+            if self.controller.done:
+                self.outcome = "DONE"
+            elif self.sim.steps >= self.total_steps:
+                self.outcome = "TIMEOUT"
+            self.samples[-1] += (goal_index, self.controller.index, self.controller.phase,
+                                 position_error, angle_error, self.outcome, self.controller.scale)
+        if self.laboratory is not None:
+            self.samples[-1] += tuple(self.laboratory.extra_values)
+        if (self.outcome == "DONE" or self.sim.steps >= self.total_steps
+                or (self.laboratory is not None and self.laboratory.done)):
             self.state = "Completed"
             self.sim.stop()
+            if self.laboratory is not None:
+                self.laboratory.stop()
         elif single:
             self.state = "Paused"
+
+    @property
+    def columns(self):
+        columns = ("time_s", "x_m", "y_m", "z_m", "roll_rad", "pitch_rad", "yaw_rad")
+        if self.lesson == "3":
+            columns += ("left_rad_s", "right_rad_s", "forward_m_s", "yaw_rate_rad_s")
+        if self.controller is not None:
+            columns += ("goal_index", "completed_waypoints", "phase", "position_error_m",
+                        "angle_error_rad", "outcome", "wheel_scale")
+        if self.laboratory is not None:
+            columns += tuple(self.laboratory.extra_columns)
+        return columns
 
     def export_csv(self, destination):
         path = Path(destination)
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", newline="", encoding="utf-8") as stream:
             writer = csv.writer(stream)
-            columns = ("time_s", "x_m", "y_m", "z_m", "roll_rad", "pitch_rad", "yaw_rad")
-            if self.lesson == "3":
-                columns += ("left_rad_s", "right_rad_s", "forward_m_s", "yaw_rate_rad_s")
-            writer.writerow(columns)
+            writer.writerow(self.columns)
             writer.writerows(self.samples)
         if self.sensors is not None:
             sensor_path = path.with_name(path.stem + "_sensors.csv")

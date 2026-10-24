@@ -1,8 +1,13 @@
 # Robotics teaching simulator
 
-A Python laboratory for the course, currently covering **lessons 1–4**:
-simulation basics, coordinate frames, mobile-base kinematics, and sensors.
-Estimation, control, planning, and manipulation are planned for later lessons.
+A Python laboratory for the course "Elementi di Robotica - Mod. 1" (Università di Genova), covering **lessons 1–5** in the desktop app:
+simulation basics, coordinate frames, mobile-base kinematics and control, sensors,
+local obstacle avoidance, and a planar 2R arm. The
+[course notes](../README.md#dispense-disponibili) guide each practical exercise
+from the model to an implementation that runs in the same application. Each Part ends with an implementation guide; worked
+solutions appear in the notes' final appendices. Base–arm coordination,
+grasping and the integrated mission follow in the
+[escape room course sequence](../docs/the_escape_room_plan.md).
 
 ## Contents
 
@@ -17,6 +22,8 @@ Estimation, control, planning, and manipulation are planned for later lessons.
   - [Lesson 2: Frames and transformations](#lesson-2-frames-and-transformations)
   - [Lesson 3: Mobile base kinematics](#lesson-3-mobile-base-kinematics)
   - [Lesson 4: Sensors and noise](#lesson-4-sensors-and-noise)
+  - [Lesson 5: Planar arm](#lesson-5-planar-arm)
+- [Guided implementation workflow](#guided-implementation-workflow)
 - [Next increments](#next-increments)
 - [Saved settings](#saved-settings-windows-and-ubuntu)
 - [Developer notes: viewport](#developer-notes-viewport)
@@ -50,7 +57,7 @@ then **Module 1: Planar transforms**.
 
 Lesson 1 provides ready-to-run motion previews, including the square; no code
 changes are needed. Select **Preview: square motion** and press **Start**.
-Lessons 2–4 contain exercises with `TODO` markers; the simulator reads your
+Lessons 2–5 contain exercises with `TODO` markers; the simulator reads your
 changes on the next launch. Until you complete an exercise, the app shows
 "not implemented yet" with a yellow background instead of results.
 
@@ -62,7 +69,12 @@ changes on the next launch. Until you complete an exercise, the app shows
 | 2 | `robotics_sim/exercises/lesson02/quaternions.py` | `hamilton`, `solve_quaternion_task` (Module 2; wxyz) |
 | 2 | `robotics_sim/exercises/lesson02/frames.py` | `point_in_world` (3D extension) |
 | 3 | `robotics_sim/exercises/lesson03/kinematics.py` | `forward`, `inverse` (select **student**) |
+| 3 | `robotics_sim/exercises/lesson03/control.py` | `StudentWaypointController.nominal_command` (goal and waypoint activities) |
 | 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |
+| 4 | `robotics_sim/exercises/lesson04/estimation.py` | `StudentOdometry.update`, `StudentInertial.update` |
+| 4 | `robotics_sim/exercises/lesson04/avoidance.py` | `StudentSectors.summarize`, `StudentObstacleSupervisor.command` |
+| 5 | `robotics_sim/exercises/lesson05/kinematics.py` | `StudentPlanarArm.forward`, `inverse`, `jacobian` |
+| 5 | `robotics_sim/exercises/lesson05/control.py` | `StudentArmController.velocity` |
 
 Finished solutions are provided by the instructor.
 ## Using the desktop app
@@ -74,10 +86,20 @@ measurements, so export first if you need to keep them. The duration applies on
 reset or when selecting another task. Close the window or choose **File > Exit**
 to quit.
 
+The scene occupies the main workspace. The scrollable panel on the right groups
+live measurements, the experiment description and the files to edit. Relevant
+model and sensor selectors appear there only for their lessons. The state badge,
+elapsed time and progress bar show whether the activity is ready, running,
+paused or complete. The compact layout keeps the scene and run controls visible
+on smaller windows.
+
 Left-drag to orbit the 3D view, **Shift + left-drag** to pan, and scroll to zoom.
 Choose **View > Reset camera** to restore the activity's original centre, angles, and zoom.
-**Labels...** controls label size and colors. Axes are x red, y green, z blue;
-the ground grid is 1 m × 1 m.
+**Labels...** controls label size and colors. **Frames** in the scene toolbar
+toggles coordinate annotations. Axes are x red, y green, z blue; major ground
+grid lines are 1 m apart, with lighter half-metre subdivisions. Contact shadows
+and directional shading help distinguish the robot and obstacles. LiDAR hits
+have green endpoints; dashed gray rays indicate no return within the range.
 
 ## Headless runs and CSV
 
@@ -205,31 +227,72 @@ quaternions, plus the optional 3D extensions.
 the differential-drive tasks, equations, reference model, and expected
 ideal-kinematics assumptions.
 
+The [Lesson 3 notes](../dispense/EDR.03_Cinematica_e_controllo.tex)
+connect this model to odometry, target regulation, and waypoint following.
+Complete `StudentWaypointController.nominal_command` in
+[`lesson03/control.py`](robotics_sim/exercises/lesson03/control.py), then choose
+**Reach a goal: pose control**, **Follow two waypoints**, or
+**Reach a goal behind the robot** in Lesson 3. The **CONTROLLER MODEL** selector
+chooses **student** or **reference** for these activities. The wheel-kinematics
+demonstrations retain their separate **KINEMATICS MODEL** selector semantics.
+Use an initial maximum duration of 30 seconds, then check position and heading
+tolerances, completed-waypoint counts and `DONE` versus `TIMEOUT`. Goal positions
+and final headings are drawn in the scene; **Export CSV** saves the goal errors
+and controller state along with the robot measurements.
+
 ### Lesson 4: sensors and noise
 
 [Lesson 4 exercise details](robotics_sim/exercises/lesson04/README.md) cover
-the encoder, lidar, and IMU activities, sensor modes, sampling behavior, noise
-models, and exported sensor data.
+the encoder, lidar and IMU activities, sensor modes, sampling and noise models.
+The same lesson also offers **Compare encoder and IMU: straight motion**,
+**Compare encoder and IMU: curved motion**, **Compare estimates: blocked robot**,
+and **Reach a goal and avoid an obstacle**. Complete the estimation or supervisor
+methods, choose the student model, and compare their traces and outcomes with
+the reference. Sensor mode selects ideal or noisy measurements independently
+of the estimation/control implementation.
+
+### Lesson 5: planar arm
+
+[Lesson 5 exercise details](robotics_sim/exercises/lesson05/README.md) connect
+the guided derivation to **Forward kinematics: endpoint**,
+**Inverse kinematics: two branches**, and **Control the end-effector** in the
+desktop app. Complete the arm model and controller methods, select the student
+model and inspect endpoint predictions, inverse branches, residuals and joint
+limits in the shared scene. **Export CSV** records the numerical evidence.
+
+## Guided implementation workflow
+
+All practical exercises run in the desktop app. Read the guided exercise first,
+predict the result, then edit the `Student` method named in the notes and in the
+**YOUR IMPLEMENTATION** panel. Save, restart the app and select the same activity
+with the student model. An unfinished method names the file and function to
+complete. After your attempt, use the reference model to compare the same
+initial conditions, target and parameters.
+
+Use **Pause** and **Step** to inspect the motion and **Export CSV** to retain
+the measurements. The duration is the maximum available time: completing a
+control task ends it early; reaching the limit without completion reports a
+timeout. Files with terminal runners remain available for automated developer
+checks, but they are not a separate practical assignment for students.
 
 ## Next increments
 
-| Lesson | Planned addition |
+The app now provides the practical activities for Lessons 1–5. The next
+increments integrate these building blocks into mobile manipulation:
+
+| Lesson | Learning goal and next laboratory activity |
 | --- | --- |
-| 5 | Separate ground-truth and odometry estimates |
-| 6 | Velocity and pose controllers |
-| 7 | Guidance and path following |
-| 8 | Occupancy grid and A* planning |
-| 9 | A small 2–3 DOF arm |
-| 10 | Integrated sense–plan–act challenge |
+| 6 | Combine base and arm transforms and position the base so an object is reachable. |
+| 7 | Implement approach, grasp, and grasp verification. |
+| 8 | Integrate navigation, perception, and manipulation in an escape room state machine. |
 
 Each new block should expose a small Python interface so a student implementation
 can replace the reference without editing the simulation loop. The first such
 interface is `setup(world)` plus `update(robot, time, dt)`; later controller and
-estimator interfaces will be introduced with their lessons rather than
-represented by empty implementations.
+estimator interfaces can be added as the activities require them.
 
-All four lessons now declare robots and issue commands inside their lesson
-folders. Lesson 1 has one file per preview (`straight.py`, `circle.py`,
+The mobile-base and sensor activities declare robots and issue commands inside
+their lesson folders. Lesson 1 has one file per preview (`straight.py`, `circle.py`,
 `square.py`); Lessons 2, 3, and 4 each use `activity.py`, whose `task` argument
 selects the UI example. Lesson 4 also declares obstacles and attaches sensors
 there. The UI lists these paths in bold alongside the formula exercise file.
@@ -263,7 +326,8 @@ contains all supported keys with default values:
 | --- | --- |
 | `width`, `height`, `x`, `y`, `maximized` | Normal window size/position in pixels and maximized state |
 | `lesson`, `task`, `duration` | Last selected activity and length in seconds |
-| `kinematics` | Lesson 3 model: `reference` or `student` |
+| `kinematics` | Lesson 3 wheel-kinematics or waypoint-controller model: `reference` or `student` |
+| `exercise_model` | Estimator, supervisor and arm exercise model: `reference` or `student` |
 | `sensor_mode` | Lesson 4 mode: `ideal`, `noisy`, or `student` |
 | `show_frames` | Display coordinate-frame annotations |
 | `label_size` | Text size, 8–36 points |
@@ -271,10 +335,8 @@ contains all supported keys with default values:
 | `label_background_transparency` | Background transparency percentage: 0 is opaque, 100 is clear |
 | `camera_yaw`, `camera_pitch`, `camera_distance` | Camera angles in degrees and distance in metres |
 
-Colors can be hexadecimal RGB strings, such as `"#172d3d"`. Task IDs are
-`straight`, `circle`, `square` for lesson 1; `planar`, `frames`, `static` for
-lesson 2; `drive_line`, `drive_circle`, `drive_spin`, `drive_inverse` for lesson 3;
-and `sensor_encoders`, `sensor_lidar`, `sensor_imu` for lesson 4. Missing or
+Colors can be hexadecimal RGB strings, such as `"#172d3d"`. Activity IDs match
+the keys in [`robotics_sim/session.py`](robotics_sim/session.py). Missing or
 invalid values fall back to defaults. Windows
 are kept within the current display bounds when restored. The simulator reopens
 in Ready state; it does not restore a running simulation or previous measurements.
@@ -285,9 +347,11 @@ Delete `settings.json` to restore defaults; this personal file is ignored by Git
 ## Developer notes: viewport
 
 The interactive renderer targets the opaque boxes and cylinders used by current
-lessons; it does not support mesh materials, transparency, shadows, or general
-intersecting-surface rendering. `Camera.render()` is available for explicit
-raster captures, but the app uses the canvas renderer.
+lessons, with directional shading and simple planar contact shadows. The arm
+is drawn from its kinematic chain. Mesh materials, transparency and general
+intersecting-surface rendering require a different rendering backend.
+`Camera.render()` is available for explicit raster captures, but the app uses
+the canvas renderer.
 
 Run `tools/benchmark_viewport.py --compare-raster` with the simulator's environment
 to compare canvas paint times with raster capture. It requires a desktop or Xvfb;

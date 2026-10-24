@@ -4,7 +4,7 @@ No global Python installation, shell activation, or administrator access require
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet(1, 2, 3, 4)][int]$Lesson = 1,
+    [ValidateSet(1, 2, 3, 4, 5)][int]$Lesson = 1,
     [switch]$Headless,
     [double]$Duration = 16,
     [double]$Dt = 1.0 / 240.0,
@@ -38,16 +38,17 @@ try {
 
     $runtimeReady = $false
     if (Test-Path -LiteralPath $pythonExecutable) {
-        & $pythonExecutable -c 'import sys, numpy, pybullet, tkinter; assert sys.version_info[:2] == (3, 12)'
+        & $pythonExecutable -c 'import sys, numpy, pybullet, tkinter; from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg; assert sys.version_info[:2] == (3, 12)'
         $runtimeReady = $LASTEXITCODE -eq 0
     }
     if (-not $runtimeReady) {
-        Write-Host 'Setting up Python 3.12 and the precompiled physics engine. This may take a few minutes.'
+        Write-Host 'Setting up Python 3.12, the physics engine and plotting tools. This may take a few minutes.'
         $environmentFile = Join-Path $simulatorRoot 'environment-win-64.lock'
         if (-not (Test-Path -LiteralPath $environmentFile)) {
             $environmentFile = Join-Path $simulatorRoot 'environment.yml'
         }
-        & $mambaExecutable create --yes --no-rc --prefix $runtimeDirectory --file $environmentFile
+        $environmentCommand = if (Test-Path -LiteralPath $pythonExecutable) { 'install' } else { 'create' }
+        & $mambaExecutable $environmentCommand --yes --no-rc --prefix $runtimeDirectory --file $environmentFile
         if ($LASTEXITCODE -ne 0) { throw 'Environment setup failed. Check your connection and rerun this launcher.' }
         & $mambaExecutable clean --all --yes --no-rc | Out-Null
     }

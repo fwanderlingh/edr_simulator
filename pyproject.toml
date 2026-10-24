@@ -7,7 +7,7 @@ name = "edr-robotics-sim"
 version = "0.1.0"
 description = "An incremental robotics teaching laboratory"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.24,<3", "pybullet>=3.2.5,<4"]
+dependencies = ["numpy>=1.24,<3", "pybullet>=3.2.5,<4", "matplotlib>=3.8,<4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9"]

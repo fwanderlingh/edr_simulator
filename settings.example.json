@@ -17,5 +17,6 @@
   "label_background_transparency": 0,
   "camera_yaw": 35,
   "camera_pitch": -55,
-  "camera_distance": 5.5
+  "camera_distance": 5.5,
+  "exercise_model": "reference"
 }
