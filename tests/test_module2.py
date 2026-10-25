@@ -95,21 +95,21 @@ def test_rpy_scene_uses_only_assignment_and_draws_reported_result(monkeypatch):
     start, end, _, _ = arrows[0]
     np.testing.assert_allclose(end-start, [.720, .604, .342], atol=1e-3)
     np.testing.assert_allclose(frame[:3, :3] @ [1, 0, 0], end-start)
-    assert "CHECK" not in readout
-    assert readout.count("OK") == 4
+    assert "❌" not in readout
+    assert readout.count("✅") == 4
     assert "Gimbal" not in readout
 
 
 def test_rpy_feedback_rejects_wrong_rotation_even_when_both_methods_agree(monkeypatch):
     monkeypatch.setattr(rpy, "solve_rpy_task", lambda *angles: (np.eye(3), np.eye(3)))
     _, _, readout = module2.evaluate("rpy")
-    assert "R vs expected CHECK" in readout
-    assert "R vs product OK" in readout
-    assert "R^T R = I OK" in readout
-    assert "det(R) = 1 OK" in readout
+    assert "R vs expected ❌" in readout
+    assert "R vs product ✅" in readout
+    assert "R^T R = I ✅" in readout
+    assert "det(R) = 1 ✅" in readout
 
 
 def test_rpy_feedback_detects_non_rotation_and_disagreement(monkeypatch):
     monkeypatch.setattr(rpy, "solve_rpy_task", lambda *angles: (2*np.eye(3), np.eye(3)))
     _, _, readout = module2.evaluate("rpy")
-    assert readout.count("CHECK") == 4
+    assert readout.count("❌") == 4

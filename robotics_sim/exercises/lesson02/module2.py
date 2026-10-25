@@ -35,7 +35,7 @@ def evaluate(task):
         expected = rpy_to_matrix(*RPY_ANGLES)
         origin = np.array([0, 0, 0.8])
         def check(condition):
-            return "OK" if condition else "CHECK"
+            return "✅" if condition else "❌"
         matrix_text = "; ".join(fmt(row) for row in rotation)
         return ([(homogeneous(rotation, origin), "Sensor: RPY assignment")],
                 [(origin, origin + direction_in_world, "v_w = R v_s", "#773baa")],

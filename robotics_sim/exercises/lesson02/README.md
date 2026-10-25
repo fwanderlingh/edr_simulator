@@ -57,8 +57,8 @@ Start, Pause and Reset normally. Results appear below the scene.
   computed orientation and `v_w=R v_s`, expected to be approximately
   `(0.720,0.604,0.342)`. The readout shows the matrix and checks
   against the expected full rotation, agreement with your product,
-  orthogonality and determinant (absolute tolerance `1e-6`). `CHECK`
-  means a check failed; `OK` applies to this input, not every possible angle.
+  orthogonality and determinant (absolute tolerance `1e-6`). ❌
+  means a check failed; ✅ applies to this input, not every possible angle.
   The drawing origin is elevated only for visibility. The order and gimbal
   lock examples remain in the notes; they are not additional scene inputs.
 - **Quaternions** — [quaternions.py](quaternions.py): implement Hamilton
