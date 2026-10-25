@@ -15,9 +15,6 @@ grasping and the integrated mission follow in the
 
 - [Student quick start](#student-quick-start)
 - [Using the desktop app](#using-the-desktop-app)
-- [Headless runs and CSV](#headless-runs-and-csv)
-- [Developer setup](#developer-setup)
-- [Minimal API](#minimal-api)
 - [Math to NumPy cheat sheet](#math-to-numpy-cheat-sheet)
 - [Lessons](#lessons)
   - [Lesson 1: System overview](#lesson-1-system-overview)
@@ -26,6 +23,11 @@ grasping and the integrated mission follow in the
   - [Lesson 4: Sensors and noise](#lesson-4-sensors-and-noise)
   - [Lesson 5: Planar arm](#lesson-5-planar-arm)
 - [Guided implementation workflow](#guided-implementation-workflow)
+---
+### Dev
+- [Headless runs and CSV](#headless-runs-and-csv)
+- [Developer setup](#developer-setup)
+- [Minimal API](#minimal-api)
 - [Next increments](#next-increments)
 - [Saved settings](#saved-settings-windows-and-ubuntu)
 - [Developer notes: viewport](#developer-notes-viewport)
@@ -103,68 +105,6 @@ toggles coordinate annotations. Axes are x red, y green, z blue; major ground
 grid lines are 1 m apart, with lighter half-metre subdivisions. Contact shadows
 and directional shading help distinguish the robot and obstacles. LiDAR hits
 have green endpoints; dashed gray rays indicate no return within the range.
-
-## Headless runs and CSV
-
-From a terminal in `simulator/`, use `--headless` to run an activity without a
-display, `--csv` to export poses, or `--test` to run headless tests:
-
-```bash
-bash start-simulator.sh --lesson 2 --headless --csv output/frames.csv
-bash start-simulator.sh --test
-```
-
-On Windows, use `& './start-simulator.cmd' -Lesson 2 -Headless -Csv output/frames.csv`
-or `& './start-simulator.cmd' -Test`. CSV paths are relative to `simulator/`;
-existing files are overwritten. Headless runs finish as fast as possible and
-do not access desktop preferences. Both modes use a fixed timestep (`--dt`,
-default 1/240 s); duration rounds up to a whole number of steps. Pose CSVs
-contain ground-truth state after each step, with units in column names.
-
-## Developer setup
-
-Development targets Python 3.12 (the code requires Python 3.10 or newer). From
-the repository root, create the supplied Conda environment and install the
-package in editable mode:
-
-```bash
-conda env create -f simulator/environment.yml
-conda activate edr-simulator
-conda install pytest
-python -m pip install --no-build-isolation --no-deps -e ./simulator
-python -m robotics_sim --lesson 2
-python -m pytest simulator/tests
-```
-
-The environment supplies a precompiled PyBullet package, avoiding a native
-build. Student exercise edits take effect on the next launch; no reinstall is
-needed.
-
-The Ubuntu and x86-64 Windows launchers use checked-in package locks; other
-detected platforms resolve `environment.yml`. Regenerate the locks when
-dependencies change. GitHub Actions tests the launchers on Windows and Ubuntu.
-
-The desktop GUI tests are opt-in with `ROBOTICS_SIM_GUI_TEST=1` (Ubuntu CI uses
-Xvfb); the remaining tests run without a display.
-
-## Minimal API
-
-```python
-from robotics_sim import Pose, Robot, Simulator, World
-
-with World(gui=True, dt=1 / 240) as world:
-    robot = Robot(world, Pose(x=0, y=0, yaw=0))
-    sim = Simulator(world, robot)
-    robot.set_velocity(vx=0.2, vy=0.0, omega=0.1, frame="world")
-    for _ in range(240):
-        pose = sim.step()
-    print(pose)
-```
-
-Manual `sim.step()` calls do not sleep. Each `World` owns an isolated physics
-connection; the context manager disconnects it even if an exercise raises an
-exception. All backend calls belong to `sim/` or `robots/`. Geometry and exercise
-code do not call PyBullet.
 
 ## Math to NumPy cheat sheet
 
@@ -277,6 +217,70 @@ the measurements. The duration is the maximum available time: completing a
 control task ends it early; reaching the limit without completion reports a
 timeout. Files with terminal runners remain available for automated developer
 checks, but they are not a separate practical assignment for students.
+
+---
+
+## Headless runs and CSV
+
+From a terminal in `simulator/`, use `--headless` to run an activity without a
+display, `--csv` to export poses, or `--test` to run headless tests:
+
+```bash
+bash start-simulator.sh --lesson 2 --headless --csv output/frames.csv
+bash start-simulator.sh --test
+```
+
+On Windows, use `& './start-simulator.cmd' -Lesson 2 -Headless -Csv output/frames.csv`
+or `& './start-simulator.cmd' -Test`. CSV paths are relative to `simulator/`;
+existing files are overwritten. Headless runs finish as fast as possible and
+do not access desktop preferences. Both modes use a fixed timestep (`--dt`,
+default 1/240 s); duration rounds up to a whole number of steps. Pose CSVs
+contain ground-truth state after each step, with units in column names.
+
+## Developer setup
+
+Development targets Python 3.12 (the code requires Python 3.10 or newer). From
+the repository root, create the supplied Conda environment and install the
+package in editable mode:
+
+```bash
+conda env create -f simulator/environment.yml
+conda activate edr-simulator
+conda install pytest
+python -m pip install --no-build-isolation --no-deps -e ./simulator
+python -m robotics_sim --lesson 2
+python -m pytest simulator/tests
+```
+
+The environment supplies a precompiled PyBullet package, avoiding a native
+build. Student exercise edits take effect on the next launch; no reinstall is
+needed.
+
+The Ubuntu and x86-64 Windows launchers use checked-in package locks; other
+detected platforms resolve `environment.yml`. Regenerate the locks when
+dependencies change. GitHub Actions tests the launchers on Windows and Ubuntu.
+
+The desktop GUI tests are opt-in with `ROBOTICS_SIM_GUI_TEST=1` (Ubuntu CI uses
+Xvfb); the remaining tests run without a display.
+
+## Minimal API
+
+```python
+from robotics_sim import Pose, Robot, Simulator, World
+
+with World(gui=True, dt=1 / 240) as world:
+    robot = Robot(world, Pose(x=0, y=0, yaw=0))
+    sim = Simulator(world, robot)
+    robot.set_velocity(vx=0.2, vy=0.0, omega=0.1, frame="world")
+    for _ in range(240):
+        pose = sim.step()
+    print(pose)
+```
+
+Manual `sim.step()` calls do not sleep. Each `World` owns an isolated physics
+connection; the context manager disconnects it even if an exercise raises an
+exception. All backend calls belong to `sim/` or `robots/`. Geometry and exercise
+code do not call PyBullet.
 
 ## Next increments
 
