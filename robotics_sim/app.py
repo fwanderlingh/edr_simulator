@@ -4,6 +4,7 @@ import math
 import time
 import tkinter as tk
 from collections import OrderedDict
+from pathlib import Path
 from tkinter import colorchooser, filedialog, messagebox, ttk
 
 import numpy as np
@@ -72,6 +73,9 @@ class SimulatorApp:
         self._label_images = OrderedDict()
         self._label_dialog = None
         root.title("Robotics Laboratory")
+        self._app_icon = tk.PhotoImage(master=root, file=str(
+            Path(__file__).resolve().parents[1] / "img" / "rlab_app_icon.png"))
+        root.iconphoto(True, self._app_icon)
         # Keep restored windows visible if the display dimensions have changed.
         screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
         width = min(int(saved.get("width", 1120)), max(900, screen_width))
@@ -362,7 +366,7 @@ class SimulatorApp:
         self.start_button.pack(side="left")
         self.step_button = ttk.Button(transport, text="Step", command=self.single_step, width=6)
         self.step_button.pack(side="left", padx=6)
-        ttk.Button(transport, text="Reset / Apply length", command=self.load_task).pack(side="left")
+        ttk.Button(transport, text="Reset ■ / Apply length", command=self.load_task).pack(side="left")
         analysis = ttk.Frame(transport, style="Card.TFrame")
         analysis.pack(side="right")
         ttk.Button(analysis, text="Export CSV…", command=self.export).pack(side="left")
@@ -627,7 +631,7 @@ class SimulatorApp:
         if state == "Completed" and self.session.outcome is not None:
             text[state] = f"{self.session.outcome} — the scene remains open. Reset to repeat or choose another task."
         self.status.set(self._notice or text[state])
-        self.start_button.configure(text="Pause" if state == "Running" else "Resume" if state == "Paused" else "Start",
+        self.start_button.configure(text="Pause ⏸︎" if state == "Running" else "Resume" if state == "Paused" else "Start ▶",
                                     state="disabled" if state == "Completed" else "normal")
         self.step_button.configure(state="disabled" if state in ("Running", "Completed") else "normal")
 
