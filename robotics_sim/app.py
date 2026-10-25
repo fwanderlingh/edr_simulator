@@ -20,6 +20,7 @@ from .exercises.lesson04.gui import SENSOR_EXERCISES
 from .preferences import DEFAULT_PATH, load_preferences, save_preferences
 from .experiment_data import capture_experiment
 from .label_image import solid_rgba_png
+from .selectable_text import SelectableText
 from .ui_theme import configure_theme, ACCENT, SURFACE, VIEWPORT
 
 
@@ -334,12 +335,11 @@ class SimulatorApp:
         ttk.Entry(self.heading_controls, textvariable=self.goal_yaw, width=7).pack(side="right")
         ttk.Button(self.goal_controls, text="Apply / reset", command=self.load_task).grid(row=4, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         ttk.Label(details, text="LIVE MEASUREMENTS", style="Section.TLabel").grid(row=3, column=0, sticky="w", pady=(0, 8))
-        self.values_label = ttk.Label(details, textvariable=self.values, style="Readout.TLabel",
-                                      wraplength=246, justify="left")
+        self.values_label = SelectableText(details, textvariable=self.values, style="Readout.TLabel")
         self.values_label.grid(row=4, column=0, sticky="ew")
         ttk.Separator(details).grid(row=5, column=0, sticky="ew", pady=16)
         ttk.Label(details, text="THE EXPERIMENT", style="Section.TLabel").grid(row=6, column=0, sticky="w", pady=(0, 8))
-        description = ttk.Label(details, textvariable=self.description, wraplength=246, justify="left")
+        description = SelectableText(details, textvariable=self.description)
         description.grid(row=7, column=0, sticky="ew")
         ttk.Separator(details).grid(row=8, column=0, sticky="ew", pady=16)
         ttk.Label(details, text="YOUR IMPLEMENTATION", style="Section.TLabel").grid(row=9, column=0, sticky="w", pady=(0, 8))
@@ -413,8 +413,11 @@ class SimulatorApp:
             (self.status, self.status_label, "Footer.TLabel"),
         ):
             def highlight_notice(*_, variable=variable, label=label, default_style=default_style):
-                label.configure(style="NotImplemented.TLabel"
-                                if "not implemented" in variable.get().lower() else default_style)
+                style = "NotImplemented.TLabel" if "not implemented" in variable.get().lower() else default_style
+                if isinstance(label, SelectableText):
+                    label.set_style(style)
+                else:
+                    label.configure(style=style)
             variable.trace_add("write", highlight_notice)
             highlight_notice()
 

@@ -64,7 +64,7 @@ def test_module2_menu_readouts_render_and_todo(tmp_path):
                 app._update_status()
                 app._render()
                 assert "not implemented" in app.values.get()
-                assert app.values_label.cget("style") == "NotImplemented.TLabel"
+                assert app.values_label.cget("background") == "#fff2cd"
     finally:
         app.close()
 

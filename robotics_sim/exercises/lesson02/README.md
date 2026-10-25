@@ -55,7 +55,7 @@ Start, Pause and Reset normally. Results appear below the scene.
   The scene uses only the assignment angles `(pi/6,-pi/9,2pi/9)` radians
   and direction `v_s=(1,0,0)`. The sensor frame and purple arrow show the
   computed orientation and `v_w=R v_s`, expected to be approximately
-  `(0.719846,0.604023,0.342020)`. The readout shows the matrix and checks
+  `(0.720,0.604,0.342)`. The readout shows the matrix and checks
   against the expected full rotation, agreement with your product,
   orthogonality and determinant (absolute tolerance `1e-6`). `CHECK`
   means a check failed; `OK` applies to this input, not every possible angle.
