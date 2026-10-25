@@ -33,9 +33,29 @@ wheels are visual geometry, without wheel joints, rolling contact, slip, or
 motor dynamics. These four GUI tasks do not use a feedback controller or
 odometry estimator.
 
+## Part II: first proportional controller
+
+Start with **Reach a goal: proportional control**, whose goal is fixed at
+`(1 m, 0 m, 0 rad)` ahead of the robot. Complete
+[`StudentProportionalController.wheel_command`](proportional.py): calculate the
+signed x error, choose a proportional forward speed (zero within `eps_p`),
+then return the two wheel angular speeds using the supplied wheel radius.
+The available parameters are `self.goals[0][0]`, `self.gain` and `self.eps_p`.
+The exercise intentionally asks for wheel references rather than a body command.
+
+Choose **student** in **CONTROLLER MODEL**, save and restart after editing.
+The scene, wheel-command application, common actuator limit, arrival detection
+and CSV recording are supplied. The activity remains inspectable before an
+unfinished method is first called with Start/Step. Use a 20-second duration and
+compare the wheel speeds, x error and `DONE`/`TIMEOUT` outcome. The defaults are
+`gain=0.4`, `eps_p=0.03 m` and `wheel_max=5 rad/s`.
+After your attempt, choose **reference** to compare with
+[`ReferenceProportionalController`](proportional_reference.py).
+Only the exercise file needs editing; the kinematics demonstrations remain separate.
+
 ## Part II: guided waypoint controller
 
-First draw the TURN, DRIVE and ALIGN transitions and predict the initial
+After the straight-goal exercise, draw the TURN, DRIVE and ALIGN transitions and predict the initial
 command from the Lesson 3 notes. Then complete
 [`StudentWaypointController.nominal_command`](control.py). The supplied loop
 already converts the body command into wheel speeds, applies a common speed

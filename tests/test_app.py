@@ -172,7 +172,7 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
         app.select_lesson()
         app.kinematics.set("student")
         for key, title in TASKS["3"].items():
-            app.kinematics.set("reference" if key in ("drive_goal", "drive_waypoints", "drive_goal_behind") else "student")
+            app.kinematics.set("reference" if key in ("drive_proportional", "drive_goal", "drive_waypoints", "drive_goal_behind") else "student")
             app.task.set(title)
             app.load_task()
             app.single_step()
@@ -180,7 +180,8 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
             assert len(app.renderer.scene.shapes) == 4
             assert "Wheels L/R" in app.values.get()
             if app.session.controller is not None:
-                assert app.session.controller.__class__.__name__ == "ReferenceWaypointController"
+                assert app.session.controller.__class__.__name__ == (
+                    "ReferenceProportionalController" if key == "drive_proportional" else "ReferenceWaypointController")
             else:
                 assert app.session.robot.motor_model.__class__.__name__ == "StudentDifferentialDrive"
         app.lesson.set(LESSONS["4"])
@@ -202,6 +203,43 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
     finally:
         app.close()
     assert app.session.state == "Closed"
+
+
+@desktop_process
+def test_proportional_exercise_selects_its_student_file_and_reference(tmp_path):
+    import tkinter as tk
+    from unittest.mock import patch
+    from robotics_sim.app import SimulatorApp, enable_high_dpi
+    from robotics_sim.exercises.lesson03.proportional import StudentProportionalController
+    from robotics_sim.session import TASKS
+
+    enable_high_dpi()
+    root = tk.Tk()
+    app = SimulatorApp(root, lesson="3", settings_path=tmp_path / "proportional.json")
+    try:
+        app.kinematics.set("reference")
+        app.task.set(TASKS["3"]["drive_proportional"])
+        app.load_task()
+        root.update()
+        app._render()
+        assert str(app.model_heading.cget("text")) == "CONTROLLER MODEL"
+        assert "lesson03/proportional.py" in str(app.edit_file.cget("text"))
+        assert "activity.py" not in str(app.edit_file.cget("text"))
+        assert not app.goal_controls.winfo_ismapped()
+        assert any(app.canvas.itemcget(i, "text") == "Goal 1"
+                   for i in app.canvas.find_withtag("label-text"))
+        app.single_step()
+        assert app.session.robot.wheel_velocities == pytest.approx((.4 / .12, .4 / .12))
+        app.kinematics.set("student")
+        app.load_task()
+        with patch.object(StudentProportionalController, "wheel_command",
+                          side_effect=NotImplementedError("Complete wheel_command")):
+            app.single_step()
+        assert "wheel_command" in app.status.get()
+        assert "not implemented" in app.status.get().lower()
+        assert app.session.sim.steps == 0
+    finally:
+        app.close()
 
 
 @desktop_process

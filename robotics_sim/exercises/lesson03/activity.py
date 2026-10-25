@@ -7,9 +7,12 @@ from robotics_sim.robots.differential_drive import (
 from .kinematics import StudentDifferentialDrive
 from .control import DEFAULT_GOALS, StudentWaypointController
 from .control_reference import ReferenceWaypointController
+from .proportional import StudentProportionalController
+from .proportional_reference import ReferenceProportionalController
 
 
 WAYPOINT_TASKS = {
+    "drive_proportional": ((1.0, 0.0, 0.0),),
     "drive_goal": (DEFAULT_GOALS[0],),
     "drive_waypoints": DEFAULT_GOALS,
     "drive_goal_behind": ((-1.0, 0.0, 0.0),),
@@ -23,8 +26,12 @@ def setup(world, *, task, kinematics="reference"):
         # The student method is first called on Step/Start, so an unfinished
         # controller can still be inspected with its goals visible in Ready.
         robot = DifferentialDriveRobot(world, Pose(x=0, y=0))
-        controller = (StudentWaypointController if kinematics == "student"
-                      else ReferenceWaypointController)
+        if task == "drive_proportional":
+            controller = (StudentProportionalController if kinematics == "student"
+                          else ReferenceProportionalController)
+        else:
+            controller = (StudentWaypointController if kinematics == "student"
+                          else ReferenceWaypointController)
         robot.waypoint_controller = controller(WAYPOINT_TASKS[task])
         return robot
     model = StudentDifferentialDrive if kinematics == "student" else ReferenceDifferentialDrive

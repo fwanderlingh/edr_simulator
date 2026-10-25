@@ -29,6 +29,7 @@ TASKS = {
           "drive_circle": "Unequal wheel speeds: circle",
           "drive_spin": "Opposite wheel speeds: spin",
           "drive_inverse": "Inverse kinematics: body twist",
+          "drive_proportional": "Reach a goal: proportional control",
           "drive_goal": "Reach a goal: pose control",
           "drive_waypoints": "Follow two waypoints",
           "drive_goal_behind": "Reach a goal behind the robot"},
@@ -57,6 +58,7 @@ DESCRIPTIONS = {
     "drive_circle": "Unequal wheel speeds produce a circle of radius v / omega. Positive yaw turns left; the right wheel travels farther.",
     "drive_spin": "Equal and opposite wheel speeds rotate the robot about its centre. Forward velocity is zero.",
     "drive_inverse": "Convert v = 0.24 m/s and omega = 0.4 rad/s to wheel speeds, then apply forward kinematics. Compare with the circle task.",
+    "drive_proportional": "First feedback exercise: reach the goal at (1 m, 0 m), starting at (0, 0, 0). Complete StudentProportionalController.wheel_command: position error -> proportional forward speed -> two wheel references. Keep yaw rate zero and stop within 0.03 m. Select student for your code or reference for comparison.",
     "drive_goal": "Reach (x, y, yaw) = (1 m, 0.5 m, pi/2 rad). Turn toward the goal, drive within position tolerance, then align the final orientation. Select reference to inspect the working controller or student to run your nominal_command implementation.",
     "drive_waypoints": "Reach (1 m, 0.5 m, pi/2 rad), then (1 m, 1.5 m, 0 rad). Complete position and orientation at each waypoint before advancing. The controller selector switches between the reference model and your implementation; DONE and TIMEOUT are distinct outcomes.",
     "drive_goal_behind": "Reach (-1 m, 0 m, 0 rad), starting with a goal behind the robot. Predict the initial turn, then observe TURN, DRIVE and ALIGN. Use student to run nominal_command from control.py after completing the guided exercise.",
@@ -81,6 +83,7 @@ ACTIVITY_FILES = {
     "drive_circle": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
     "drive_spin": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
     "drive_inverse": ("Edit StudentDifferentialDrive.forward and inverse; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_proportional": ("Complete StudentProportionalController.wheel_command; calculate both wheel references, save and restart.", "robotics_sim/exercises/lesson03/proportional.py"),
     "drive_goal": ("Complete StudentWaypointController.nominal_command; select student controller and restart after editing.", "robotics_sim/exercises/lesson03/control.py"),
     "drive_waypoints": ("Complete StudentWaypointController.nominal_command; advance only after both tolerances are met.", "robotics_sim/exercises/lesson03/control.py"),
     "drive_goal_behind": ("Complete StudentWaypointController.nominal_command; test a target behind the robot without commanding lateral motion.", "robotics_sim/exercises/lesson03/control.py"),
@@ -184,6 +187,9 @@ class ActivitySession:
         self.controller = getattr(self.robot, "waypoint_controller", None)
         if self.controller is not None:
             if self.goal is not None and self.task != "drive_waypoints":
+                if self.task == "drive_proportional" and (
+                        self.goal[0] <= 0 or self.goal[1] != 0 or self.goal[2] != 0):
+                    raise ValueError("The proportional exercise requires a goal on positive x with y=heading=0.")
                 self.controller.goals = (tuple(self.goal),)
             self.outcome = "RUNNING"
         elif self.laboratory is not None:

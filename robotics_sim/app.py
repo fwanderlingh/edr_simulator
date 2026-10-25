@@ -520,7 +520,7 @@ class SimulatorApp:
         hint, path = ACTIVITY_FILES[task]
         self.edit_hint.configure(text=hint)
         files = f"File (relative to simulator/): {path}"
-        if self.lesson_id != "1":
+        if self.lesson_id != "1" and task != "drive_proportional":
             scene_path = f"robotics_sim/exercises/lesson{int(self.lesson_id):02d}/" + (
                 "gui.py" if self.session.laboratory is not None else "activity.py")
             if scene_path != path:

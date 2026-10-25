@@ -73,6 +73,7 @@ changes on the next launch. Until you complete an exercise, the app shows
 | 2 | `robotics_sim/exercises/lesson02/quaternions.py` | `hamilton`, `solve_quaternion_task` (Module 2; wxyz) |
 | 2 | `robotics_sim/exercises/lesson02/frames.py` | `point_in_world` (3D extension) |
 | 3 | `robotics_sim/exercises/lesson03/kinematics.py` | `forward`, `inverse` (select **student**) |
+| 3 | `robotics_sim/exercises/lesson03/proportional.py` | `StudentProportionalController.wheel_command` (first proportional controller) |
 | 3 | `robotics_sim/exercises/lesson03/control.py` | `StudentWaypointController.nominal_command` (goal and waypoint activities) |
 | 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |
 | 4 | `robotics_sim/exercises/lesson04/estimation.py` | `StudentOdometry.update`, `StudentInertial.update` |
