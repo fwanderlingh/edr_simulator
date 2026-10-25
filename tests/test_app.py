@@ -383,6 +383,53 @@ def test_unimplemented_exercises_show_a_hint_instead_of_crashing(tmp_path):
 
 
 @desktop_process
+def test_saved_student_kinematics_opens_and_uses_the_todo_warning(tmp_path):
+    import json
+    import tkinter as tk
+    from unittest.mock import patch
+    from robotics_sim.app import SimulatorApp, enable_high_dpi
+    from robotics_sim.exercises.lesson03.kinematics import StudentDifferentialDrive
+    from robotics_sim.session import TASKS
+
+    enable_high_dpi()
+    path = tmp_path / "student.json"
+    path.write_text(json.dumps({"lesson": "3", "task": "drive_inverse",
+                               "kinematics": "student"}))
+    root = tk.Tk()
+    with patch.object(StudentDifferentialDrive, "forward",
+                      side_effect=NotImplementedError("complete forward()")), \
+         patch.object(StudentDifferentialDrive, "inverse",
+                      side_effect=NotImplementedError("complete inverse()")):
+        app = SimulatorApp(root, settings_path=path)
+        try:
+            root.update()
+            assert app.session.task == "drive_inverse" and app.session.state == "Ready"
+            for task in ("drive_line", "drive_circle", "drive_spin", "drive_inverse"):
+                app.task.set(TASKS["3"][task])
+                app.load_task()
+                root.update()
+                assert app.canvas.winfo_viewable()
+                assert app.session.state == "Ready" and app.session.sim.steps == 0
+                app.step_button.invoke()
+                assert "Exercise not implemented yet:" in app.status.get()
+                assert app.session.sim.steps == 0 and app.session.samples == []
+                assert app.session.robot.wheel_velocities == (0, 0)
+            app.load_task()
+            app.start_button.invoke()
+            wait_for_ui(root, lambda: app.session.state == "Paused"
+                        and "Exercise not implemented yet:" in app.status.get(),
+                        description="standard TODO warning after Start")
+            assert app.session.sim.steps == 0
+            app.kinematics.set("reference")
+            app.load_task()
+            app.single_step()
+            assert app.session.sim.steps == 1
+            assert "not implemented" not in app.status.get()
+        finally:
+            app.close()
+
+
+@desktop_process
 def test_compact_layout_keeps_viewport_and_activity_controls_visible(tmp_path):
     """Long instructions and sensor readouts must not squeeze the scene away."""
     import tkinter as tk

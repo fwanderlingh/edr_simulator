@@ -36,8 +36,8 @@ def setup(world, *, task, kinematics="reference"):
         return robot
     model = StudentDifferentialDrive if kinematics == "student" else ReferenceDifferentialDrive
     robot = DifferentialDriveRobot(world, Pose(x=0, y=0), motor_model=model())
-    # Initialize the command so the Ready view also shows the chosen speeds.
-    update(robot, 0.0, world.physics.dt, task=task)
+    # Keep Ready inspectable even when the selected student model is a TODO.
+    # The guarded Start/Step path evaluates the exercise before physics advances.
     return robot
 
 

@@ -1,9 +1,11 @@
 import csv
 import math
+from unittest.mock import Mock
 
 import pytest
 
 from robotics_sim.robots.differential_drive import ReferenceDifferentialDrive
+from robotics_sim.exercises.lesson03.kinematics import StudentDifferentialDrive
 from robotics_sim.session import ActivitySession
 from robotics_sim.sim.scene_renderer import BoxScene
 from robotics_sim.sim.camera import Camera
@@ -15,6 +17,33 @@ def test_forward_and_inverse_conventions():
     assert model.forward(-2, 2) == pytest.approx((0, 0.8))
     assert model.inverse(0.3, -0.4) == pytest.approx((4, 2))
     assert model.forward(*model.inverse(-0.3, 0.7)) == pytest.approx((-0.3, 0.7))
+
+
+@pytest.mark.parametrize("task,method", [
+    ("drive_line", "forward"), ("drive_circle", "forward"),
+    ("drive_spin", "forward"), ("drive_inverse", "inverse"),
+])
+def test_unfinished_kinematics_can_open_stop_and_report_on_step(task, method, monkeypatch):
+    forward = Mock(side_effect=NotImplementedError("complete forward()"))
+    inverse = Mock(side_effect=NotImplementedError("complete inverse()"))
+    monkeypatch.setattr(StudentDifferentialDrive, "forward", forward)
+    monkeypatch.setattr(StudentDifferentialDrive, "inverse", inverse)
+    session = ActivitySession("3", task, kinematics="student")
+    try:
+        assert session.state == "Ready" and session.sim.steps == 0
+        assert session.robot.wheel_velocities == (0, 0)
+        forward.assert_not_called()
+        inverse.assert_not_called()
+        with pytest.raises(NotImplementedError, match=f"complete {method}"):
+            session.step(single=True)
+        assert session.sim.steps == 0 and session.samples == []
+        calls_before_stop = forward.call_count, inverse.call_count
+        session.sim.stop()
+        assert (forward.call_count, inverse.call_count) == calls_before_stop
+        assert session.robot.wheel_velocities == (0, 0)
+        assert session.robot.command.vx == session.robot.command.omega == 0
+    finally:
+        session.close()
 
 
 @pytest.mark.parametrize("task,v,omega", [

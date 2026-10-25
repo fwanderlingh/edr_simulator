@@ -58,6 +58,12 @@ class DifferentialDriveRobot(Robot):
     def set_velocity(self, vx=0.0, vy=0.0, omega=0.0, *, frame="body"):
         if vy != 0 or (frame != "body" and (vx != 0 or omega != 0)):
             raise ValueError("Differential drive accepts forward body velocity and yaw rate only.")
+        if vx == 0 and omega == 0:
+            # Stopping must work even if student forward/inverse is unfinished
+            # or invalid: the GUI uses this after reporting exercise errors.
+            self.wheel_velocities = (0.0, 0.0)
+            super().set_velocity(frame="body")
+            return
         self.set_twist(vx, omega)
 
     def after_step(self):
