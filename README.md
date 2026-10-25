@@ -9,7 +9,6 @@ solutions appear in the notes' final appendices. Base–arm coordination,
 grasping and the integrated mission follow in the
 [escape room course sequence](../docs/the_escape_room_plan.md).
 
-
 ## Contents
 
 - [Student quick start](#student-quick-start)

@@ -131,11 +131,16 @@ def _estimation(axes, data):
     _trajectory(axes[0], data, x="enc_x_m", y="enc_y_m", label="Encoder", color=ORANGE)
     _trajectory(axes[0], data, x="imu_x_m", y="imu_y_m", label="IMU", color=PURPLE)
     _xy_labels(axes[0], "Actual and reconstructed trajectories")
-    _series(axes[1], data, [("enc_position_error_m", "Encoder", ORANGE),
-                           ("imu_position_error_m", "IMU", PURPLE)],
-            title="Position errors against actual pose", ylabel="Error [m]")
     sample_time = data.get("sensor_time_s", data["time_s"])
     selection = np.r_[True, np.diff(sample_time) > 1e-10]
+    # Between acquisitions, estimates describe an earlier instant than the
+    # current physics pose. Compare errors only when both timestamps match.
+    aligned = selection & np.isclose(data["time_s"], sample_time, rtol=0, atol=1e-9)
+    for key, label, color in (("enc_position_error_m", "Encoder", ORANGE),
+                               ("imu_position_error_m", "IMU", PURPLE)):
+        if key in data:
+            _line(axes[1], sample_time[aligned], data[key][aligned], label, color)
+    axes[1].set(title="Position errors at sensor acquisitions", xlabel="Time [s]", ylabel="Error [m]")
     time = sample_time[selection]
     if "enc_speed_m_s" in data:
         _line(axes[2], time, np.abs(data["enc_speed_m_s"])[selection], "Encoder (interval mean)", ORANGE, step=True)

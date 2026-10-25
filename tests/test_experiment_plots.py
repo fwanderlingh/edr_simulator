@@ -99,6 +99,8 @@ def test_estimates_use_sensor_times_without_repeated_state_samples(tmp_path):
     time = figure.axes[2].lines[0].get_xdata()
     np.testing.assert_allclose(time, [0, .1, .2, .3, .35])
     assert len(time) < len(snapshot["samples"])
+    for error_line in figure.axes[1].lines:
+        np.testing.assert_allclose(error_line.get_xdata(), [.1, .2, .3, .35])
 
 
 def test_static_inverse_plots_both_configurations_not_a_stationary_base(tmp_path):
