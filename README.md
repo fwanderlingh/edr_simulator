@@ -93,7 +93,8 @@ elapsed time and progress bar show whether the activity is ready, running,
 paused or complete. The compact layout keeps the scene and run controls visible
 on smaller windows.
 
-Left-drag to orbit the 3D view, **Shift + left-drag** to pan, and scroll to zoom.
+Left-drag to orbit the 3D view, **middle-drag** or **Shift + left-drag** to pan,
+and scroll to zoom.
 Choose **View > Reset camera** to restore the activity's original centre, angles, and zoom.
 **Labels...** controls label size and colors. **Frames** in the scene toolbar
 toggles coordinate annotations. Axes are x red, y green, z blue; major ground

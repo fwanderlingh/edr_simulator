@@ -202,7 +202,7 @@ class SimulatorApp:
             "Step advances one physics step while paused.\n"
             "Reset / Apply length starts the selected task again and clears its measurements.\n"
             "Completed activities remain open for inspection.\n\n"
-            "In the 3D view, drag to orbit, Shift + drag to pan, and scroll to zoom.\n"
+            "In the 3D view, left-drag to orbit, middle-drag or Shift + left-drag to pan, and scroll to zoom.\n"
             "Use View > Reset camera to restore the default view.\n"
             "Use View > Label settings to change label size, colors, and backgrounds.\n\n"
             "Use File > Export measurements... to save the recorded data.\n"
@@ -272,12 +272,14 @@ class SimulatorApp:
         self.canvas.bind("<Configure>", self._redraw)
         self.canvas.bind("<ButtonPress-1>", self._begin_drag)
         self.canvas.bind("<B1-Motion>", self._orbit)
+        self.canvas.bind("<ButtonPress-2>", self._begin_drag)
+        self.canvas.bind("<B2-Motion>", lambda event: self._orbit(event, pan=True))
         self.canvas.bind("<MouseWheel>", lambda event: self._zoom(1 if event.delta > 0 else -1))
         self.canvas.bind("<Button-4>", lambda event: self._zoom(1))
         self.canvas.bind("<Button-5>", lambda event: self._zoom(-1))
         legend = ttk.Frame(viewport, style="Card.TFrame", padding=(10, 6))
         legend.grid(row=2, column=0, sticky="ew")
-        ttk.Label(legend, text="Drag: orbit  ·  Shift: pan  ·  Scroll: zoom", style="Muted.TLabel").pack(side="left")
+        ttk.Label(legend, text="Left: orbit  ·  Middle / Shift: pan  ·  Scroll: zoom", style="Muted.TLabel").pack(side="left")
         for text, color in (("z", "#245dcc"), ("y", "#14823e"), ("x", "#c92d35")):
             ttk.Label(legend, text=text, foreground=color, font=("TkDefaultFont", 9, "bold")).pack(side="right", padx=3)
 
@@ -578,7 +580,7 @@ class SimulatorApp:
         if self.session.task in module2.TASKS:
             output = self._module2_output()
             self.values.set(self.values.get() + "\n" + (output[2] if output else
-                "Module 2 not implemented yet: complete the exercise file shown above."))
+                "Module 2 not implemented yet: complete the exercise file shown below."))
         if self.session.task == "planar":
             output = self._planar_output()
             if output is None:
@@ -655,10 +657,10 @@ class SimulatorApp:
     def _begin_drag(self, event):
         self._drag_position = event.x, event.y
 
-    def _orbit(self, event):
+    def _orbit(self, event, *, pan=False):
         if self._drag_position:
             dx, dy = event.x - self._drag_position[0], event.y - self._drag_position[1]
-            if event.state & 0x0001:  # Tk Shift modifier, on Windows and Linux.
+            if pan or event.state & 0x0001:  # Tk Shift modifier, on Windows and Linux.
                 self.camera.pan(dx, dy, self.canvas.winfo_width(), self.canvas.winfo_height())
             else:
                 self.camera.orbit(dx, dy)
