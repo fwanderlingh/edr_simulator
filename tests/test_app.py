@@ -221,6 +221,17 @@ def test_settings_restore_after_closing_and_reopening(tmp_path):
         root.unbind("<Configure>")
         root.geometry("1240x820+50+60")
         root.update()
+        # Exercise the native divider's mouse bindings, including live reflow.
+        sash_x, sash_y = app.workspace.sash_coord(0)
+        app.workspace.event_generate("<ButtonPress-1>", x=sash_x + 3, y=sash_y + 50)
+        root.update()
+        app.workspace.event_generate("<B1-Motion>", x=sash_x - 147, y=sash_y + 50)
+        root.update()
+        app.workspace.event_generate("<ButtonRelease-1>", x=sash_x - 147, y=sash_y + 50)
+        root.update()
+        expected_sidebar = app.inspector_canvas.master.winfo_width()
+        assert expected_sidebar == pytest.approx(444, abs=2)
+        assert int(app.edit_hint.cget("wraplength")) > 350
         app.lesson.set(LESSONS["2"])
         app.select_lesson()
         app.task.set(TASKS["2"]["static"])
@@ -241,12 +252,14 @@ def test_settings_restore_after_closing_and_reopening(tmp_path):
     saved = json.loads(path.read_text())
     assert (saved["width"], saved["height"]) == expected_size
     assert saved["task"] == "static"
+    assert saved["sidebar_width"] == expected_sidebar
 
     root = tk.Tk()
     app = SimulatorApp(root, settings_path=path)
     try:
         root.update()
         assert (root.winfo_width(), root.winfo_height()) == expected_size
+        assert app.inspector_canvas.master.winfo_width() == expected_sidebar
         assert app.session.lesson == "2"
         assert app.session.task == "static"
         assert app.session.duration == 25

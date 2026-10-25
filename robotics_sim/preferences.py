@@ -26,12 +26,13 @@ def load_preferences(path):
             result[key] = data[key]
     ranges = {"label_size": (8, 36), "label_background_transparency": (0, 100), "duration": (0.001, 86400),
               "camera_yaw": (-1e9, 1e9), "camera_pitch": (-89, -5), "camera_distance": (1.5, 14),
-              "width": (900, 20000), "height": (620, 20000), "x": (-20000, 20000), "y": (-20000, 20000)}
+              "width": (900, 20000), "height": (620, 20000), "x": (-20000, 20000), "y": (-20000, 20000),
+              "sidebar_width": (240, 20000)}
     for key, (low, high) in ranges.items():
         value = data.get(key)
         if type(value) not in (int, float) or not math.isfinite(value) or not low <= value <= high:
             continue
-        if key in ("label_size", "width", "height", "x", "y") and int(value) != value:
+        if key in ("label_size", "width", "height", "x", "y", "sidebar_width") and int(value) != value:
             continue
         result[key] = value
     return result

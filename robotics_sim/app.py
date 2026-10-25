@@ -21,7 +21,7 @@ from .preferences import DEFAULT_PATH, load_preferences, save_preferences
 from .experiment_data import capture_experiment
 from .label_image import solid_rgba_png
 from .selectable_text import SelectableText
-from .ui_theme import configure_theme, ACCENT, SURFACE, VIEWPORT
+from .ui_theme import configure_theme, ACCENT, PAGE, SURFACE, VIEWPORT
 
 
 class SimulatorApp:
@@ -32,6 +32,7 @@ class SimulatorApp:
         self._loading_preferences = True
         self._save_timer = None
         saved = load_preferences(settings_path)
+        self._sidebar_width = int(saved.get("sidebar_width", 294))
         lesson = lesson or saved.get("lesson", "1")
         if lesson not in LESSONS:
             lesson = "1"
@@ -160,6 +161,7 @@ class SimulatorApp:
         except ValueError:
             pass
         data = {**self._normal_window, "maximized": self._is_maximized(),
+                "sidebar_width": self._sidebar_width,
                 "lesson": self.session.lesson, "task": self.session.task, "duration": duration,
                 "kinematics": self.kinematics.get(),
                 "sensor_mode": self.sensor_mode.get(), "exercise_model": self.exercise_model.get(),
@@ -210,6 +212,7 @@ class SimulatorApp:
             "In the 3D view, left-drag to orbit, middle-drag or Shift + left-drag to pan, and scroll to zoom.\n"
             "Use View > Reset camera to restore the default view.\n"
             "Use View > Label settings to change label size, colors, and backgrounds.\n\n"
+            "Drag the divider beside the right panel to adjust its width.\n\n"
             "Use File > Export measurements... to save the recorded data.\n"
             "After editing a student exercise, save the file and restart the simulator.", parent=self.root))
         menu.add_cascade(label="Help", menu=help_menu)
@@ -254,13 +257,13 @@ class SimulatorApp:
         duration_entry.bind("<FocusOut>", self._queue_save)
         duration_entry.bind("<Return>", self._queue_save)
 
-        workspace = ttk.Frame(panel)
+        workspace = tk.PanedWindow(panel, orient="horizontal", background=PAGE,
+                                  borderwidth=0, sashwidth=12, sashrelief="flat",
+                                  showhandle=True, handlesize=7, opaqueresize=True)
+        self.workspace = workspace
         workspace.grid(row=2, column=0, sticky="nsew", pady=(0, 12))
-        workspace.columnconfigure(0, weight=1)
-        workspace.columnconfigure(1, minsize=294)
-        workspace.rowconfigure(0, weight=1)
         viewport = ttk.Frame(workspace, style="Card.TFrame", padding=1)
-        viewport.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        workspace.add(viewport, minsize=452, stretch="always")
         viewport.columnconfigure(0, weight=1)
         viewport.rowconfigure(1, weight=1)
         tools = ttk.Frame(viewport, style="Card.TFrame", padding=(12, 6))
@@ -289,7 +292,11 @@ class SimulatorApp:
             ttk.Label(legend, text=text, foreground=color, font=("TkDefaultFont", 9, "bold")).pack(side="right", padx=3)
 
         inspector = ttk.Frame(workspace, style="Card.TFrame")
-        inspector.grid(row=0, column=1, sticky="nsew")
+        workspace.add(inspector, minsize=240, width=self._sidebar_width, stretch="never")
+        def sidebar_resized(event):
+            self._sidebar_width = event.width
+            self._queue_save()
+        inspector.bind("<Configure>", sidebar_resized)
         inspector.columnconfigure(0, weight=1)
         inspector.rowconfigure(0, weight=1)
         self.inspector_canvas = tk.Canvas(inspector, background=SURFACE,
@@ -320,8 +327,9 @@ class SimulatorApp:
             values=("ideal", "noisy", "student"), state="readonly", width=16)
         self.sensor_selector.pack(fill="x")
         self.sensor_selector.bind("<<ComboboxSelected>>", self.load_task)
-        ttk.Label(self.sensor_controls, text="10 Hz nominal · A mode change resets the activity.",
-                  style="Muted.TLabel", wraplength=245).pack(anchor="w", pady=(6, 0))
+        sensor_hint = ttk.Label(self.sensor_controls, text="10 Hz nominal · A mode change resets the activity.",
+                                style="Muted.TLabel", wraplength=245)
+        sensor_hint.pack(anchor="w", pady=(6, 0))
         self.goal_controls = ttk.Frame(details, style="Card.TFrame")
         self.goal_controls.grid(row=2, column=0, sticky="ew", pady=(0, 14))
         self.goal_controls.columnconfigure((0, 1), weight=1)
@@ -347,6 +355,11 @@ class SimulatorApp:
         self.edit_hint.grid(row=10, column=0, sticky="ew", pady=(0, 8))
         self.edit_file = ttk.Label(details, wraplength=246, justify="left", style="Code.TLabel")
         self.edit_file.grid(row=11, column=0, sticky="ew")
+
+        def wrap_details(event):
+            for label in (sensor_hint, self.edit_hint, self.edit_file):
+                label.configure(wraplength=max(1, event.width - 28))
+        details.bind("<Configure>", wrap_details, add="+")
 
         def scroll_details(event):
             direction = -1 if getattr(event, "num", None) == 4 else 1

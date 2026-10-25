@@ -91,7 +91,9 @@ reset or when selecting another task. Close the window or choose **File > Exit**
 to quit.
 
 The scene occupies the main workspace. The scrollable panel on the right groups
-live measurements, the experiment description and the files to edit. Relevant
+live measurements, the experiment description and the files to edit. Drag the
+divider between the scene and the panel to adjust their widths; your chosen
+panel width is remembered on the next launch. Relevant
 model and sensor selectors appear there only for their lessons. The state badge,
 elapsed time and progress bar show whether the activity is ready, running,
 paused or complete. The compact layout keeps the scene and run controls visible
@@ -332,6 +334,7 @@ contains all supported keys with default values:
 | Keys | Meaning |
 | --- | --- |
 | `width`, `height`, `x`, `y`, `maximized` | Normal window size/position in pixels and maximized state |
+| `sidebar_width` | Width of the right panel in pixels, limited to keep both panes usable |
 | `lesson`, `task`, `duration` | Last selected activity and length in seconds |
 | `kinematics` | Lesson 3 wheel-kinematics or waypoint-controller model: `reference` or `student` |
 | `exercise_model` | Estimator, supervisor and arm exercise model: `reference` or `student` |
