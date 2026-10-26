@@ -1,25 +1,29 @@
 """The introductory controller shares the app lifecycle but returns wheel speeds."""
 
 import csv
+import math
 from unittest.mock import Mock
 
 import pytest
 
+from robotics_sim import Pose
 from robotics_sim.exercises.lesson03.proportional import StudentProportionalController
 from robotics_sim.exercises.lesson03.proportional_reference import ReferenceProportionalController
+from robotics_sim.exercises.lesson03 import activity
 from robotics_sim.robots.differential_drive import ReferenceDifferentialDrive
 from robotics_sim.session import ACTIVITY_FILES, ActivitySession, TASKS
 
 
 @pytest.mark.parametrize("gain", [0.4, 0.2])
-def test_reference_reaches_front_goal_and_exports_results(gain, tmp_path):
+def test_reference_reaches_front_goal_and_exports_results(gain, tmp_path, monkeypatch):
+    monkeypatch.setattr(activity, "GAIN", gain)
     session = ActivitySession("3", "drive_proportional", duration=20, dt=1 / 120)
     try:
         assert "drive_proportional" in TASKS["3"]
         assert ACTIVITY_FILES["drive_proportional"][1].endswith("lesson03/proportional.py")
         assert isinstance(session.controller, ReferenceProportionalController)
         assert session.state == "Ready" and session.robot.wheel_velocities == (0, 0)
-        session.controller.gain = gain
+        assert session.controller.gain == gain
         session.step(single=True)
         assert session.robot.wheel_velocities == pytest.approx((gain / .12, gain / .12))
         session.start()
@@ -92,6 +96,19 @@ def test_common_wheel_limit_and_timeout_stop_the_robot():
         assert session.robot.wheel_velocities == (0, 0)
     finally:
         session.close()
+
+
+@pytest.mark.parametrize("pose", [
+    Pose(x=.98, y=.025), Pose(x=1, y=.1), Pose(x=.99, y=.01),
+])
+def test_reference_uses_both_position_error_components(pose):
+    controller = ReferenceProportionalController()
+    gx, gy, _ = controller.goal
+    rho = math.hypot(gx - pose.x, gy - pose.y)
+    speed = controller.gain * rho if rho > controller.eps_p else 0.0
+    assert controller.wheel_command(pose, .12) == pytest.approx((speed / .12, speed / .12))
+    if rho > controller.eps_p:
+        assert speed > 0  # A small x error alone must not trigger the stop.
 
 
 def test_proportional_goal_stays_on_the_exercise_axis():
