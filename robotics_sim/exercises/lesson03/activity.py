@@ -7,7 +7,7 @@ from robotics_sim.robots.differential_drive import (
 from .kinematics import StudentDifferentialDrive
 from .control import DEFAULT_GOALS, StudentWaypointController
 from .control_reference import ReferenceWaypointController
-from .proportional import GAIN, GOAL, POSITION_TOLERANCE, StudentProportionalController
+from .proportional import GAIN, GOAL, EPS_POS, StudentProportionalController
 from .proportional_reference import ReferenceProportionalController
 
 
@@ -30,7 +30,7 @@ def setup(world, *, task, kinematics="reference"):
         if task == "drive_proportional":
             controller = (StudentProportionalController if kinematics == "student"
                           else ReferenceProportionalController)
-            controller_options = {"gain": GAIN, "eps_p": POSITION_TOLERANCE}
+            controller_options = {"gain": GAIN, "eps_pos": EPS_POS}
         else:
             controller = (StudentWaypointController if kinematics == "student"
                           else ReferenceWaypointController)

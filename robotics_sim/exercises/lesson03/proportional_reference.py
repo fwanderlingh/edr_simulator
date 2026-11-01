@@ -10,5 +10,5 @@ class ReferenceProportionalController(ProportionalController):
         gx, gy, _ = self.goal
         ex, ey = gx - pose.x, gy - pose.y
         rho = math.hypot(ex, ey)  # Distance sqrt(ex² + ey²), in metres.
-        speed = self.gain * rho if rho > self.eps_p else 0.0
+        speed = self.gain * rho if rho > self.eps_pos else 0.0
         return speed / wheel_radius, speed / wheel_radius

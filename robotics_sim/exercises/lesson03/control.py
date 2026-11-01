@@ -26,19 +26,19 @@ class WaypointController:
     """Supplied state, wheel conversion and saturation; poses are ground truth."""
 
     def __init__(self, goals=DEFAULT_GOALS, *, kp=0.8, ka=2.0, kt=1.5,
-                 eps_p=0.03, eps_a=0.03, angle_in=0.08, angle_out=0.6,
+                 eps_pos=0.03, eps_a=0.03, angle_in=0.08, angle_out=0.6,
                  wheel_max=5.0):
         self.goals = tuple(tuple(goal) for goal in goals)
         if not self.goals or any(len(g) != 3 or not all(math.isfinite(x) for x in g)
                                  for g in self.goals):
             raise ValueError("Supply at least one finite (x_m, y_m, yaw_rad) goal.")
-        positive = (kp, ka, kt, eps_p, eps_a, wheel_max)
+        positive = (kp, ka, kt, eps_pos, eps_a, wheel_max)
         if not all(math.isfinite(x) and x > 0 for x in positive):
             raise ValueError("Gains, tolerances and wheel limit must be positive and finite.")
         if not 0 < angle_in < angle_out < math.pi / 2:
             raise ValueError("Require 0 < angle_in < angle_out < pi/2.")
         self.kp, self.ka, self.kt = kp, ka, kt
-        self.eps_p, self.eps_a = eps_p, eps_a
+        self.eps_pos, self.eps_a = eps_pos, eps_a
         self.angle_in, self.angle_out = angle_in, angle_out
         self.wheel_max = wheel_max
         self.index, self.phase = 0, "TURN"
@@ -72,7 +72,7 @@ class StudentWaypointController(WaypointController):
 
         Guided steps (the complete working comparison is in control_reference.py):
         1. Read gx, gy, gt = self.goals[self.index]. Compute distance first.
-        2. Within eps_p choose ALIGN; otherwise use TURN or DRIVE with hysteresis.
+        2. Within eps_pos choose ALIGN; otherwise use TURN or DRIVE with hysteresis.
         3. In ALIGN use the wrapped final-angle error. Within eps_a, increment
            index, set TURN or DONE, and return a zero command for that step.
         4. Else compute the bearing error with

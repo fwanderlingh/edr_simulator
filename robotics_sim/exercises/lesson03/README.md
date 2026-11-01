@@ -39,9 +39,9 @@ Start with **Reach a goal: proportional control**, whose goal is fixed at
 `(1 m, 0 m, 0 rad)` ahead of the robot. Complete
 [`StudentProportionalController.wheel_command`](proportional.py): calculate the
 full position error `rho = math.hypot(ex, ey)` from both Cartesian components,
-choose a proportional forward speed (zero within `eps_p`),
+choose a proportional forward speed (zero within `eps_pos`),
 then return the two wheel angular speeds using the supplied wheel radius.
-The available parameters are `self.goal`, `self.gain` and `self.eps_p`.
+The available parameters are `self.goal`, `self.gain` and `self.eps_pos`.
 The exercise intentionally asks for wheel references rather than a body command.
 
 Choose **student** in **CONTROLLER MODEL**, save and restart after editing.
@@ -49,8 +49,8 @@ The scene, wheel-command application, common actuator limit, arrival detection
 and CSV recording are supplied. The activity remains inspectable before an
 unfinished method is first called with Start/Step. Use a 20-second duration and
 compare the wheel speeds, position error and `DONE`/`TIMEOUT` outcome. The defaults are
-`GAIN=0.4`, `POSITION_TOLERANCE=0.03 m` and a supplied wheel limit of 5 rad/s.
-The exercise file exposes `GOAL`, `GAIN` and `POSITION_TOLERANCE` at the top;
+`GAIN=0.4`, `EPS_POS=0.03 m` and a supplied wheel limit of 5 rad/s.
+The exercise file exposes `GOAL`, `GAIN` and `EPS_POS` at the top;
 both models use these parameters. Simulator plumbing is kept in
 `_proportional_runtime.py`, outside the method to complete.
 After your attempt, choose **reference** to compare with

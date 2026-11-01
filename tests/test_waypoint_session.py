@@ -30,7 +30,7 @@ def test_reference_goals_arrive_early_and_export_correct_targets(task, count, tm
         assert session.robot.wheel_velocities == (0, 0)
         assert len(session.arrivals) == count
         for arrival in session.arrivals:
-            assert arrival["position_error_m"] <= session.controller.eps_p
+            assert arrival["position_error_m"] <= session.controller.eps_pos
             assert abs(arrival["angle_error_rad"]) <= session.controller.eps_a
         path = tmp_path / "goals.csv"
         session.export_csv(path)

@@ -8,9 +8,9 @@ from .control import WaypointController
 class ProportionalController(WaypointController):
     """Lifecycle, validation and actuator limits; students edit proportional.py."""
 
-    def __init__(self, goals=((1.0, 0.0, 0.0),), *, gain=0.4, eps_p=0.03,
+    def __init__(self, goals=((1.0, 0.0, 0.0),), *, gain=0.4, eps_pos=0.03,
                  wheel_max=5.0):
-        super().__init__(goals, kp=gain, eps_p=eps_p, wheel_max=wheel_max)
+        super().__init__(goals, kp=gain, eps_pos=eps_pos, wheel_max=wheel_max)
         if len(self.goals) != 1 or self.goals[0][0] <= 0 or self.goals[0][1:] != (0, 0):
             raise ValueError("The proportional exercise needs one goal on positive x with y=heading=0.")
         self.gain = gain
@@ -36,7 +36,7 @@ class ProportionalController(WaypointController):
         peak = max(abs(value) for value in references)
         self.scale = min(1.0, self.wheel_max / peak) if peak else 1.0
         gx, gy, _ = self.goal
-        if math.hypot(gx - pose.x, gy - pose.y) <= self.eps_p:
+        if math.hypot(gx - pose.x, gy - pose.y) <= self.eps_pos:
             self.index, self.phase = 1, "DONE"
             robot.set_wheel_velocities(0.0, 0.0)
         else:

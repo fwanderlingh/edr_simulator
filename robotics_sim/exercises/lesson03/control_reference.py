@@ -11,7 +11,7 @@ class ReferenceWaypointController(WaypointController):
             return 0.0, 0.0
         gx, gy, gt = self.goals[self.index]
         rho = math.hypot(gx - pose.x, gy - pose.y)
-        if rho <= self.eps_p:
+        if rho <= self.eps_pos:
             self.phase = "ALIGN"
         elif self.phase == "ALIGN":
             self.phase = "TURN"

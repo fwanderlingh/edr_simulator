@@ -61,8 +61,8 @@ class ExerciseChecks:
             all_arrived = len(arrivals) == len(ctrl.goals)
             checks = [
                 ("All waypoints reached", all_arrived and session.outcome == "DONE"),
-                (f"Arrival position errors ≤ {ctrl.eps_p:g} m", all_arrived and
-                 all(a["position_error_m"] <= ctrl.eps_p for a in arrivals)),
+                (f"Arrival position errors ≤ {ctrl.eps_pos:g} m", all_arrived and
+                 all(a["position_error_m"] <= ctrl.eps_pos for a in arrivals)),
             ]
             if task != "drive_proportional":
                 checks.append((f"Arrival heading errors ≤ {ctrl.eps_a:g} rad", all_arrived and

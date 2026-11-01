@@ -31,7 +31,7 @@ def test_reference_reaches_front_goal_and_exports_results(gain, tmp_path, monkey
             session.step()
         pose = session.robot.pose()
         assert session.outcome == "DONE" and session.sim.time < 20
-        assert abs(1 - pose.x) <= session.controller.eps_p
+        assert abs(1 - pose.x) <= session.controller.eps_pos
         assert (pose.y, pose.yaw) == pytest.approx((0, 0), abs=1e-9)
         assert session.controller.phase == "DONE" and session.controller.index == 1
         assert session.robot.wheel_velocities == (0, 0)
@@ -105,9 +105,9 @@ def test_reference_uses_both_position_error_components(pose):
     controller = ReferenceProportionalController()
     gx, gy, _ = controller.goal
     rho = math.hypot(gx - pose.x, gy - pose.y)
-    speed = controller.gain * rho if rho > controller.eps_p else 0.0
+    speed = controller.gain * rho if rho > controller.eps_pos else 0.0
     assert controller.wheel_command(pose, .12) == pytest.approx((speed / .12, speed / .12))
-    if rho > controller.eps_p:
+    if rho > controller.eps_pos:
         assert speed > 0  # A small x error alone must not trigger the stop.
 
 
