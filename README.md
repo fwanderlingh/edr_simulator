@@ -92,7 +92,12 @@ reset or when selecting another task. Close the window or choose **File > Exit**
 to quit.
 
 The scene occupies the main workspace. The scrollable panel on the right groups
-live measurements, the experiment description and the files to edit. Drag the
+live measurements, the experiment description and the files to edit. An
+**Exercise checks** card lists checks for the selected exercise: green checkmarks
+mean passed, and red arrows mean failed or awaiting evaluation. **Passed** appears
+only when every check is green. Checks update as you run; Reset clears run evidence.
+They validate the selected activity and inputs, rather than every possible solution
+input. Lesson 1 motion previews have no exercise checks. Drag the
 divider between the scene and the panel to adjust their widths; your chosen
 panel width is remembered on the next launch. Relevant
 model and sensor selectors appear there only for their lessons. The state badge,

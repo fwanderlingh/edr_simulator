@@ -42,6 +42,62 @@ def wait_for_ui(root, condition, *, timeout=5, description="UI condition"):
 
 @desktop_process
 @pytest.mark.solution
+def test_exercise_checks_card_pass_failure_todo_switch_and_reset(tmp_path):
+    import tkinter as tk
+    from unittest.mock import patch
+    import numpy as np
+    from robotics_sim.app import SimulatorApp
+    from robotics_sim.exercises.lesson02 import rpy
+    from robotics_sim.session import LESSONS, TASKS
+
+    root = tk.Tk()
+    app = SimulatorApp(root, lesson="2", duration=.02, dt=.01, settings_path=tmp_path / "checks.json")
+    try:
+        app.task.set(TASKS["2"]["rpy"])
+        app.load_task()
+        root.update()
+        assert app.checks_card.winfo_ismapped()
+        assert len(app.check_rows) == 4
+        assert [marker.cget("text") for marker, _ in app.check_rows] == ["✓"] * 4
+        assert app.checks_badge.winfo_ismapped()
+        assert app.checks_badge.cget("text") == "Passed"
+        assert "Checks:" not in app.values.get()
+        # The card wraps inside the narrow sidebar and stays above measurements.
+        assert app.checks_card.winfo_y() < app.values_label.winfo_y()
+        assert all(label.winfo_x() + label.winfo_width() <= app.checks_list.winfo_width()
+                   for _, label in app.check_rows)
+        with patch.object(rpy, "solve_rpy_task", return_value=(np.eye(3), np.eye(3))):
+            app._update_status()
+            root.update()
+            assert [marker.cget("text") for marker, _ in app.check_rows] == ["→", "✓", "✓", "✓"]
+            assert app.check_rows[0][0].cget("style") == "CheckFailed.TLabel"
+            assert app.check_rows[1][0].cget("style") == "CheckPassed.TLabel"
+            assert not app.checks_badge.winfo_ismapped()
+        with patch.object(rpy, "solve_rpy_task", side_effect=NotImplementedError):
+            app._update_status()
+            root.update()
+            assert [marker.cget("text") for marker, _ in app.check_rows] == ["→"] * 4
+            assert not app.checks_badge.winfo_ismapped()
+        app.lesson.set(LESSONS["3"])
+        app.select_lesson()
+        app.single_step()
+        app.single_step()
+        root.update()
+        assert app.checks_badge.winfo_ismapped()
+        app.load_task()
+        root.update()
+        assert not app.checks_badge.winfo_ismapped()
+        assert all(marker.cget("text") == "→" for marker, _ in app.check_rows)
+        app.lesson.set(LESSONS["1"])
+        app.select_lesson()
+        root.update()
+        assert not app.checks_card.winfo_ismapped()
+    finally:
+        app.close()
+
+
+@desktop_process
+@pytest.mark.solution
 def test_module2_menu_readouts_render_and_todo(tmp_path):
     import tkinter as tk
     from unittest.mock import patch

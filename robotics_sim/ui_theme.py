@@ -25,6 +25,8 @@ def configure_theme(root):
     style.configure(".", font=(family, 10), foreground=INK)
     style.configure("TFrame", background=PAGE)
     style.configure("Card.TFrame", background=SURFACE)
+    style.configure("Checks.TFrame", background=SURFACE, bordercolor=LINE,
+                    lightcolor=LINE, darkcolor=LINE, relief="solid", borderwidth=1)
     style.configure("TLabel", background=SURFACE, foreground=INK)
     style.configure("Title.TLabel", background=PAGE, font=(family, 21, "bold"))
     style.configure("Subtitle.TLabel", background=PAGE, foreground=MUTED, font=(family, 9))
@@ -54,9 +56,12 @@ def configure_theme(root):
     style.configure("Vertical.TScrollbar", background="#d2dde5", troughcolor=SURFACE,
                     borderwidth=0, arrowsize=11)
     style.configure("NotImplemented.TLabel", background="#fff2cd", foreground="#78551a")
+    style.configure("CheckPassed.TLabel", foreground="#14823e", font=(family, 11, "bold"))
+    style.configure("CheckFailed.TLabel", foreground="#c92d35", font=(family, 11, "bold"))
     for name, foreground, background in (
         ("Ready", ACCENT, "#dff0ef"), ("Running", ACCENT, "#dff0ef"),
         ("Paused", "#94651c", "#fff0d4"), ("Completed", "#3463a1", "#e6edf9"),
+        ("Passed", "#14823e", "#e2f3e8"),
     ):
         style.configure(f"{name}.Badge.TLabel", foreground=foreground, background=background,
                         font=(family, 9, "bold"), padding=(12, 6))

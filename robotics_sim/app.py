@@ -19,6 +19,7 @@ from .sim.scene_renderer import SceneRenderer
 from .exercises.lesson04.gui import SENSOR_EXERCISES
 from .preferences import DEFAULT_PATH, load_preferences, save_preferences
 from .experiment_data import capture_experiment
+from .exercise_checks import ExerciseChecks
 from .label_image import solid_rgba_png
 from .selectable_text import SelectableText
 from .ui_theme import configure_theme, ACCENT, PAGE, SURFACE, VIEWPORT
@@ -342,19 +343,36 @@ class SimulatorApp:
         ttk.Label(self.heading_controls, text="Heading · degrees", style="Muted.TLabel").pack(side="left")
         ttk.Entry(self.heading_controls, textvariable=self.goal_yaw, width=7).pack(side="right")
         ttk.Button(self.goal_controls, text="Apply / reset", command=self.load_task).grid(row=4, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        ttk.Label(details, text="LIVE MEASUREMENTS", style="Section.TLabel").grid(row=3, column=0, sticky="w", pady=(0, 8))
+        ttk.Label(details, text="LIVE MEASUREMENTS", style="Section.TLabel").grid(row=4, column=0, sticky="w", pady=(0, 8))
         self.values_label = SelectableText(details, textvariable=self.values, style="Readout.TLabel")
-        self.values_label.grid(row=4, column=0, sticky="ew")
-        ttk.Separator(details).grid(row=5, column=0, sticky="ew", pady=16)
-        ttk.Label(details, text="THE EXPERIMENT", style="Section.TLabel").grid(row=6, column=0, sticky="w", pady=(0, 8))
+        self.values_label.grid(row=5, column=0, sticky="ew")
+        self.checks_card = ttk.Frame(details, style="Checks.TFrame", padding=10)
+        self.checks_card.grid(row=3, column=0, sticky="ew", pady=(0, 14))
+        self.checks_card.columnconfigure(0, weight=1)
+        checks_header = ttk.Frame(self.checks_card, style="Card.TFrame")
+        checks_header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        ttk.Label(checks_header, text="EXERCISE CHECKS", style="Section.TLabel").pack(side="left")
+        self.checks_badge = ttk.Label(checks_header, text="Passed", style="Passed.Badge.TLabel")
+        self.checks_badge.pack(side="right")
+        self.checks_list = ttk.Frame(self.checks_card, style="Card.TFrame")
+        self.checks_list.grid(row=1, column=0, sticky="ew")
+        self.checks_list.columnconfigure(1, weight=1)
+        self.check_rows = []
+        self._displayed_checks = None
+        def wrap_checks(event):
+            for _, label in self.check_rows:
+                label.configure(wraplength=max(1, event.width - 28))
+        self.checks_list.bind("<Configure>", wrap_checks)
+        ttk.Separator(details).grid(row=6, column=0, sticky="ew", pady=16)
+        ttk.Label(details, text="THE EXPERIMENT", style="Section.TLabel").grid(row=7, column=0, sticky="w", pady=(0, 8))
         description = SelectableText(details, textvariable=self.description)
-        description.grid(row=7, column=0, sticky="ew")
-        ttk.Separator(details).grid(row=8, column=0, sticky="ew", pady=16)
-        ttk.Label(details, text="YOUR IMPLEMENTATION", style="Section.TLabel").grid(row=9, column=0, sticky="w", pady=(0, 8))
+        description.grid(row=8, column=0, sticky="ew")
+        ttk.Separator(details).grid(row=9, column=0, sticky="ew", pady=16)
+        ttk.Label(details, text="YOUR IMPLEMENTATION", style="Section.TLabel").grid(row=10, column=0, sticky="w", pady=(0, 8))
         self.edit_hint = ttk.Label(details, wraplength=246, justify="left", style="Muted.TLabel")
-        self.edit_hint.grid(row=10, column=0, sticky="ew", pady=(0, 8))
+        self.edit_hint.grid(row=11, column=0, sticky="ew", pady=(0, 8))
         self.edit_file = ttk.Label(details, wraplength=246, justify="left", style="Code.TLabel")
-        self.edit_file.grid(row=11, column=0, sticky="ew")
+        self.edit_file.grid(row=12, column=0, sticky="ew")
 
         def wrap_details(event):
             for label in (sensor_hint, self.edit_hint, self.edit_file):
@@ -367,7 +385,9 @@ class SimulatorApp:
                 direction = -1 if event.delta > 0 else 1
             self.inspector_canvas.yview_scroll(direction * 3, "units")
             return "break"
-        for widget in (self.inspector_canvas, details, self.values_label, description, self.edit_hint, self.edit_file):
+        self._scroll_details = scroll_details
+        for widget in (self.inspector_canvas, details, self.values_label, description, self.edit_hint, self.edit_file,
+                       self.checks_card, checks_header, self.checks_badge, self.checks_list, *checks_header.winfo_children()):
             widget.bind("<MouseWheel>", scroll_details)
             widget.bind("<Button-4>", scroll_details)
             widget.bind("<Button-5>", scroll_details)
@@ -484,6 +504,7 @@ class SimulatorApp:
             self._remember_experiment()
             self.session.close()
         self.session = new_session
+        self.exercise_checks = ExerciseChecks(new_session)
         self._experiment_generation += 1
         self.model_selector.configure(state="readonly", textvariable=(self.kinematics
                                       if self.lesson_id == "3" else self.exercise_model))
@@ -595,14 +616,17 @@ class SimulatorApp:
             return None
 
     def _update_status(self):
+        module2_output = planar_output = frame_output = None
         pose = self.session.robot.pose()
         self.values.set(f"x     {pose.x:8.3f} m\ny     {pose.y:8.3f} m\nyaw   {pose.yaw:8.3f} rad")
         if self.session.task in module2.TASKS:
             output = self._module2_output()
-            self.values.set(self.values.get() + "\n" + (output[2] if output else
+            module2_output = output
+            self.values.set(self.values.get() + "\n" + (output.readout if output else
                 "Module 2 not implemented yet: complete the exercise file shown below."))
         if self.session.task == "planar":
             output = self._planar_output()
+            planar_output = output
             if output is None:
                 self.values.set(self.values.get() +
                     "\nModule 1 not implemented yet: complete solve_planar_task in exercises/lesson02/planar.py")
@@ -611,6 +635,12 @@ class SimulatorApp:
                 self.values.set(self.values.get() +
                     f"\nModule 1 output: point in world ({point[0]:.2f}, {point[1]:.2f}) m"
                     f" | direction in world ({direction[0]:.2f}, {direction[1]:.2f})")
+        if self.session.task in ("frames", "static"):
+            try:
+                frame_output = point_in_world(pose.matrix(), frames_activity.ROBOT_FROM_SENSOR,
+                                              frames_activity.POINT_IN_SENSOR)
+            except NotImplementedError:
+                self.values.set(self.values.get() + "\nExercise not implemented yet: complete point_in_world.")
         if self.session.lesson == "3":
             left, right = self.session.robot.wheel_velocities
             command = self.session.robot.command
@@ -635,6 +665,11 @@ class SimulatorApp:
                             f"\nGoal error: {distance:.3f} m\nHeading error: {heading:.3f} rad\nOutcome: {self.session.outcome}")
         if self.session.laboratory is not None:
             self.values.set(self.values.get() + "\n" + self.session.laboratory.readout)
+        checks = self.exercise_checks.evaluate(module2_output=module2_output,
+                                               planar_output=planar_output, frame_output=frame_output)
+        if self._notice:
+            checks = (*checks, ("Exercise runs without implementation errors", False))
+        self._update_checks(checks)
         state = self.session.state
         self.state_badge.configure(text=state, style=f"{state}.Badge.TLabel")
         self.progress.configure(value=(100 if state == "Completed" and self.session.outcome != "TIMEOUT"
@@ -650,6 +685,36 @@ class SimulatorApp:
         self.start_button.configure(text="Pause ⏸︎" if state == "Running" else "Resume" if state == "Paused" else "Start ▶",
                                     state="disabled" if state == "Completed" else "normal")
         self.step_button.configure(state="disabled" if state in ("Running", "Completed") else "normal")
+
+    def _update_checks(self, checks):
+        if checks == self._displayed_checks:
+            return
+        self._displayed_checks = checks
+        if not checks:
+            self.checks_card.grid_remove()
+            return
+        self.checks_card.grid()
+        if tuple(label.cget("text") for _, label in self.check_rows) != tuple(name for name, _ in checks):
+            for widget in self.checks_list.winfo_children():
+                widget.destroy()
+            self.check_rows = []
+            for index, (name, _) in enumerate(checks):
+                marker = ttk.Label(self.checks_list, width=2, anchor="n")
+                marker.grid(row=index, column=0, sticky="nw", pady=3)
+                label = ttk.Label(self.checks_list, text=name, justify="left",
+                                  wraplength=max(1, self.checks_list.winfo_width() - 28))
+                label.grid(row=index, column=1, sticky="nw", pady=3)
+                self.check_rows.append((marker, label))
+                for widget in (marker, label):
+                    for event in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+                        widget.bind(event, self._scroll_details)
+        for (marker, _), (_, passed) in zip(self.check_rows, checks):
+            marker.configure(text="✓" if passed else "→",
+                             style="CheckPassed.TLabel" if passed else "CheckFailed.TLabel")
+        if all(passed for _, passed in checks):
+            self.checks_badge.pack(side="right")
+        else:
+            self.checks_badge.pack_forget()
 
     def _tick(self):
         if self.closed:
@@ -933,7 +998,7 @@ class SimulatorApp:
             elif self.session.task in module2.TASKS:
                 output = self._module2_output()
                 if output is not None:
-                    frames, arrows, _ = output
+                    frames, arrows = output.frames, output.arrows
                     for transform, name in frames:
                         self._frame(transform, name, scale=0.4, offset=(12, -40))
                     for start, end, name, color in arrows:

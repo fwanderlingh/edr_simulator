@@ -71,7 +71,8 @@ def test_module2_lifecycle_and_unfinished_exercise(task, monkeypatch):
 @pytest.mark.solution
 @pytest.mark.parametrize('task', module2.TASKS)
 def test_scene_annotations_are_finite(task):
-    frames, arrows, readout = module2.evaluate(task)
+    frames, arrows, readout, checks = module2.evaluate(task)
+    assert checks and all(passed for _, passed in checks)
     if task == "rpy":
         reported_direction = np.fromstring(readout.split("v_w: [", 1)[1].split("]", 1)[0], sep=" ")
         np.testing.assert_allclose(reported_direction, [.720, .604, .342], atol=1e-3)
@@ -88,28 +89,25 @@ def test_rpy_scene_uses_only_assignment_and_draws_reported_result(monkeypatch):
     from unittest.mock import Mock
     solver = Mock(wraps=rpy.solve_rpy_task)
     monkeypatch.setattr(rpy, "solve_rpy_task", solver)
-    frames, arrows, readout = module2.evaluate("rpy")
+    frames, arrows, readout, checks = module2.evaluate("rpy")
     solver.assert_called_once_with(np.pi/6, -np.pi/9, 2*np.pi/9)
     assert len(frames) == len(arrows) == 1
     frame, _ = frames[0]
     start, end, _, _ = arrows[0]
     np.testing.assert_allclose(end-start, [.720, .604, .342], atol=1e-3)
     np.testing.assert_allclose(frame[:3, :3] @ [1, 0, 0], end-start)
-    assert "❌" not in readout
-    assert readout.count("✅") == 4
+    assert "Checks:" not in readout
+    assert len(checks) == 4 and all(passed for _, passed in checks)
     assert "Gimbal" not in readout
 
 
 def test_rpy_feedback_rejects_wrong_rotation_even_when_both_methods_agree(monkeypatch):
     monkeypatch.setattr(rpy, "solve_rpy_task", lambda *angles: (np.eye(3), np.eye(3)))
-    _, _, readout = module2.evaluate("rpy")
-    assert "R vs expected ❌" in readout
-    assert "R vs product ✅" in readout
-    assert "R^T R = I ✅" in readout
-    assert "det(R) = 1 ✅" in readout
+    result = module2.evaluate("rpy")
+    assert [passed for _, passed in result.checks] == [False, True, True, True]
 
 
 def test_rpy_feedback_detects_non_rotation_and_disagreement(monkeypatch):
     monkeypatch.setattr(rpy, "solve_rpy_task", lambda *angles: (2*np.eye(3), np.eye(3)))
-    _, _, readout = module2.evaluate("rpy")
-    assert readout.count("❌") == 4
+    result = module2.evaluate("rpy")
+    assert not any(passed for _, passed in result.checks)
