@@ -123,6 +123,17 @@ from frame `b` to frame `a` (the pose of `b` expressed in `a`); `p_in_a` is poin
 import numpy as np
 ```
 
+For planar transforms, $c=\cos\theta$ and $s=\sin\theta$. The rotation and
+homogeneous transform matrices are:
+
+```math
+R(\theta)=\begin{bmatrix}c&-s\\s&c\end{bmatrix}
+```
+
+```math
+T=\begin{bmatrix}R&t\\0&1\end{bmatrix}
+```
+
 | Math | Python (NumPy) | Notes |
 |---|---|---|
 | $\mathbf{p}=(x,y)^T$ | `p = np.array([x, y])` | 1D `float` array |
@@ -132,8 +143,8 @@ import numpy as np
 | $\cos\theta,\ \sin\theta$ | `np.cos(theta)`, `np.sin(theta)` | radians (`np.deg2rad(degrees)`) |
 | $\mathrm{atan2}(y,x)$ | `math.atan2(y, x)` | direction angle in radians; y first, x second; preserves the quadrant; `import math` |
 | $\sqrt{x^2+y^2}$ | `math.hypot(x, y)` | distance or vector magnitude; `import math` |
-| $R(\theta)=\begin{bmatrix}c&-s\\ s&c\end{bmatrix}$ | `R = np.array([[c, -s], [s, c]])` | |
-| $T=\begin{bmatrix}R&t\\0&1\end{bmatrix}$ | `T = np.eye(3); T[:2, :2] = R; T[:2, 2] = t` | block assignment by slicing |
+| rotation matrix $R(\theta)$ | `R = np.array([[c, -s], [s, c]])` | |
+| homogeneous transform $T$ | `T = np.eye(3); T[:2, :2] = R; T[:2, 2] = t` | block assignment by slicing |
 | rotation block of $T$ | `T[:2, :2]` | |
 | translation of $T$ | `T[:2, 2]` | |
 | matrix-vector product $A\mathbf{x}$ | `A @ x` | **not** `*` (element-wise) |
@@ -148,8 +159,8 @@ Worked examples:
 | Math | Python |
 |---|---|
 | $T_{ws}=T_{wr}T_{rs}$ | `world_from_sensor = world_from_robot @ robot_from_sensor` |
-| point: $\tilde{p}_w=T_{ws}\begin{bmatrix}p_s\\1\end{bmatrix}$ | `point_in_world = world_from_sensor @ np.append(point_in_sensor, 1)` |
-| direction: $\tilde{d}_w=T_{ws}\begin{bmatrix}d_s\\0\end{bmatrix}$ | `direction_in_world = world_from_sensor @ np.append(direction_in_sensor, 0)` |
+| point: $\tilde{p}_w=T_{ws}(x_s,y_s,1)^T$ | `point_in_world = world_from_sensor @ np.append(point_in_sensor, 1)` |
+| direction: $\tilde{d}_w=T_{ws}(d_{x,s},d_{y,s},0)^T$ | `direction_in_world = world_from_sensor @ np.append(direction_in_sensor, 0)` |
 
 The result of a homogeneous transform has one extra component (3 elements in
 2D); take `[:2]` for Cartesian coordinates, e.g.
