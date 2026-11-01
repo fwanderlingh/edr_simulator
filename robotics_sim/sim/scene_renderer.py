@@ -108,7 +108,7 @@ class BoxScene:
                 self.shapes.append((body, vertices, sides, normals, np.asarray(shape[5]),
                                     quaternion_to_matrix(shape[6]), np.asarray(shape[7][:3])))
 
-    def faces(self, camera, ground_paths=()):
+    def faces(self, camera, ground_paths=(), shadow_paths=()):
         faces = []
         for index, (body, local_vertices, sides, local_normals, offset, local_rotation, color) in enumerate(self.shapes):
             position, orientation = bullet.getBasePositionAndOrientation(body, physicsClientId=self.world.physics.client)
@@ -147,6 +147,7 @@ class BoxScene:
             faces.extend(self._shadow_cache.get(index, ()))
         # The floor is necessarily behind the other bodies; its large extent
         # makes mean-depth sorting inaccurate when the camera crosses its edge.
+        faces.extend(self.path_shadows(camera, shadow_paths))
         faces.extend(self.ground_grid(camera))
         faces.extend(self.ground_paths(camera, ground_paths))
         return sorted(faces, key=lambda face: (
@@ -175,6 +176,25 @@ class BoxScene:
             pixels = (ndc + (1, -1)) * (camera.width / 2, -camera.height / 2)
             result.append(Face((-3, index, layer), tuple(pixels.ravel()), layer, color))
         return result
+
+    def path_shadows(self, camera, paths):
+        """Cast rounded elevated links with the same light and tones as bodies.
+
+        Each path is (3D joint positions, link radius). Project links separately
+        so a bent arm does not cast a filled triangle between its two links.
+        """
+        faces = []
+        angles = np.arange(12) * (2 * np.pi / 12)
+        for path_index, (points, radius) in enumerate(paths):
+            offsets = np.array([(radius * np.cos(a), radius * np.sin(a), z)
+                                for z in (-radius, radius) for a in angles])
+            for segment, (start, end) in enumerate(zip(points, points[1:])):
+                start, end = np.asarray(start), np.asarray(end)
+                if np.linalg.norm(end - start) <= 1e-12:
+                    continue
+                vertices = np.concatenate((start + offsets, end + offsets))
+                faces.extend(self.contact_shadow(camera, ("path", path_index, segment), vertices))
+        return faces
 
     def ground_paths(self, camera, paths):
         """Project flat guide strips above the grid and below solid bodies.
@@ -241,7 +261,7 @@ class SceneRenderer:
         self._values = {}
         self._order = ()
 
-    def draw(self, world, camera, width, height, *, ground_paths=()):
+    def draw(self, world, camera, width, height, *, ground_paths=(), shadow_paths=()):
         if self.scene is None or self.scene.world is not world:
             self.canvas.delete("scene")
             self.scene = BoxScene(world)
@@ -249,7 +269,7 @@ class SceneRenderer:
             self._values.clear()
             self._order = ()
         camera.prepare(width, height)
-        faces = self.scene.faces(camera, ground_paths)
+        faces = self.scene.faces(camera, ground_paths, shadow_paths)
         visible = {face.key for face in faces}
         for key in self.items.keys() - visible:
             if self._values.get(key) is not None:

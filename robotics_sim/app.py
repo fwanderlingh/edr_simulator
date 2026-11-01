@@ -914,13 +914,17 @@ class SimulatorApp:
 
     def _render(self):
         width, height = max(2, self.canvas.winfo_width()), max(2, self.canvas.winfo_height())
+        laboratory = self.session.laboratory
+        chains = ()
+        if self.session.lesson == "5":
+            chains = laboratory.branches if len(laboratory.branches) else (laboratory.points,)
         ground_paths = ()
         if self.session.task == "square":
             ground_paths = (([(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)], "#b5660b"),)
-        self.renderer.draw(self.session.world, self.camera, width, height, ground_paths=ground_paths)
+        self.renderer.draw(self.session.world, self.camera, width, height, ground_paths=ground_paths,
+                           shadow_paths=tuple((chain, 0.10) for chain in chains))
         self.canvas.delete("overlay")
         self._label_bounds = []
-        laboratory = self.session.laboratory
         if self.session.controller is not None:
             controller = self.session.controller
             for index, (gx, gy, heading) in enumerate(controller.goals):
@@ -937,7 +941,6 @@ class SimulatorApp:
                     for start, end in zip(simplified, simplified[1:]):
                         self._line(start, end, color, width=2)
         if self.session.lesson == "5":
-            chains = laboratory.branches if len(laboratory.branches) else (laboratory.points,)
             for index, chain in enumerate(chains):
                 color = "#087f83" if index == 0 else "#8558ae"
                 for start, end in zip(chain, chain[1:]):

@@ -626,6 +626,51 @@ def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
 
 
 @desktop_process
+def test_arm_shadows_move_show_both_ik_branches_and_reset(tmp_path):
+    import tkinter as tk
+    from robotics_sim.app import SimulatorApp, enable_high_dpi
+    from robotics_sim.session import LESSONS, TASKS
+
+    enable_high_dpi()
+    root = tk.Tk()
+    app = SimulatorApp(root, lesson="5", settings_path=tmp_path / "arm-shadows.json")
+
+    def visible_shadows():
+        return {key: item for key, item in app.renderer.items.items()
+                if key[0] == -3 and isinstance(key[1], tuple)
+                and app.canvas.itemcget(item, "state") != "hidden"}
+
+    try:
+        app.task.set(TASKS["5"]["arm_control"])
+        app.load_task()
+        root.update()
+        app._render()
+        initial = visible_shadows()
+        assert len(initial) == 6
+        before = {key: app.canvas.coords(item) for key, item in initial.items()}
+        app.single_step()
+        app._render()
+        moved = visible_shadows()
+        assert moved == initial  # Retain the canvas items as joints move.
+        assert any(app.canvas.coords(item) != before[key] for key, item in moved.items())
+        app.task.set(TASKS["5"]["arm_inverse"])
+        app.load_task()
+        app.single_step()
+        app._render()
+        assert len(app.session.laboratory.branches) == 2
+        assert len(visible_shadows()) == 12
+        app.load_task()
+        app._render()
+        assert len(visible_shadows()) == 6
+        app.lesson.set(LESSONS["1"])
+        app.select_lesson()
+        app._render()
+        assert not visible_shadows()
+    finally:
+        app.close()
+
+
+@desktop_process
 def test_plots_use_latest_record_and_survive_activity_reset(tmp_path):
     import tkinter as tk
     from robotics_sim.app import SimulatorApp, enable_high_dpi
