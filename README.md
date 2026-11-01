@@ -2,12 +2,10 @@
 
 A Python laboratory for the course "Elementi di Robotica - Mod. 1" (Università di Genova), covering **lessons 1–5** in the desktop app:
 simulation basics, coordinate frames, mobile-base kinematics and control, sensors,
-local obstacle avoidance, and a planar 2R arm. The
-[course notes](../README.md#dispense-disponibili) guide each practical exercise
-from the model to an implementation that runs in the same application. Each Part ends with an implementation guide; worked
-solutions appear in the notes' final appendices. Base–arm coordination,
-grasping and the integrated mission follow in the
-[escape room course sequence](../docs/the_escape_room_plan.md).
+local obstacle avoidance, and a planar 2R arm. The lesson exercise guides below
+help you turn each model into an implementation that runs in the same
+application. Base–arm coordination, grasping and the integrated mission follow
+in the escape room course sequence.
 
 ![Screenshot of the simulator](img/sim_screenshot.png)
 
@@ -54,7 +52,7 @@ use headless mode on servers. For a class without internet, first run
 Do not move or copy a created `.conda` runtime; distribute the source folder and
 let each computer create its own environment.
 
-For the notes' Module 1, choose **Lesson 2 - Frames and transformations** and
+For Module 1, choose **Lesson 2 - Frames and transformations** and
 then **Module 1: Planar transforms**.
 
 ### Exercises you complete
@@ -132,7 +130,7 @@ import numpy as np
 | homogeneous direction $(v_x,v_y,0)^T$ | `np.append(v, 0)` | free vector ignores translation |
 | back to Cartesian | `ph[:2]` | drop the last component |
 | $\cos\theta,\ \sin\theta$ | `np.cos(theta)`, `np.sin(theta)` | radians (`np.deg2rad(degrees)`) |
-| $\operatorname{atan2}(y,x)$ | `math.atan2(y, x)` | direction angle in radians; y first, x second; preserves the quadrant; `import math` |
+| $\mathrm{atan2}(y,x)$ | `math.atan2(y, x)` | direction angle in radians; y first, x second; preserves the quadrant; `import math` |
 | $\sqrt{x^2+y^2}$ | `math.hypot(x, y)` | distance or vector magnitude; `import math` |
 | $R(\theta)=\begin{bmatrix}c&-s\\ s&c\end{bmatrix}$ | `R = np.array([[c, -s], [s, c]])` | |
 | $T=\begin{bmatrix}R&t\\0&1\end{bmatrix}$ | `T = np.eye(3); T[:2, :2] = R; T[:2, 2] = t` | block assignment by slicing |
@@ -180,8 +178,8 @@ quaternions, plus the optional 3D extensions.
 the differential-drive tasks, equations, reference model, and expected
 ideal-kinematics assumptions.
 
-The [Lesson 3 notes](../dispense/EDR.03_Cinematica_e_controllo.tex)
-connect this model to odometry, target regulation, and waypoint following.
+The activities connect this model to odometry, target regulation, and waypoint
+following.
 Complete `StudentWaypointController.wheel_command` in
 [`lesson03/control.py`](robotics_sim/exercises/lesson03/control.py), then choose
 **Reach a goal: pose control**, **Follow two waypoints**, or
@@ -216,8 +214,8 @@ limits in the shared scene. **Export CSV** records the numerical evidence.
 ## Guided implementation workflow
 
 All practical exercises run in the desktop app. Read the guided exercise first,
-predict the result, then edit the `Student` method named in the notes and in the
-**YOUR IMPLEMENTATION** panel. Save, restart the app and select the same activity
+predict the result, then edit the `Student` method named in the exercise guide
+and in the **YOUR IMPLEMENTATION** panel. Save, restart the app and select the same activity
 with the student model. An unfinished method names the file and function to
 complete. After your attempt, use the reference model to compare the same
 initial conditions, target and parameters.
