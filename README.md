@@ -156,11 +156,35 @@ T=\begin{bmatrix}R&t\\0&1\end{bmatrix}
 
 Worked examples:
 
-| Math | Python |
-|---|---|
-| $T_{ws}=T_{wr}T_{rs}$ | `world_from_sensor = world_from_robot @ robot_from_sensor` |
-| point: $\tilde{p}_w=T_{ws}(x_s,y_s,1)^T$ | `point_in_world = world_from_sensor @ np.append(point_in_sensor, 1)` |
-| direction: $\tilde{d}_w=T_{ws}(d_{x,s},d_{y,s},0)^T$ | `direction_in_world = world_from_sensor @ np.append(direction_in_sensor, 0)` |
+Compose transforms:
+
+```math
+T_{ws}=T_{wr}T_{rs}
+```
+
+```python
+world_from_sensor = world_from_robot @ robot_from_sensor
+```
+
+Transform a point:
+
+```math
+\tilde{p}_{w}=T_{ws}\begin{bmatrix}x_s\\y_s\\1\end{bmatrix}
+```
+
+```python
+point_in_world = world_from_sensor @ np.append(point_in_sensor, 1)
+```
+
+Transform a direction:
+
+```math
+\tilde{d}_{w}=T_{ws}\begin{bmatrix}d_{x,s}\\d_{y,s}\\0\end{bmatrix}
+```
+
+```python
+direction_in_world = world_from_sensor @ np.append(direction_in_sensor, 0)
+```
 
 The result of a homogeneous transform has one extra component (3 elements in
 2D); take `[:2]` for Cartesian coordinates, e.g.
