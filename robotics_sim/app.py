@@ -922,7 +922,7 @@ class SimulatorApp:
         if self.session.task == "square":
             ground_paths = (([(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)], "#b5660b"),)
         self.renderer.draw(self.session.world, self.camera, width, height, ground_paths=ground_paths,
-                           shadow_paths=tuple((chain, 0.10) for chain in chains))
+                           shadow_paths=tuple((chain, 0.02) for chain in chains))
         self.canvas.delete("overlay")
         self._label_bounds = []
         if self.session.controller is not None:

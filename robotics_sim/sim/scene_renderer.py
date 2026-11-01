@@ -178,21 +178,21 @@ class BoxScene:
         return result
 
     def path_shadows(self, camera, paths):
-        """Cast rounded elevated links with the same light and tones as bodies.
+        """Cast thin link strips with the same light and tones as bodies.
 
-        Each path is (3D joint positions, link radius). Project links separately
+        Each path is (3D joint positions, strip half-width). Project links separately
         so a bent arm does not cast a filled triangle between its two links.
         """
         faces = []
-        angles = np.arange(12) * (2 * np.pi / 12)
-        for path_index, (points, radius) in enumerate(paths):
-            offsets = np.array([(radius * np.cos(a), radius * np.sin(a), z)
-                                for z in (-radius, radius) for a in angles])
+        for path_index, (points, half_width) in enumerate(paths):
             for segment, (start, end) in enumerate(zip(points, points[1:])):
                 start, end = np.asarray(start), np.asarray(end)
-                if np.linalg.norm(end - start) <= 1e-12:
+                delta = end[:2] - start[:2]
+                length = np.linalg.norm(delta)
+                if length <= 1e-12:
                     continue
-                vertices = np.concatenate((start + offsets, end + offsets))
+                side = half_width * np.array([-delta[1], delta[0], 0]) / length
+                vertices = np.array([start - side, end - side, end + side, start + side])
                 faces.extend(self.contact_shadow(camera, ("path", path_index, segment), vertices))
         return faces
 

@@ -78,7 +78,7 @@ def test_arm_shadows_follow_joints_and_stay_below_grid_and_base(yaw, pitch):
         camera.prepare(1000, 700)
         scene = BoxScene(session.world)
         lab = session.laboratory
-        first = scene.faces(camera, shadow_paths=((lab.points, .10),))
+        first = scene.faces(camera, shadow_paths=((lab.points, .02),))
         shadows = [face for face in first if face.key[0] == -3 and isinstance(face.key[1], tuple)]
         assert len(shadows) == 6  # Two separate links, each with three soft tonal bands.
         ground_and_solids = [i for i, face in enumerate(first) if face.key[0] in (-1, 1)]
@@ -89,7 +89,7 @@ def test_arm_shadows_follow_joints_and_stay_below_grid_and_base(yaw, pitch):
             assert np.all(pixels >= -1e-6)
             assert np.all(pixels <= (1000 + 1e-6, 700 + 1e-6))
         lab.q = np.array([1.0, -.4])
-        moved = scene.faces(camera, shadow_paths=((lab.points, .10),))
+        moved = scene.faces(camera, shadow_paths=((lab.points, .02),))
         moved_shadows = [face for face in moved if face.key[0] == -3 and isinstance(face.key[1], tuple)]
         assert [face.coordinates for face in moved_shadows] != [face.coordinates for face in shadows]
         assert not any(isinstance(face.key[1], tuple) for face in scene.faces(camera) if face.key[0] == -3)
@@ -104,7 +104,7 @@ def test_link_shadows_do_not_fill_the_elbow_and_clip_offscreen_geometry():
         camera.prepare(1000, 700)
         scene = BoxScene(session.world)
         bent = np.array([(0, 0, .2), (1, 0, .2), (1, 1, .2)])
-        shadows = scene.path_shadows(camera, ((bent, .10),))
+        shadows = scene.path_shadows(camera, ((bent, .02),))
         assert {face.key[1] for face in shadows} == {("path", 0, 0), ("path", 0, 1)}
         # Each footprint stays close to its own ground-projected segment.
         # Filling the convex hull of the whole arm would cover the elbow interior.
@@ -116,6 +116,6 @@ def test_link_shadows_do_not_fill_the_elbow_and_clip_offscreen_geometry():
             cross = edges[:, 0] * delta[:, 1] - edges[:, 1] * delta[:, 0]
             assert not (np.all(cross >= 0) or np.all(cross <= 0))
         for points in ([(0, 0, .2), (0, 0, .2)], [(1000, 1000, .2), (1001, 1000, .2)]):
-            assert scene.path_shadows(camera, ((points, .10),)) == []
+            assert scene.path_shadows(camera, ((points, .02),)) == []
     finally:
         session.close()
