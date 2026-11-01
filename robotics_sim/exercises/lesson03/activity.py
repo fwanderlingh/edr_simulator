@@ -5,16 +5,17 @@ from robotics_sim.robots.differential_drive import (
     DifferentialDriveRobot, ReferenceDifferentialDrive,
 )
 from .kinematics import StudentDifferentialDrive
-from .control import DEFAULT_GOALS, StudentWaypointController
-from .control_reference import ReferenceWaypointController
+from . import control as waypoint_exercise
+from .control import GOALS, StudentWaypointController
+from robotics_sim.sim.references.waypoint_control import ReferenceWaypointController
 from .proportional import GAIN, GOAL, EPS_POS, StudentProportionalController
-from .proportional_reference import ReferenceProportionalController
+from robotics_sim.sim.references.proportional_control import ReferenceProportionalController
 
 
 WAYPOINT_TASKS = {
     "drive_proportional": (GOAL,),
-    "drive_goal": (DEFAULT_GOALS[0],),
-    "drive_waypoints": DEFAULT_GOALS,
+    "drive_goal": (GOALS[0],),
+    "drive_waypoints": GOALS,
     "drive_goal_behind": ((-1.0, 0.0, 0.0),),
 }
 
@@ -34,6 +35,7 @@ def setup(world, *, task, kinematics="reference"):
         else:
             controller = (StudentWaypointController if kinematics == "student"
                           else ReferenceWaypointController)
+            controller_options = waypoint_exercise._controller_parameters()
         robot.waypoint_controller = controller(WAYPOINT_TASKS[task], **controller_options)
         return robot
     model = StudentDifferentialDrive if kinematics == "student" else ReferenceDifferentialDrive

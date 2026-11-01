@@ -1,6 +1,6 @@
 """Guided waypoint-control exercise for Lesson 3, Part II.
 
-Complete StudentWaypointController.nominal_command using the course notes.
+Complete StudentWaypointController.wheel_command using the course notes.
 Run from simulator/: python -m robotics_sim.exercises.lesson03.control
 Use --model reference to compare after making your own prediction.
 """
@@ -15,7 +15,20 @@ from robotics_sim import DifferentialDriveRobot, Pose, Simulator, World
 from robotics_sim.sim.visualizer import Visualizer
 
 
-DEFAULT_GOALS = ((1.0, 0.5, math.pi / 2), (1.0, 1.5, 0.0))
+GOALS = ((1.0, 0.5, math.pi / 2), (1.0, 1.5, 0.0))  # (x [m], y [m], heading [rad])
+GAIN = 0.8                  # 1/s; forward speed from position error
+GAIN_BEARING = 2.0          # 1/s; turn toward the goal
+GAIN_HEADING = 1.5          # 1/s; align the final heading
+EPS_POS = 0.03              # m
+EPS_ANGLE = 0.03            # rad
+ANGLE_IN = 0.08             # rad; enter DRIVE
+ANGLE_OUT = 0.6             # rad; return to TURN
+
+
+def _controller_parameters():
+    """Use the exercise settings for both models and both GUI/CLI entry points."""
+    return dict(gain=GAIN, gain_bearing=GAIN_BEARING, gain_heading=GAIN_HEADING,
+                eps_pos=EPS_POS, eps_angle=EPS_ANGLE, angle_in=ANGLE_IN, angle_out=ANGLE_OUT)
 
 
 def wrap(angle):
@@ -23,22 +36,22 @@ def wrap(angle):
 
 
 class WaypointController:
-    """Supplied state, wheel conversion and saturation; poses are ground truth."""
+    """Supplied state and actuator limits; the exercise computes wheel references."""
 
-    def __init__(self, goals=DEFAULT_GOALS, *, kp=0.8, ka=2.0, kt=1.5,
-                 eps_pos=0.03, eps_a=0.03, angle_in=0.08, angle_out=0.6,
+    def __init__(self, goals=GOALS, *, gain=GAIN, gain_bearing=GAIN_BEARING, gain_heading=GAIN_HEADING,
+                 eps_pos=EPS_POS, eps_angle=EPS_ANGLE, angle_in=ANGLE_IN, angle_out=ANGLE_OUT,
                  wheel_max=5.0):
         self.goals = tuple(tuple(goal) for goal in goals)
         if not self.goals or any(len(g) != 3 or not all(math.isfinite(x) for x in g)
                                  for g in self.goals):
             raise ValueError("Supply at least one finite (x_m, y_m, yaw_rad) goal.")
-        positive = (kp, ka, kt, eps_pos, eps_a, wheel_max)
+        positive = (gain, gain_bearing, gain_heading, eps_pos, eps_angle, wheel_max)
         if not all(math.isfinite(x) and x > 0 for x in positive):
             raise ValueError("Gains, tolerances and wheel limit must be positive and finite.")
         if not 0 < angle_in < angle_out < math.pi / 2:
             raise ValueError("Require 0 < angle_in < angle_out < pi/2.")
-        self.kp, self.ka, self.kt = kp, ka, kt
-        self.eps_pos, self.eps_a = eps_pos, eps_a
+        self.gain, self.gain_bearing, self.gain_heading = gain, gain_bearing, gain_heading
+        self.eps_pos, self.eps_angle = eps_pos, eps_angle
         self.angle_in, self.angle_out = angle_in, angle_out
         self.wheel_max = wheel_max
         self.index, self.phase = 0, "TURN"
@@ -49,58 +62,67 @@ class WaypointController:
     def done(self):
         return self.index == len(self.goals)
 
-    def nominal_command(self, pose):
+    def wheel_command(self, pose, r, L):
         raise NotImplementedError("Choose the student or reference controller.")
 
     def update(self, robot, time, dt):
-        """Called before each physics step. The exercise returns body (v, omega)."""
+        """Apply the exercise's wheel references, with a common actuator limit."""
         if self.done:
-            self.nominal = (0.0, 0.0)
+            references = (0.0, 0.0)
         else:
-            self.nominal = tuple(self.nominal_command(robot.pose()))
-        if len(self.nominal) != 2 or not all(math.isfinite(x) for x in self.nominal):
-            raise ValueError("nominal_command must return finite (v_m_s, omega_rad_s).")
-        wl, wr = robot.motor_model.inverse(*self.nominal)
+            references = tuple(self.wheel_command(
+                robot.pose(), robot.motor_model.wheel_radius, robot.motor_model.track_width))
+        if len(references) != 2 or not all(math.isfinite(x) for x in references):
+            raise ValueError("wheel_command must return two finite wheel speeds in rad/s.")
+        self.nominal = robot.motor_model.forward(*references)
+        wl, wr = references
         peak = max(abs(wl), abs(wr))
         self.scale = min(1.0, self.wheel_max / peak) if peak else 1.0
         robot.set_wheel_velocities(self.scale * wl, self.scale * wr)
 
 
 class StudentWaypointController(WaypointController):
-    def nominal_command(self, pose):
-        """Return (v, omega), updating self.index and self.phase when necessary.
+    def wheel_command(self, pose, r, L):
+        """Return (w_left, w_right) in rad/s; update self.index and self.phase.
 
-        Guided steps (the complete working comparison is in control_reference.py):
+        The robot supplies r (wheel radius, m) and L (track width, m).
+        Read self.goals, self.gain, self.gain_bearing, self.gain_heading,
+        self.eps_pos, self.eps_angle, self.angle_in and self.angle_out.
+
+        Guided steps (derive the controller from the notes before comparison):
         1. Read gx, gy, gt = self.goals[self.index]. Compute distance first.
         2. Within eps_pos choose ALIGN; otherwise use TURN or DRIVE with hysteresis.
-        3. In ALIGN use the wrapped final-angle error. Within eps_a, increment
+        3. In ALIGN use gain_heading * wrapped final-angle error. Within eps_angle, increment
            index, set TURN or DONE, and return a zero command for that step.
         4. Else compute the bearing error with
            wrap(math.atan2(gy - pose.y, gx - pose.x) - pose.yaw).
            TURN has zero forward speed;
-           DRIVE uses kp*distance. Both use ka*bearing_error for omega.
-        5. Return the nominal command. update already applies the wheel limit.
+           DRIVE uses gain*distance. Both use gain_bearing*bearing_error for omega.
+        5. Convert (v, omega) with both complete inverse-kinematics equations,
+           using r and L as in proportional.py. Return the two wheel references;
+           update applies them with the common wheel-speed limit.
         """
-        # TODO: implement the phase transitions and the two nominal velocities.
+        # TODO: errors -> phase and (v, omega) -> complete wheel-reference equations.
         raise NotImplementedError(
-            "Complete StudentWaypointController.nominal_command in "
+            "Complete StudentWaypointController.wheel_command in "
             "robotics_sim/exercises/lesson03/control.py (Lesson 3, Part II)."
         )
 
 
-def run(*, model="student", goals=DEFAULT_GOALS, csv_path="output/control.csv",
+def run(*, model="student", goals=None, csv_path="output/control.csv",
         gui=False, duration=60.0, dt=1 / 240, wheel_max=5.0):
     """Run the exercise and return evidence for each reached waypoint."""
     if not math.isfinite(duration) or duration <= 0:
         raise ValueError("Duration must be positive and finite.")
     if model == "reference":
-        from .control_reference import ReferenceWaypointController
+        from robotics_sim.sim.references.waypoint_control import ReferenceWaypointController
         controller_class = ReferenceWaypointController
     elif model == "student":
         controller_class = StudentWaypointController
     else:
         raise ValueError("Choose model student or reference.")
-    controller = controller_class(goals, wheel_max=wheel_max)
+    controller = controller_class(GOALS if goals is None else goals,
+                                  wheel_max=wheel_max, **_controller_parameters())
     csv_path = Path(csv_path)
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     arrivals = []
@@ -154,7 +176,7 @@ def main(argv=None):
     parser.add_argument("--dt", type=float, default=1 / 240)
     parser.add_argument("--wheel-max", type=float, default=5.0)
     args = parser.parse_args(argv)
-    goals = ((-1.0, 0.0, 0.0),) if args.behind else DEFAULT_GOALS
+    goals = ((-1.0, 0.0, 0.0),) if args.behind else GOALS
     try:
         result = run(model=args.model, goals=goals, csv_path=args.csv, gui=args.gui,
                      duration=args.duration, dt=args.dt, wheel_max=args.wheel_max)

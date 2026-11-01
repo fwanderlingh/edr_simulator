@@ -40,8 +40,17 @@ Start with **Reach a goal: proportional control**, whose goal is fixed at
 [`StudentProportionalController.wheel_command`](proportional.py): calculate the
 full position error `rho = math.hypot(ex, ey)` from both Cartesian components,
 choose a proportional forward speed (zero within `eps_pos`),
-then return the two wheel angular speeds using the supplied wheel radius.
-The available parameters are `self.goal`, `self.gain` and `self.eps_pos`.
+then set `omega = 0.0` and use both complete inverse-kinematics equations:
+
+```python
+w_left = (v - L * omega / 2) / r
+w_right = (v + L * omega / 2) / r
+```
+
+The method `wheel_command(self, pose, r, L)` receives the robot's wheel radius
+`r` and track width `L` in metres. Keep the complete equations even when
+`omega` is zero. The available controller parameters are `self.goal`,
+`self.gain` and `self.eps_pos`.
 The exercise intentionally asks for wheel references rather than a body command.
 
 Choose **student** in **CONTROLLER MODEL**, save and restart after editing.
@@ -54,17 +63,27 @@ The exercise file exposes `GOAL`, `GAIN` and `EPS_POS` at the top;
 both models use these parameters. Simulator plumbing is kept in
 `_proportional_runtime.py`, outside the method to complete.
 After your attempt, choose **reference** to compare with
-[`ReferenceProportionalController`](proportional_reference.py).
+[`ReferenceProportionalController`](../../sim/references/proportional_control.py).
 Only the exercise file needs editing; the kinematics demonstrations remain separate.
 
 ## Part II: guided waypoint controller
 
 After the straight-goal exercise, draw the TURN, DRIVE and ALIGN transitions and predict the initial
 command from the Lesson 3 notes. Then complete
-[`StudentWaypointController.nominal_command`](control.py). The supplied loop
-already converts the body command into wheel speeds, applies a common speed
-limit and records a CSV. Keep the geometric calculation separate from those
-supplied mechanisms.
+[`StudentWaypointController.wheel_command`](control.py). As in `proportional.py`,
+the method receives `(pose, r, L)` and returns `(w_left, w_right)` in rad/s.
+Compute the position and heading errors, choose the phase and `(v, omega)`,
+then use both complete inverse-kinematics equations shown above. The supplied
+loop applies the wheel references with a common speed limit and records a CSV.
+
+The settings are at the top of `control.py`: `GOALS`, `GAIN`, `GAIN_BEARING`,
+`GAIN_HEADING`, `EPS_POS`, `EPS_ANGLE`, `ANGLE_IN` and `ANGLE_OUT`. The matching
+attributes are `self.goals`, `self.gain`, `self.gain_bearing`, `self.gain_heading`,
+`self.eps_pos`, `self.eps_angle`, `self.angle_in` and `self.angle_out`.
+`GAIN` and `EPS_POS` have the same meaning as in the first exercise. The waypoint
+exercise starts with `GAIN=0.8`; the additional gains handle bearing and final
+heading. Both the student and reference models use these settings in the GUI
+and standalone runner.
 
 The notes' `atan2(y, x)` is written `math.atan2(y, x)` in Python, with
 `import math`. Use `math.atan2(ey, ex)` for the target direction and
@@ -80,11 +99,13 @@ Open **Lesson 3 - Mobile base kinematics** in the desktop app and choose:
 - **Reach a goal behind the robot** to test the initial turn.
 
 The selector becomes **CONTROLLER MODEL** for these activities. Choose
-**student** to run your `nominal_command`; an unfinished method reports the
+**student** to run your `wheel_command`; an unfinished method reports the
 file to edit while leaving the scene available for inspection. After your
 attempt, compare with **reference**, whose solution is kept separately in
-`control_reference.py`. The wheel conversion uses the supplied reference
-kinematics so this exercise isolates the controller.
+[the simulator reference package](../../sim/references/waypoint_control.py).
+Both exercises require the student to convert the
+chosen body command into wheel references; the robot uses reference forward
+kinematics to simulate the resulting motion.
 
 Set an initial maximum duration of **30 seconds**, press **Reset / Apply length**,
 then **Start**. Goal markers show positions; arrows show desired final headings.

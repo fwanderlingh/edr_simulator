@@ -11,7 +11,7 @@ import numpy as np
 from robotics_sim import Pose, Velocity
 from .control import StudentArmController
 from .kinematics import StudentPlanarArm
-from .reference import ReferenceArmController, ReferencePlanarArm
+from robotics_sim.sim.references.planar_arm import ReferenceArmController, ReferencePlanarArm
 
 
 DEFAULT_INITIAL = (0.2, 0.5)

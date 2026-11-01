@@ -1,10 +1,12 @@
 """Goal-control exercises use the same lifecycle as the desktop activities."""
 
 import csv
+from unittest.mock import Mock
 
 import pytest
 
 from robotics_sim.exercises.lesson03.control import StudentWaypointController
+from robotics_sim.exercises.lesson03 import control
 from robotics_sim.robots.differential_drive import ReferenceDifferentialDrive
 from robotics_sim.session import ActivitySession, ACTIVITY_FILES, TASKS
 
@@ -31,7 +33,7 @@ def test_reference_goals_arrive_early_and_export_correct_targets(task, count, tm
         assert len(session.arrivals) == count
         for arrival in session.arrivals:
             assert arrival["position_error_m"] <= session.controller.eps_pos
-            assert abs(arrival["angle_error_rad"]) <= session.controller.eps_a
+            assert abs(arrival["angle_error_rad"]) <= session.controller.eps_angle
         path = tmp_path / "goals.csv"
         session.export_csv(path)
         with path.open() as stream:
@@ -66,18 +68,54 @@ def test_timeout_stops_and_new_session_resets_waypoint_state():
 
 
 def test_student_controller_is_inspectable_before_missing_step(monkeypatch):
-    def unfinished(self, pose):
-        raise NotImplementedError("Complete nominal_command")
-    monkeypatch.setattr(StudentWaypointController, "nominal_command", unfinished)
+    def unfinished(self, pose, r, L):
+        raise NotImplementedError("Complete wheel_command")
+    monkeypatch.setattr(StudentWaypointController, "wheel_command", unfinished)
     session = ActivitySession("3", "drive_goal", kinematics="student")
     try:
         assert isinstance(session.controller, StudentWaypointController)
         assert type(session.robot.motor_model) is ReferenceDifferentialDrive
         assert session.state == "Ready" and session.sim.steps == 0
         assert session.robot.wheel_velocities == (0, 0)
-        with pytest.raises(NotImplementedError, match="nominal_command"):
+        with pytest.raises(NotImplementedError, match="wheel_command"):
             session.step(single=True)
         assert session.sim.steps == 0
         assert session.samples == [] and session.controller.index == 0
+    finally:
+        session.close()
+
+
+@pytest.mark.parametrize("r,L", [(0.12, 0.42), (0.09, 0.60)])
+def test_student_computes_wheel_references_without_automatic_inverse(monkeypatch, r, L):
+    command = Mock(return_value=(1.0, 3.0))
+    monkeypatch.setattr(StudentWaypointController, "wheel_command", command)
+    session = ActivitySession("3", "drive_goal", kinematics="student", dt=.01)
+    try:
+        session.robot.motor_model = ReferenceDifferentialDrive(r, L)
+        session.robot.motor_model.inverse = Mock(side_effect=AssertionError("Student computes inverse kinematics"))
+        session.step(single=True)
+        command.assert_called_once()
+        assert command.call_args.args[1:] == (r, L)
+        assert session.robot.wheel_velocities == (1.0, 3.0)
+        assert session.robot.command.vx == pytest.approx(2 * r)
+        assert session.robot.command.omega == pytest.approx(2 * r / L)
+        session.robot.motor_model.inverse.assert_not_called()
+    finally:
+        session.close()
+
+
+@pytest.mark.parametrize("model", ["student", "reference"])
+def test_exercise_settings_reach_both_controller_models(monkeypatch, model):
+    monkeypatch.setattr(control, "GAIN", .25)
+    monkeypatch.setattr(control, "EPS_POS", .05)
+    monkeypatch.setattr(control, "GAIN_BEARING", 3.0)
+    monkeypatch.setattr(control, "GAIN_HEADING", 1.2)
+    monkeypatch.setattr(control, "EPS_ANGLE", .02)
+    session = ActivitySession("3", "drive_goal", kinematics=model)
+    try:
+        ctrl = session.controller
+        assert (ctrl.gain, ctrl.eps_pos) == (.25, .05)
+        assert (ctrl.gain_bearing, ctrl.gain_heading, ctrl.eps_angle) == (3.0, 1.2, .02)
+        assert session.sim.steps == 0
     finally:
         session.close()

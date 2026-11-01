@@ -8,7 +8,7 @@ import pytest
 
 from robotics_sim import Pose
 from robotics_sim.exercises.lesson04 import avoidance, estimation
-from robotics_sim.exercises.lesson04.reference import (
+from robotics_sim.sim.references.sensors import (
     ReferenceInertial, ReferenceObstacleSupervisor, ReferenceOdometry, ReferenceSectors,
 )
 

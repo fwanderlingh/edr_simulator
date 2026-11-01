@@ -1,4 +1,4 @@
-"""Instructor solutions for the separate Lesson 4 estimation/control exercises."""
+"""Instructor comparison models for Lesson 4 estimation and supervision."""
 
 from math import cos, hypot, isfinite, pi, sin
 

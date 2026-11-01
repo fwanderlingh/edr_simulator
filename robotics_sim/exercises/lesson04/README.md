@@ -148,7 +148,8 @@ general path planner.
 
 ## Instructor comparison after attempting the exercises
 
-The complete implementations are separate in [reference.py](reference.py),
+The complete implementations are separate in the simulator's
+[reference package](../../sim/references/sensors.py),
 corresponding to the solutions appendix of the notes. After your own attempt,
 keep the activity and sensor mode unchanged, select **reference** under
 **ESTIMATOR MODEL** or **SUPERVISOR MODEL**, then restart the activity and

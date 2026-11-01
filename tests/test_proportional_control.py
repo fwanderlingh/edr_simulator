@@ -8,7 +8,7 @@ import pytest
 
 from robotics_sim import Pose
 from robotics_sim.exercises.lesson03.proportional import StudentProportionalController
-from robotics_sim.exercises.lesson03.proportional_reference import ReferenceProportionalController
+from robotics_sim.sim.references.proportional_control import ReferenceProportionalController
 from robotics_sim.exercises.lesson03 import activity
 from robotics_sim.robots.differential_drive import ReferenceDifferentialDrive
 from robotics_sim.session import ACTIVITY_FILES, ActivitySession, TASKS
@@ -49,7 +49,7 @@ def test_reference_reaches_front_goal_and_exports_results(gain, tmp_path, monkey
 
 
 def test_student_stays_inspectable_until_first_command(monkeypatch):
-    def unfinished(self, pose, wheel_radius):
+    def unfinished(self, pose, r, L):
         raise NotImplementedError("Complete wheel_command")
     monkeypatch.setattr(StudentProportionalController, "wheel_command", unfinished)
     session = ActivitySession("3", "drive_proportional", kinematics="student")
@@ -66,18 +66,20 @@ def test_student_stays_inspectable_until_first_command(monkeypatch):
         session.close()
 
 
-def test_student_values_are_applied_as_wheel_references(monkeypatch):
+@pytest.mark.parametrize("r,L", [(0.12, 0.42), (0.09, 0.60)])
+def test_student_values_are_applied_as_wheel_references(monkeypatch, r, L):
     command = Mock(return_value=(1.25, 1.25))
     monkeypatch.setattr(StudentProportionalController, "wheel_command", command)
     session = ActivitySession("3", "drive_proportional", kinematics="student", dt=.01)
     try:
+        session.robot.motor_model = ReferenceDifferentialDrive(wheel_radius=r, track_width=L)
         session.robot.motor_model.inverse = Mock(side_effect=AssertionError("Do not convert twice"))
         session.step(single=True)
         command.assert_called_once()
-        assert command.call_args.args[1] == .12
+        assert command.call_args.args[1:] == (r, L)
         assert session.robot.wheel_velocities == (1.25, 1.25)
-        assert session.robot.command.vx == pytest.approx(.15)
-        assert session.robot.pose().x == pytest.approx(.0015)
+        assert session.robot.command.vx == pytest.approx(1.25 * r)
+        assert session.robot.pose().x == pytest.approx(1.25 * r * session.dt)
         session.robot.motor_model.inverse.assert_not_called()
     finally:
         session.close()
@@ -106,7 +108,7 @@ def test_reference_uses_both_position_error_components(pose):
     gx, gy, _ = controller.goal
     rho = math.hypot(gx - pose.x, gy - pose.y)
     speed = controller.gain * rho if rho > controller.eps_pos else 0.0
-    assert controller.wheel_command(pose, .12) == pytest.approx((speed / .12, speed / .12))
+    assert controller.wheel_command(pose, .12, .42) == pytest.approx((speed / .12, speed / .12))
     if rho > controller.eps_pos:
         assert speed > 0  # A small x error alone must not trigger the stop.
 

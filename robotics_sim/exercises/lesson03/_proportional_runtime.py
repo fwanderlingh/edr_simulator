@@ -10,7 +10,7 @@ class ProportionalController(WaypointController):
 
     def __init__(self, goals=((1.0, 0.0, 0.0),), *, gain=0.4, eps_pos=0.03,
                  wheel_max=5.0):
-        super().__init__(goals, kp=gain, eps_pos=eps_pos, wheel_max=wheel_max)
+        super().__init__(goals, gain=gain, eps_pos=eps_pos, wheel_max=wheel_max)
         if len(self.goals) != 1 or self.goals[0][0] <= 0 or self.goals[0][1:] != (0, 0):
             raise ValueError("The proportional exercise needs one goal on positive x with y=heading=0.")
         self.gain = gain
@@ -20,7 +20,7 @@ class ProportionalController(WaypointController):
     def goal(self):
         return self.goals[0]
 
-    def wheel_command(self, pose, wheel_radius):
+    def wheel_command(self, pose, r, L):
         raise NotImplementedError("Choose the student or reference proportional controller.")
 
     def update(self, robot, time, dt):
@@ -29,7 +29,8 @@ class ProportionalController(WaypointController):
             robot.set_wheel_velocities(0.0, 0.0)
             return
         pose = robot.pose()
-        references = tuple(self.wheel_command(pose, robot.motor_model.wheel_radius))
+        references = tuple(self.wheel_command(
+            pose, robot.motor_model.wheel_radius, robot.motor_model.track_width))
         if len(references) != 2 or not all(math.isfinite(value) for value in references):
             raise ValueError("wheel_command must return two finite wheel speeds in rad/s.")
         self.nominal = robot.motor_model.forward(*references)

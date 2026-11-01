@@ -9,7 +9,7 @@ import math
 from robotics_sim import DifferentialDriveRobot, Pose
 from .avoidance import StudentObstacleSupervisor, StudentSectors
 from .estimation import StudentInertial, StudentOdometry
-from .reference import (
+from robotics_sim.sim.references.sensors import (
     ReferenceInertial, ReferenceObstacleSupervisor, ReferenceOdometry, ReferenceSectors,
 )
 from .sensors.suite import SensorSuite

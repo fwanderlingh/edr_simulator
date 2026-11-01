@@ -12,7 +12,7 @@ from pathlib import Path
 
 from robotics_sim import DifferentialDriveRobot, Pose, Simulator, World
 from robotics_sim.sim.visualizer import Visualizer
-from .reference import ReferenceInertial, ReferenceOdometry
+from robotics_sim.sim.references.sensors import ReferenceInertial, ReferenceOdometry
 from .sensors.suite import SensorSuite
 
 

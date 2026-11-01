@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from robotics_sim.exercises.lesson05 import __main__ as activity
-from robotics_sim.exercises.lesson05.reference import ReferenceArmController, ReferencePlanarArm
+from robotics_sim.sim.references.planar_arm import ReferenceArmController, ReferencePlanarArm
 
 
 def options(tmp_path, **changes):

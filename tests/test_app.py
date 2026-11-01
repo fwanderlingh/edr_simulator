@@ -592,8 +592,8 @@ def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
         assert len(app.session.arrivals) == 2
         app.kinematics.set("student")
         app.load_task()
-        with patch.object(StudentWaypointController, "nominal_command",
-                          side_effect=NotImplementedError("complete nominal_command")):
+        with patch.object(StudentWaypointController, "wheel_command",
+                          side_effect=NotImplementedError("complete wheel_command")):
             app.single_step()
         assert "not implemented" in app.status.get().lower()
         assert app.session.sim.time == 0

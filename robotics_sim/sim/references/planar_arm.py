@@ -1,4 +1,4 @@
-"""Instructor reference models; consult after attempting the guided exercises."""
+"""Instructor comparison models for the Lesson 5 planar-arm exercises."""
 
 import math
 import numpy as np

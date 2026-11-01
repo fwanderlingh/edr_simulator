@@ -12,7 +12,7 @@ from robotics_sim import World
 from robotics_sim.sim.visualizer import Visualizer
 from .kinematics import StudentPlanarArm
 from .control import StudentArmController
-from .reference import ReferencePlanarArm, ReferenceArmController
+from robotics_sim.sim.references.planar_arm import ReferencePlanarArm, ReferenceArmController
 
 
 def draw_arm(view, model, q, target, *, name="arm", color=(0.04, 0.5, 0.5)):

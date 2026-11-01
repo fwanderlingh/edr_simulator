@@ -48,5 +48,5 @@ sets the initial configuration for additional experiments.
 The plant integrates prescribed joint velocities. The common application draws
 the chain, goals and predictions; it does not simulate contact, grasp forces or
 collision-free motion between inverse-kinematics branches. Instructor models are
-kept separately in [reference.py](reference.py), and worked results are in the
+kept separately in the simulator's [reference package](../../sim/references/planar_arm.py), and worked results are in the
 notes' final appendix.

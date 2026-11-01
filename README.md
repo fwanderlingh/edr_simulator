@@ -74,7 +74,7 @@ changes on the next launch. Until you complete an exercise, the app shows
 | 2 | `robotics_sim/exercises/lesson02/frames.py` | `point_in_world` (3D extension) |
 | 3 | `robotics_sim/exercises/lesson03/kinematics.py` | `forward`, `inverse` (select **student**) |
 | 3 | `robotics_sim/exercises/lesson03/proportional.py` | `StudentProportionalController.wheel_command` (first proportional controller) |
-| 3 | `robotics_sim/exercises/lesson03/control.py` | `StudentWaypointController.nominal_command` (goal and waypoint activities) |
+| 3 | `robotics_sim/exercises/lesson03/control.py` | `StudentWaypointController.wheel_command` (goal and waypoint activities) |
 | 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |
 | 4 | `robotics_sim/exercises/lesson04/estimation.py` | `StudentOdometry.update`, `StudentInertial.update` |
 | 4 | `robotics_sim/exercises/lesson04/avoidance.py` | `StudentSectors.summarize`, `StudentObstacleSupervisor.command` |
@@ -182,7 +182,7 @@ ideal-kinematics assumptions.
 
 The [Lesson 3 notes](../dispense/EDR.03_Cinematica_e_controllo.tex)
 connect this model to odometry, target regulation, and waypoint following.
-Complete `StudentWaypointController.nominal_command` in
+Complete `StudentWaypointController.wheel_command` in
 [`lesson03/control.py`](robotics_sim/exercises/lesson03/control.py), then choose
 **Reach a goal: pose control**, **Follow two waypoints**, or
 **Reach a goal behind the robot** in Lesson 3. The **CONTROLLER MODEL** selector
@@ -248,6 +248,12 @@ default 1/240 s); duration rounds up to a whole number of steps. Pose CSVs
 contain ground-truth state after each step, with units in column names.
 
 ## Developer setup
+
+Instructor comparison models are kept in `robotics_sim/sim/references/`,
+separate from the student exercise files. The **reference** selectors use
+these modules; they are included in the student export so comparison mode and
+exercise checks work without an additional installation. This separation is
+organizational: the distributed Python sources remain readable.
 
 Development targets Python 3.12 (the code requires Python 3.10 or newer). From
 the repository root, create the supplied Conda environment and install the

@@ -10,7 +10,7 @@ import numpy as np
 
 from .exercises.lesson02 import activity as frames_activity
 from .exercises.lesson02 import module2
-from .exercises.lesson04.reference import ReferenceInertial, ReferenceOdometry, ReferenceSectors
+from .sim.references.sensors import ReferenceInertial, ReferenceOdometry, ReferenceSectors
 from .robots.differential_drive import ReferenceDifferentialDrive
 
 
@@ -65,8 +65,8 @@ class ExerciseChecks:
                  all(a["position_error_m"] <= ctrl.eps_pos for a in arrivals)),
             ]
             if task != "drive_proportional":
-                checks.append((f"Arrival heading errors ≤ {ctrl.eps_a:g} rad", all_arrived and
-                               all(abs(a["angle_error_rad"]) <= ctrl.eps_a for a in arrivals)))
+                checks.append((f"Arrival heading errors ≤ {ctrl.eps_angle:g} rad", all_arrived and
+                               all(abs(a["angle_error_rad"]) <= ctrl.eps_angle for a in arrivals)))
             checks.append((f"Wheel speeds stay within {ctrl.wheel_max:g} rad/s", ran and
                            all(max(abs(row[7]), abs(row[8])) <= ctrl.wheel_max + 1e-9
                                for row in session.samples)))
