@@ -1,5 +1,7 @@
 """Right-handed rotations acting on column vectors; quaternions use xyzw."""
 
+import math
+
 import numpy as np
 
 
@@ -25,10 +27,10 @@ def rpy_to_matrix(roll, pitch, yaw):
 def matrix_to_rpy(rotation):
     """Return roll, pitch, yaw; at gimbal lock choose roll = 0."""
     r = np.asarray(rotation, dtype=float)
-    pitch = np.arctan2(-r[2, 0], np.hypot(r[0, 0], r[1, 0]))
+    pitch = math.atan2(-r[2, 0], np.hypot(r[0, 0], r[1, 0]))
     if np.hypot(r[0, 0], r[1, 0]) < 1e-10:
-        return np.array([0.0, pitch, np.arctan2(-r[0, 1], r[1, 1])])
-    return np.array([np.arctan2(r[2, 1], r[2, 2]), pitch, np.arctan2(r[1, 0], r[0, 0])])
+        return np.array([0.0, pitch, math.atan2(-r[0, 1], r[1, 1])])
+    return np.array([math.atan2(r[2, 1], r[2, 2]), pitch, math.atan2(r[1, 0], r[0, 0])])
 
 
 def quaternion_to_matrix(quaternion):

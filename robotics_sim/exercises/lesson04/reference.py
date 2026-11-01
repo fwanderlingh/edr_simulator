@@ -1,6 +1,8 @@
 """Instructor solutions for the separate Lesson 4 estimation/control exercises."""
 
-from math import atan2, cos, hypot, isfinite, pi, sin
+from math import cos, hypot, isfinite, pi, sin
+
+import math
 
 
 def wrap(angle):
@@ -103,6 +105,6 @@ class ReferenceObstacleSupervisor:
             if hypot(pose.x - self.pass_start[0], pose.y - self.pass_start[1]) < 1.0:
                 return 0.25, 1.5 * wrap(self.turn_yaw - pose.yaw)
             self.phase = "GO"
-        error = wrap(atan2(dy, dx) - pose.yaw)
+        error = wrap(math.atan2(dy, dx) - pose.yaw)
         # Rotate before advancing when the target lies far from the forward axis.
         return min(0.3, 0.8 * rho) * max(0.0, cos(error)), 2.0 * error

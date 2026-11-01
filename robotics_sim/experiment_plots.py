@@ -4,6 +4,7 @@ The caller owns the snapshot and embeds the returned Figure in its plot window.
 No live robot/sensor reads occur while a figure is being drawn.
 """
 
+import math
 import re
 
 import numpy as np
@@ -93,7 +94,7 @@ def _base(axes, data, snapshot):
                 gx, gy = goals[int(goal_index)][:2]
                 dx, dy = gx - data["x_m"][i], gy - data["y_m"][i]
                 if np.hypot(dx, dy) > 1e-9:
-                    bearing[i] = (np.arctan2(dy, dx) - data["yaw_rad"][i] + np.pi) % (2 * np.pi) - np.pi
+                    bearing[i] = (math.atan2(dy, dx) - data["yaw_rad"][i] + np.pi) % (2 * np.pi) - np.pi
             _line(axes[2], data["time_s"], bearing, "Bearing error", TEAL)
         goal_indices = data.get("goal_index", np.empty(0))
         changes = np.flatnonzero(np.diff(goal_indices) != 0) + 1
@@ -281,8 +282,8 @@ def _arm(axes, data, snapshot):
     for branch in branches:
         chain = np.asarray(branch)
         first, second = chain[1, :2] - chain[0, :2], chain[2, :2] - chain[1, :2]
-        q1 = np.arctan2(first[1], first[0])
-        q2 = (np.arctan2(second[1], second[0]) - q1 + np.pi) % (2 * np.pi) - np.pi
+        q1 = math.atan2(first[1], first[0])
+        q2 = (math.atan2(second[1], second[0]) - q1 + np.pi) % (2 * np.pi) - np.pi
         angles.append((q1, q2))
         residuals.append(np.linalg.norm(chain[-1, :2] - np.asarray(target)[:2]))
     if angles:

@@ -38,7 +38,7 @@ odometry estimator.
 Start with **Reach a goal: proportional control**, whose goal is fixed at
 `(1 m, 0 m, 0 rad)` ahead of the robot. Complete
 [`StudentProportionalController.wheel_command`](proportional.py): calculate the
-full position error `rho = hypot(ex, ey)` from both Cartesian components,
+full position error `rho = math.hypot(ex, ey)` from both Cartesian components,
 choose a proportional forward speed (zero within `eps_p`),
 then return the two wheel angular speeds using the supplied wheel radius.
 The available parameters are `self.goal`, `self.gain` and `self.eps_p`.
@@ -65,6 +65,13 @@ command from the Lesson 3 notes. Then complete
 already converts the body command into wheel speeds, applies a common speed
 limit and records a CSV. Keep the geometric calculation separate from those
 supplied mechanisms.
+
+The notes' `atan2(y, x)` is written `math.atan2(y, x)` in Python, with
+`import math`. Use `math.atan2(ey, ex)` for the target direction and
+wrap its difference from the robot yaw to obtain the bearing error. This is
+an angle in radians; `math.hypot(ex, ey)` is the position-error magnitude in
+metres. The first proportional exercise needs only that magnitude because its
+goal lies straight ahead and its yaw-rate command is zero.
 
 Open **Lesson 3 - Mobile base kinematics** in the desktop app and choose:
 

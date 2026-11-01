@@ -75,7 +75,9 @@ class StudentWaypointController(WaypointController):
         2. Within eps_p choose ALIGN; otherwise use TURN or DRIVE with hysteresis.
         3. In ALIGN use the wrapped final-angle error. Within eps_a, increment
            index, set TURN or DONE, and return a zero command for that step.
-        4. Else compute the bearing error. TURN has zero forward speed;
+        4. Else compute the bearing error with
+           wrap(math.atan2(gy - pose.y, gx - pose.x) - pose.yaw).
+           TURN has zero forward speed;
            DRIVE uses kp*distance. Both use ka*bearing_error for omega.
         5. Return the nominal command. update already applies the wheel limit.
         """

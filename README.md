@@ -132,6 +132,8 @@ import numpy as np
 | homogeneous direction $(v_x,v_y,0)^T$ | `np.append(v, 0)` | free vector ignores translation |
 | back to Cartesian | `ph[:2]` | drop the last component |
 | $\cos\theta,\ \sin\theta$ | `np.cos(theta)`, `np.sin(theta)` | radians (`np.deg2rad(degrees)`) |
+| $\operatorname{atan2}(y,x)$ | `math.atan2(y, x)` | direction angle in radians; y first, x second; preserves the quadrant; `import math` |
+| $\sqrt{x^2+y^2}$ | `math.hypot(x, y)` | distance or vector magnitude; `import math` |
 | $R(\theta)=\begin{bmatrix}c&-s\\ s&c\end{bmatrix}$ | `R = np.array([[c, -s], [s, c]])` | |
 | $T=\begin{bmatrix}R&t\\0&1\end{bmatrix}$ | `T = np.eye(3); T[:2, :2] = R; T[:2, 2] = t` | block assignment by slicing |
 | rotation block of $T$ | `T[:2, :2]` | |
