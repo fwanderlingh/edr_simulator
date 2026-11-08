@@ -9,17 +9,19 @@ class ReferenceWaypointController(WaypointController):
     pose_controller_class = ReferencePoseController
 
     def wheel_command(self, pose, r, L):
+        self.scale = 1.0
         if self.done:
             return 0.0, 0.0
-        controller = self.pose_controller
-        wheels = controller.wheel_command(pose, r, L)
-        self.phase = controller.phase
-        if controller.done:
+        wheels = self.pose_controller.wheel_command(pose, r, L)
+        self.phase = self.pose_controller.phase
+        self.scale = self.pose_controller.scale
+        if self.pose_controller.done:
             self.index += 1
             if self.done:
                 self.phase = "DONE"
             else:
-                controller.set_goal(self.goals[self.index])
+                self.pose_controller.set_goal(self.goals[self.index])
                 self.phase = "TURN"
+            self.scale = 1.0
             return 0.0, 0.0
         return wheels

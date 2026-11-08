@@ -231,7 +231,7 @@ exercise settings and the student method; simulator support is in
 Start with a maximum duration of 30 seconds. The GUI shows phase and completion
 count; Export CSV records targets, errors, wheel speeds and DONE/TIMEOUT evidence.
 Reach both position and heading tolerances at every target. Change `WHEEL_MAX`
-in `control.py` to test the supplied common wheel-speed limit.
+in `control.py` to test the common wheel-speed saturation implemented by the student.
 These exercises use ground-truth poses; Lesson 4 introduces sensor-based estimates.
 
 ### Lesson 4: sensors and noise

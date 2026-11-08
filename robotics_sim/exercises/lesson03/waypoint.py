@@ -28,6 +28,8 @@ class StudentWaypointController(WaypointController):
         After each arrival, set_goal(next_goal) changes its target and resets TURN.
         Do not call set_goal on every step: it would erase the current phase.
         Gains, tolerances and wheel limit come from control.py.
+        Saturation is implemented in control.py: return the pose controller's
+        already limited wheel speeds without applying another saturation.
         Initially self.index = 0 and self.phase = "TURN".
 
         Here self.done is an inherited, read-only @property that evaluates
@@ -39,10 +41,12 @@ class StudentWaypointController(WaypointController):
         1. If self.done, return two zeros.
         2. Call self.pose_controller.wheel_command(pose, r, L).
            Copy that controller's phase into self.phase for the live readout.
+           Copy its scale into self.scale for the wheel_scale CSV column.
         3. If that controller is done (both pose tolerances met), increment
            self.index. If self.done, set self.phase to DONE. Otherwise call
            self.pose_controller.set_goal(self.goals[self.index]) and set
            self.phase to TURN. Return two zeros for this arrival sample.
+           Record self.scale = 1.0 whenever returning two zeros.
         4. Otherwise return the current pose controller's wheel references.
         """
         # TODO: current pose controller -> arrival -> next waypoint or DONE.

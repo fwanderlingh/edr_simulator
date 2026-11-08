@@ -50,18 +50,25 @@ w_right = (v + L * omega / 2) / r
 The method `wheel_command(self, pose, r, L)` receives the robot's wheel radius
 `r` and track width `L` in metres. Keep the complete equations even when
 `omega` is zero. The available controller parameters are `self.goal`,
-`self.gain_pos` and `self.eps_pos`.
+`self.gain_pos`, `self.eps_pos` and `self.wheel_max`.
 `GAIN_POS` (available as `self.gain_pos`) is the position-error gain `k_rho`
 from the notes, shared in name with the following pose-control exercise.
 The exercise intentionally asks for wheel references rather than a body command.
 
+Before returning, apply the common wheel-speed saturation from the notes. Compute
+the largest absolute wheel speed and use the same factor on both wheels:
+`min(1.0, self.wheel_max / peak)`, or `1.0` when `peak` is zero. Record the factor
+in `self.scale` for the `wheel_scale` CSV column and return the scaled speeds.
+The simulator applies your returned speeds unchanged. The check **Wheel speeds
+stay within ...** fails when you exceed the limit; it does not correct your command.
+
 Choose **student** in **CONTROLLER MODEL**, save and click **Reload exercise** after editing.
-The scene, wheel-command application, common actuator limit, arrival detection
+The scene, wheel-command application, arrival detection
 and CSV recording are supplied. The activity remains inspectable before an
 unfinished method is first called with Start/Step. Use a 20-second duration and
 compare the wheel speeds, position error and `DONE`/`TIMEOUT` outcome. The defaults are
-`GAIN_POS=0.4`, `EPS_POS=0.03 m` and a supplied wheel limit of 5 rad/s.
-The exercise file exposes `GOAL`, `GAIN_POS` and `EPS_POS` at the top;
+`GAIN_POS=0.4`, `EPS_POS=0.03 m` and `WHEEL_MAX=5 rad/s`.
+The exercise file exposes `GOAL`, `GAIN_POS`, `EPS_POS` and `WHEEL_MAX` at the top;
 both models use these parameters. Simulator plumbing is kept in
 `_proportional_runtime.py`, outside the method to complete.
 After your attempt, choose **reference** to compare with
@@ -88,13 +95,15 @@ the wrapped final-heading error; when both tolerances are met, set
 ALIGN for TURN, compute the bearing error with
 `wrap(math.atan2(ey, ex) - pose.yaw)`, and apply TURN/DRIVE hysteresis.
 Choose `(v, omega)` using the updated phase, then calculate both complete
-inverse-kinematics equations. No waypoint index is needed in this exercise.
+inverse-kinematics equations, then apply the common saturation as in `proportional.py`.
+Record its factor in `self.scale`; use `1.0` when returning two zeros.
+No waypoint index is needed in this exercise.
 
 The editable settings at the top of `control.py` are `GOAL`, `GAIN_POS`,
 `GAIN_BEARING`, `GAIN_HEADING`, `EPS_POS`, `EPS_ANGLE`, `ANGLE_IN`, `ANGLE_OUT`
-and `WHEEL_MAX` (rad/s). Both models use these settings. Controller validation
-and wheel limits are supplied in `_control_runtime.py`; the UI session owns
-the simulation loop and CSV recording.
+and `WHEEL_MAX` (rad/s). Both models use these settings. Saturation belongs in
+your `wheel_command`; `_control_runtime.py` validates and applies the returned
+values without limiting them. The UI session owns the simulation loop and CSV recording.
 The corresponding solution is
 [`ReferencePoseController`](../../sim/references/control.py).
 Use **Reach a goal: pose behind robot** to test the same pose controller's
@@ -116,7 +125,9 @@ and does not determine this completion check.
 
 The supplied adapter creates one `StudentPoseController` in `self.pose_controller`
 with `self.goals[0]` as its initial target. Call its `wheel_command(pose, r, L)`
-and copy its phase into `self.phase`. Reuse the same object throughout the sequence.
+and copy its phase into `self.phase` and its scale into `self.scale` for the CSV.
+Return its already saturated wheel speeds without applying another saturation.
+Reuse the same object throughout the sequence.
 Advance `self.index` only when that pose controller reports `done`, so both
 position and heading must be reached at every waypoint. If the sequence is complete,
 set `self.phase = "DONE"`. Otherwise call
@@ -124,7 +135,8 @@ set `self.phase = "DONE"`. Otherwise call
 The supplied `set_goal(next_goal)` method changes the target and resets the pose
 controller to TURN. Call it only when advancing to the next waypoint: calling it
 on every step would erase the controller's phase. Return two zeros on the arrival
-sample; the next target starts on the following sample. Otherwise return the pose
+sample, with `self.scale = 1.0`; the next target starts on the following sample.
+Otherwise return the pose
 controller's wheel references. This exercise adds sequencing to the pose controller
 you already completed.
 The corresponding solution is
@@ -143,6 +155,7 @@ throughout the run and zero final wheel speeds. `goal_index` identifies the
 goal active before the step; `completed_waypoints` counts arrivals after it.
 DONE means all targets were reached; TIMEOUT stops without claiming completion.
 To test the common speed limit, change `WHEEL_MAX` in `control.py` and click **Reload exercise**.
+For the proportional exercise, change `WHEEL_MAX` in `proportional.py` instead.
 Both exercises use ground-truth poses; Lesson 4 introduces sensor-based estimates.
 
 ## Scene and robot commands

@@ -19,7 +19,7 @@ EPS_POS = 0.03              # m
 EPS_ANGLE = 0.03            # rad
 ANGLE_IN = 0.08             # rad; enter DRIVE
 ANGLE_OUT = 0.6             # rad; return to TURN
-WHEEL_MAX = 5.0             # rad/s; supplied common wheel-speed limit
+WHEEL_MAX = 5.0             # rad/s; apply this limit in wheel_command
 
 
 class StudentPoseController(PoseController):
@@ -34,9 +34,17 @@ class StudentPoseController(PoseController):
         self.phase == "DONE" whenever you read it, without parentheses.
         It is not a separate flag to update. Set self.phase = "DONE" when
         both pose tolerances are met; self.done then becomes True automatically.
+
+        Apply saturation before returning the wheel references: compute
+        peak = max(abs(w_left), abs(w_right)), then a common factor
+        min(1.0, self.wheel_max / peak), or 1.0 when peak is zero.
+        Record the factor in self.scale (also 1.0 when returning two zeros),
+        and return both wheel speeds multiplied by it. Do not clip each wheel
+        separately. The simulator applies your returned speeds unchanged;
+        the wheel-speed check fails if your saturation is missing or incorrect.
         """
         
-        # TODO: errors -> phase -> (v, omega) -> left/right wheel references.
+        # TODO: errors -> phase -> (v, omega) -> wheel references -> common saturation.
         raise NotImplementedError(
             "Complete StudentPoseController.wheel_command in "
             "robotics_sim/exercises/lesson03/control.py."

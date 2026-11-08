@@ -20,7 +20,7 @@ from robotics_sim.session import ActivitySession
     ("ALIGN", .2, "TURN"),
 ])
 def test_pose_hysteresis_uses_updated_phase_for_current_command(phase, alpha, expected):
-    controller = ReferencePoseController(((1, 0, 0),))
+    controller = ReferencePoseController(((1, 0, 0),), wheel_max=100)
     controller.phase = phase
     left, right = controller.wheel_command(Pose(yaw=-alpha), .12, .42)
     assert controller.phase == expected
@@ -54,7 +54,7 @@ def test_waypoint_arrival_waits_for_heading_and_stops_for_one_sample():
     assert controller.pose_controller is pose_controller
     assert pose_controller.goal == controller.goals[1]
     assert pose_controller.phase == "TURN" and not pose_controller.done
-    assert controller.wheel_command(Pose(), .12, .42) == pytest.approx((.8 / .12,) * 2)
+    assert controller.wheel_command(Pose(), .12, .42) == pytest.approx((5, 5))
     assert controller.phase == "DRIVE"
     assert controller.wheel_command(Pose(x=1), .12, .42) == (0, 0)
     assert controller.done and pose_controller.done and controller.phase == "DONE"
@@ -103,8 +103,22 @@ def test_ui_session_uses_editable_wheel_limit(monkeypatch, tmp_path, task):
                 rows = list(csv.DictReader(stream))
             assert max(abs(float(rows[0][column])) for column in
                        ("left_rad_s", "right_rad_s")) == pytest.approx(limit)
+            assert 0 < float(rows[0]["wheel_scale"]) < 1
         finally:
             session.close()
+
+
+def test_pose_saturation_preserves_curvature_and_resets_at_zero_command():
+    controller = ReferencePoseController(((1, .1, 0),), wheel_max=2)
+    controller.phase = "DRIVE"
+    left, right = controller.wheel_command(Pose(), .12, .42)
+    assert right == pytest.approx(2) and 0 < left < right
+    v, omega = .12 * (left + right) / 2, .12 * (right - left) / .42
+    assert omega / v == pytest.approx(2 * math.atan2(.1, 1) / (.8 * math.hypot(1, .1)))
+    assert 0 < controller.scale < 1
+    controller.set_goal((0, 0, 0))
+    assert controller.wheel_command(Pose(), .12, .42) == (0, 0)
+    assert controller.scale == 1
 
 
 def test_single_pose_target_fields_apply_to_the_pose_controller():

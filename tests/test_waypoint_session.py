@@ -97,21 +97,25 @@ def test_student_controller_is_inspectable_before_missing_step(monkeypatch, task
 
 @pytest.mark.parametrize("r,L", [(0.12, 0.42), (0.09, 0.60)])
 def test_student_computes_wheel_references_without_automatic_inverse(monkeypatch, r, L):
-    command = Mock(return_value=(1.0, 3.0))
-    monkeypatch.setattr(StudentPoseController, "wheel_command", command)
-    session = ActivitySession("3", "drive_goal", kinematics="student", dt=.01)
-    try:
-        session.robot.motor_model = ReferenceDifferentialDrive(r, L)
-        session.robot.motor_model.inverse = Mock(side_effect=AssertionError("Student computes inverse kinematics"))
-        session.step(single=True)
-        command.assert_called_once()
-        assert command.call_args.args[1:] == (r, L)
-        assert session.robot.wheel_velocities == (1.0, 3.0)
-        assert session.robot.command.vx == pytest.approx(2 * r)
-        assert session.robot.command.omega == pytest.approx(2 * r / L)
-        session.robot.motor_model.inverse.assert_not_called()
-    finally:
-        session.close()
+    for task, controller in (("drive_goal", StudentPoseController),
+                             ("drive_waypoints", StudentWaypointController)):
+        command = Mock(return_value=(10.0, 30.0))
+        monkeypatch.setattr(controller, "wheel_command", command)
+        session = ActivitySession("3", task, kinematics="student", dt=.01)
+        try:
+            session.robot.motor_model = ReferenceDifferentialDrive(r, L)
+            session.robot.motor_model.inverse = Mock(side_effect=AssertionError("Student computes inverse kinematics"))
+            session.step(single=True)
+            command.assert_called_once()
+            assert command.call_args.args[1:] == (r, L)
+            assert session.robot.wheel_velocities == (10.0, 30.0)
+            assert session.robot.command.vx == pytest.approx(20 * r)
+            assert session.robot.command.omega == pytest.approx(20 * r / L)
+            assert not next(passed for label, passed in ExerciseChecks(session).evaluate()
+                            if label.startswith("Wheel speeds stay within"))
+            session.robot.motor_model.inverse.assert_not_called()
+        finally:
+            session.close()
 
 
 @pytest.mark.parametrize("model", ["student", "reference"])

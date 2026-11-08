@@ -43,7 +43,7 @@ def test_waypoint_at_initial_pose_completes_without_motion(tmp_path, monkeypatch
     ((0, 0, math.pi / 2), "ALIGN", 0.0, 1.5 * math.pi / 2),
 ])
 def test_reference_wheel_commands_include_turning_and_robot_geometry(goal, phase, v, omega):
-    ctrl = ReferenceWaypointController((goal,))
+    ctrl = ReferenceWaypointController((goal,), wheel_max=100)
     model = ReferenceDifferentialDrive(wheel_radius=.09, track_width=.6)
     wheels = ctrl.wheel_command(Pose(), model.wheel_radius, model.track_width)
     assert ctrl.phase == phase

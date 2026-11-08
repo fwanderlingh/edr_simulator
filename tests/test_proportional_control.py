@@ -72,7 +72,7 @@ def test_student_stays_inspectable_until_first_command(monkeypatch):
 
 @pytest.mark.parametrize("r,L", [(0.12, 0.42), (0.09, 0.60)])
 def test_student_values_are_applied_as_wheel_references(monkeypatch, r, L):
-    command = Mock(return_value=(1.25, 1.25))
+    command = Mock(return_value=(12.5, 12.5))
     monkeypatch.setattr(StudentProportionalController, "wheel_command", command)
     session = ActivitySession("3", "drive_proportional", kinematics="student", dt=.01)
     try:
@@ -81,9 +81,11 @@ def test_student_values_are_applied_as_wheel_references(monkeypatch, r, L):
         session.step(single=True)
         command.assert_called_once()
         assert command.call_args.args[1:] == (r, L)
-        assert session.robot.wheel_velocities == (1.25, 1.25)
-        assert session.robot.command.vx == pytest.approx(1.25 * r)
-        assert session.robot.pose().x == pytest.approx(1.25 * r * session.dt)
+        assert session.robot.wheel_velocities == (12.5, 12.5)
+        assert session.robot.command.vx == pytest.approx(12.5 * r)
+        assert session.robot.pose().x == pytest.approx(12.5 * r * session.dt)
+        assert not next(passed for label, passed in ExerciseChecks(session).evaluate()
+                        if label.startswith("Wheel speeds stay within"))
         session.robot.motor_model.inverse.assert_not_called()
     finally:
         session.close()

@@ -6,7 +6,7 @@ from ._control_runtime import WheelController
 
 
 class ProportionalController(WheelController):
-    """Lifecycle, validation and actuator limits; students edit proportional.py."""
+    """Lifecycle and validation; students compute and saturate wheel references."""
 
     def __init__(self, goals=((1.0, 0.0, 0.0),), *, gain_pos=0.4, eps_pos=0.03,
                  wheel_max=5.0):
@@ -24,7 +24,8 @@ class ProportionalController(WheelController):
         raise NotImplementedError("Choose the student or reference proportional controller.")
 
     def update(self, robot, time, dt):
-        """Apply raw wheel references, with no automatic inverse conversion."""
+        """Apply returned wheel references without automatic conversion or saturation."""
+        self.scale = 1.0  # The exercise records its saturation factor for the CSV.
         if self.done:
             robot.set_wheel_velocities(0.0, 0.0)
             return
@@ -34,11 +35,9 @@ class ProportionalController(WheelController):
         if len(references) != 2 or not all(math.isfinite(value) for value in references):
             raise ValueError("wheel_command must return two finite wheel speeds in rad/s.")
         self.nominal = robot.motor_model.forward(*references)
-        peak = max(abs(value) for value in references)
-        self.scale = min(1.0, self.wheel_max / peak) if peak else 1.0
         gx, gy, _ = self.goal
         if math.hypot(gx - pose.x, gy - pose.y) <= self.eps_pos:
             self.index, self.phase = 1, "DONE"
             robot.set_wheel_velocities(0.0, 0.0)
         else:
-            robot.set_wheel_velocities(*(self.scale * value for value in references))
+            robot.set_wheel_velocities(*references)

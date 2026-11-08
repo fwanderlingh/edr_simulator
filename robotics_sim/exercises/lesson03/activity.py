@@ -11,7 +11,7 @@ from .control import StudentPoseController
 from .waypoint import StudentWaypointController
 from robotics_sim.sim.references.control import ReferencePoseController
 from robotics_sim.sim.references.waypoint_control import ReferenceWaypointController
-from .proportional import GAIN_POS, GOAL, EPS_POS, StudentProportionalController
+from .proportional import GAIN_POS, GOAL, EPS_POS, WHEEL_MAX, StudentProportionalController
 from robotics_sim.sim.references.proportional_control import ReferenceProportionalController
 
 
@@ -34,7 +34,7 @@ def setup(world, *, task, kinematics="reference"):
         if task == "drive_proportional":
             controller = (StudentProportionalController if kinematics == "student"
                           else ReferenceProportionalController)
-            controller_options = {"gain_pos": GAIN_POS, "eps_pos": EPS_POS}
+            controller_options = {"gain_pos": GAIN_POS, "eps_pos": EPS_POS, "wheel_max": WHEEL_MAX}
         elif task == "drive_waypoints":
             controller = (StudentWaypointController if kinematics == "student"
                           else ReferenceWaypointController)

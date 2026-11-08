@@ -15,4 +15,7 @@ class ReferenceProportionalController(ProportionalController):
         # Convert (v, omega) using the complete inverse-kinematics equations.
         w_left = (v - L * omega / 2) / r
         w_right = (v + L * omega / 2) / r
-        return w_left, w_right
+        # Saturation belongs to the controller, as in the student exercise.
+        peak = max(abs(w_left), abs(w_right))
+        self.scale = min(1.0, self.wheel_max / peak) if peak else 1.0
+        return self.scale * w_left, self.scale * w_right

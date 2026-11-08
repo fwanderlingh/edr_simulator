@@ -1,4 +1,4 @@
-"""Supplied controller state and wheel limits for the Lesson 3 UI exercises."""
+"""Supplied controller state and validation for the Lesson 3 UI exercises."""
 
 import math
 
@@ -17,7 +17,7 @@ def wrap(angle):
 
 
 class WheelController:
-    """Supplied state and actuator limits; the exercise computes wheel references."""
+    """Supplied state; the exercise computes and saturates wheel references."""
 
     def __init__(self, goals=((1.0, 0.5, math.pi / 2), (1.0, 1.5, 0.0)), *,
                  gain_pos=0.8, gain_bearing=2.0, gain_heading=1.5,
@@ -48,7 +48,8 @@ class WheelController:
         raise NotImplementedError("Choose the student or reference controller.")
 
     def update(self, robot, time, dt):
-        """Apply the exercise's wheel references, with a common actuator limit."""
+        """Validate and apply wheel references unchanged; saturation is the exercise."""
+        self.scale = 1.0  # The exercise records its saturation factor for the CSV.
         if self.done:
             references = (0.0, 0.0)
         else:
@@ -59,10 +60,7 @@ class WheelController:
         if self.done:
             self.index = len(self.goals)
         self.nominal = robot.motor_model.forward(*references)
-        wl, wr = references
-        peak = max(abs(wl), abs(wr))
-        self.scale = min(1.0, self.wheel_max / peak) if peak else 1.0
-        robot.set_wheel_velocities(self.scale * wl, self.scale * wr)
+        robot.set_wheel_velocities(*references)
 
 
 class PoseController(WheelController):
