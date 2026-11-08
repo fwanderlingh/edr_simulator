@@ -97,10 +97,15 @@ class SimulatorApp:
         self.time_readout = tk.StringVar(value="0.00 / 0.00 s")
         self._build_menu()
         self._build_widgets()
-        self.select_lesson()
-        if self.lesson_id == lesson and saved.get("lesson") == lesson and saved.get("task") in TASKS[lesson]:
-            self.task.set(TASKS[lesson][saved["task"]])
-            self.load_task()
+        # Restore the activity before building a session. Loading the lesson's
+        # default first can normalize selectors (e.g. student -> ideal for the
+        # front stop), changing the saved LiDAR model before it is evaluated.
+        self.lesson_id = lesson
+        self.tasks.configure(values=list(TASKS[lesson].values()))
+        task = saved.get("task") if saved.get("lesson") == lesson else None
+        task = task if task in TASKS[lesson] else next(iter(TASKS[lesson]))
+        self.task.set(TASKS[lesson][task])
+        self.load_task()
         for name in ("yaw", "pitch", "distance"):
             if f"camera_{name}" in saved and saved.get("lesson") == self.lesson_id:
                 setattr(self.camera, name, saved[f"camera_{name}"])

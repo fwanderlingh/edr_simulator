@@ -611,6 +611,35 @@ def test_lesson2_exceptions_are_handled_during_startup_and_rendering(tmp_path):
 
 
 @desktop_process
+def test_saved_lidar_student_mode_is_not_reset_by_the_default_front_stop(tmp_path):
+    import json
+    import tkinter as tk
+    from unittest.mock import patch
+    import robotics_sim.app as application
+    from robotics_sim.exercises.lesson04 import lidar
+    from robotics_sim.exercises.lesson04.sensors.lidar import LidarSensor
+
+    settings = tmp_path / "saved-lidar.json"
+    settings.write_text(json.dumps({"lesson": "4", "task": "sensor_lidar", "sensor_mode": "student"}))
+    root = tk.Tk()
+    root.withdraw()
+    # Supply only the tested sensor implementation, also in the public clone.
+    with patch.object(lidar.StudentLidar, "directions", LidarSensor.directions), \
+         patch.object(application, "ActivitySession", wraps=application.ActivitySession) as build:
+        app = application.SimulatorApp(root, settings_path=settings)
+        try:
+            assert build.call_count == 1
+            assert build.call_args.args == ("4", "sensor_lidar")
+            assert build.call_args.kwargs["sensor_mode"] == "student"
+            assert app.session.task == "sensor_lidar" and app.session.state == "Ready"
+            assert app.sensor_mode.get() == app.session.sensor_mode == "student"
+            assert isinstance(app.session.sensors.lidar, lidar.StudentLidar)
+            assert not app._notice
+        finally:
+            app.close()
+
+
+@desktop_process
 def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(tmp_path):
     import json
     import tkinter as tk
@@ -623,6 +652,7 @@ def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(
     settings.write_text(json.dumps({"lesson": "4", "task": "sensor_lidar", "sensor_mode": "student"}))
     saved = tmp_path / "lidar.py"
     root = tk.Tk()
+    root.withdraw()
     with patch.object(lidar.StudentLidar, "directions", side_effect=RuntimeError("bad scan directions")), \
          patch.object(lidar, "__file__", str(saved)), \
          patch("robotics_sim.app.messagebox.showerror") as showerror:
@@ -631,13 +661,25 @@ def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(
             assert app.session.lesson == "1" and app.session.task == "straight"
             assert "RuntimeError: bad scan directions" in app.status.get()
             assert showerror.call_count == 1
-            previous = app.session
+            assert app._reload_target == ("4", "sensor_lidar")
+            startup_fallback = app.session
+            # The current lesson default is a working reference front stop;
+            # it does not evaluate StudentLidar and must remain accessible.
             app.lesson.set(LESSONS["4"])
             app.select_lesson()
+            assert app.session.task == "sensor_front_stop" and not app._notice
+            assert app.session is not startup_fallback
+            assert showerror.call_count == 1
+            previous = app.session
+            app.task.set(TASKS["4"]["sensor_lidar"])
+            app.sensor_mode.set("student")
+            app.load_task()
             assert app.session is previous
-            assert app.lesson_id == "1" and app.task.get() == TASKS["1"]["straight"]
+            assert app.lesson_id == "4" and app.task.get() == TASKS["4"]["sensor_front_stop"]
             assert showerror.call_count == 2
             assert previous.world.physics.connected
+            assert app._reload_target == ("4", "sensor_lidar")
+            assert "RuntimeError: bad scan directions" in app.status.get()
             app._render()
             root.update()
             # Simulate saving a repair without depending on completed exercises:
@@ -646,7 +688,9 @@ def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(
                              "class StudentLidar(LidarSensor):\n    pass\n", encoding="utf-8")
             # Reload also retries the activity whose student sensor failed to load.
             app.reload_button.invoke()
-            assert app.session.lesson == "4" and app.session.task == "sensor_encoders"
+            assert app.session.lesson == "4" and app.session.task == "sensor_lidar"
+            assert app.sensor_mode.get() == app.session.sensor_mode == "student"
+            assert isinstance(app.session.sensors.lidar, lidar.StudentLidar)
             assert app.session is not previous and not app._notice
             assert showerror.call_count == 2
         finally:
