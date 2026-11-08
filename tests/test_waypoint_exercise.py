@@ -6,7 +6,8 @@ import math
 import pytest
 
 from robotics_sim import Pose
-from robotics_sim.exercises.lesson03.control import StudentWaypointController, main, run
+from robotics_sim.exercises.lesson03.waypoint import StudentWaypointController
+from robotics_sim.exercises.lesson03._control_runtime import main, run
 from robotics_sim.sim.references.waypoint_control import ReferenceWaypointController
 from robotics_sim.robots.differential_drive import ReferenceDifferentialDrive
 
@@ -18,7 +19,7 @@ from robotics_sim.robots.differential_drive import ReferenceDifferentialDrive
 ])
 def test_reference_arrival_and_wheel_limits(goals, tmp_path):
     path = tmp_path / "run.csv"
-    result = run(model="reference", goals=goals, csv_path=path)
+    result = run(task="waypoints", model="reference", goals=goals, csv_path=path)
     assert result["status"] == "DONE"
     assert len(result["arrivals"]) == len(goals)
     assert result["final_wheels"] == (0.0, 0.0)
@@ -32,7 +33,7 @@ def test_reference_arrival_and_wheel_limits(goals, tmp_path):
 
 
 def test_timeout_is_distinct_and_stops(tmp_path):
-    result = run(model="reference", duration=0.02, csv_path=tmp_path / "timeout.csv")
+    result = run(task="waypoints", model="reference", duration=0.02, csv_path=tmp_path / "timeout.csv")
     assert result["status"] == "TIMEOUT"
     assert result["completed"] == 0
     assert result["final_wheels"] == (0.0, 0.0)
@@ -63,5 +64,5 @@ def test_incomplete_student_entry_point_is_reported(monkeypatch, capsys, tmp_pat
     def incomplete(self, pose, r, L):
         raise NotImplementedError("Complete wheel_command")
     monkeypatch.setattr(StudentWaypointController, "wheel_command", incomplete)
-    assert main(["--csv", str(tmp_path / "incomplete.csv")]) == 2
+    assert main(["--csv", str(tmp_path / "incomplete.csv")], task="waypoints") == 2
     assert "NOT IMPLEMENTED: Complete wheel_command" in capsys.readouterr().out

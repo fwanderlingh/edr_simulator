@@ -5,8 +5,11 @@ from robotics_sim.robots.differential_drive import (
     DifferentialDriveRobot, ReferenceDifferentialDrive,
 )
 from .kinematics import StudentDifferentialDrive
-from . import control as waypoint_exercise
-from .control import GOALS, StudentWaypointController
+from . import control, waypoint
+from ._control_runtime import controller_parameters
+from .control import StudentPoseController
+from .waypoint import StudentWaypointController
+from robotics_sim.sim.references.control import ReferencePoseController
 from robotics_sim.sim.references.waypoint_control import ReferenceWaypointController
 from .proportional import GAIN, GOAL, EPS_POS, StudentProportionalController
 from robotics_sim.sim.references.proportional_control import ReferenceProportionalController
@@ -14,8 +17,8 @@ from robotics_sim.sim.references.proportional_control import ReferenceProportion
 
 WAYPOINT_TASKS = {
     "drive_proportional": (GOAL,),
-    "drive_goal": (GOALS[0],),
-    "drive_waypoints": GOALS,
+    "drive_goal": (control.GOAL,),
+    "drive_waypoints": waypoint.GOALS,
     "drive_goal_behind": ((-1.0, 0.0, 0.0),),
 }
 
@@ -32,10 +35,14 @@ def setup(world, *, task, kinematics="reference"):
             controller = (StudentProportionalController if kinematics == "student"
                           else ReferenceProportionalController)
             controller_options = {"gain": GAIN, "eps_pos": EPS_POS}
-        else:
+        elif task == "drive_waypoints":
             controller = (StudentWaypointController if kinematics == "student"
                           else ReferenceWaypointController)
-            controller_options = waypoint_exercise._controller_parameters()
+            controller_options = controller_parameters()
+        else:
+            controller = (StudentPoseController if kinematics == "student"
+                          else ReferencePoseController)
+            controller_options = controller_parameters()
         robot.waypoint_controller = controller(WAYPOINT_TASKS[task], **controller_options)
         return robot
     model = StudentDifferentialDrive if kinematics == "student" else ReferenceDifferentialDrive

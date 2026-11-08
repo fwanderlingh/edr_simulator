@@ -66,69 +66,82 @@ After your attempt, choose **reference** to compare with
 [`ReferenceProportionalController`](../../sim/references/proportional_control.py).
 Only the exercise file needs editing; the kinematics demonstrations remain separate.
 
-## Part II: guided waypoint controller
+## Part II: reach one target pose
 
-After the straight-goal exercise, draw the TURN, DRIVE and ALIGN transitions and predict the initial
-command from the Lesson 3 notes. Then complete
-[`StudentWaypointController.wheel_command`](control.py). As in `proportional.py`,
-the method receives `(pose, r, L)` and returns `(w_left, w_right)` in rad/s.
-Compute the position and heading errors, choose the phase and `(v, omega)`,
-then use both complete inverse-kinematics equations shown above. The supplied
-loop applies the wheel references with a common speed limit and records a CSV.
+After the straight-goal exercise, complete
+[`StudentPoseController.wheel_command`](control.py) and choose **Reach a goal:
+pose control**. The default target is `(1 m, 0.5 m, pi/2 rad)`.
+The method receives `(pose, r, L)` and returns `(w_left, w_right)` in rad/s,
+just like `proportional.py`. Read the single target from `self.goal`.
 
-The settings are at the top of `control.py`: `GOALS`, `GAIN`, `GAIN_BEARING`,
-`GAIN_HEADING`, `EPS_POS`, `EPS_ANGLE`, `ANGLE_IN` and `ANGLE_OUT`. The matching
-attributes are `self.goals`, `self.gain`, `self.gain_bearing`, `self.gain_heading`,
-`self.eps_pos`, `self.eps_angle`, `self.angle_in` and `self.angle_out`.
-`GAIN` and `EPS_POS` have the same meaning as in the first exercise. The waypoint
-exercise starts with `GAIN=0.8`; the additional gains handle bearing and final
-heading. Both the student and reference models use these settings in the GUI
-and standalone runner.
+Draw the TURN, DRIVE and ALIGN transitions from the notes first. Check distance
+before computing the bearing. Within position tolerance, enter ALIGN and correct
+the wrapped final-heading error; when both tolerances are met, set
+`self.phase = "DONE"` and return two zeros. Outside position tolerance, leave
+ALIGN for TURN, compute the bearing error with
+`wrap(math.atan2(ey, ex) - pose.yaw)`, and apply TURN/DRIVE hysteresis.
+Choose `(v, omega)` using the updated phase, then calculate both complete
+inverse-kinematics equations. No waypoint index is needed in this exercise.
 
-The notes' `atan2(y, x)` is written `math.atan2(y, x)` in Python, with
-`import math`. Use `math.atan2(ey, ex)` for the target direction and
-wrap its difference from the robot yaw to obtain the bearing error. This is
-an angle in radians; `math.hypot(ex, ey)` is the position-error magnitude in
-metres. The first proportional exercise needs only that magnitude because its
-goal lies straight ahead and its yaw-rate command is zero.
+The editable settings at the top of `control.py` are `GOAL`, `GAIN`,
+`GAIN_BEARING`, `GAIN_HEADING`, `EPS_POS`, `EPS_ANGLE`, `ANGLE_IN`, `ANGLE_OUT`
+and `WHEEL_MAX` (rad/s). Both models use these settings. Validation, wheel limits,
+CSV recording and the standalone runner are supplied in `_control_runtime.py`.
+The corresponding solution is
+[`ReferencePoseController`](../../sim/references/control.py).
+Use **Reach a goal behind the robot** to test the same pose controller's
+initial turn. Single-goal activities also accept a target through the GUI's
+**TARGET** fields; Heading is entered in degrees and converted to radians.
 
-Open **Lesson 3 - Mobile base kinematics** in the desktop app and choose:
+## Part II: sequence the waypoints
 
-- **Reach a goal: pose control** for one target pose;
-- **Follow two waypoints** for two targets in sequence;
-- **Reach a goal behind the robot** to test the initial turn.
+Next, complete [`StudentWaypointController.wheel_command`](waypoint.py) and
+choose **Follow two waypoints**. `GOALS` is editable at the top of `waypoint.py`;
+the gains, tolerances and wheel limit are reused from `control.py`.
 
-The selector becomes **CONTROLLER MODEL** for these activities. Choose
-**student** to run your `wheel_command`; an unfinished method reports the
-file to edit while leaving the scene available for inspection. After your
-attempt, compare with **reference**, whose solution is kept separately in
-[the simulator reference package](../../sim/references/waypoint_control.py).
-Both exercises require the student to convert the
-chosen body command into wheel references; the robot uses reference forward
-kinematics to simulate the resulting motion.
+The supplied adapter prepares `self.controllers`, one independent
+`StudentPoseController` per goal. Select `self.controllers[self.index]`, call
+its `wheel_command(pose, r, L)`, and copy its phase into `self.phase`.
+Advance `self.index` only when that pose controller reports `done`, so both
+position and heading must be reached at every waypoint. Return two zeros on
+the arrival sample and choose TURN for the next target, or DONE after the last.
+Otherwise return the current controller's wheel references. This exercise
+adds sequencing to the pose controller you already completed.
+The corresponding solution is
+[`ReferenceWaypointController`](../../sim/references/waypoint_control.py),
+which reuses the reference pose controller.
 
-Set an initial maximum duration of **30 seconds**, press **Reset / Apply length**,
-then **Start**. Goal markers show positions; arrows show desired final headings.
-The live measurements show the current phase, completed-waypoint count and
-errors. **Export CSV** records the same evidence for analysis. Reaching all
-poses ends the activity early; the time limit produces a timeout.
+For both exercises, choose **student** in **CONTROLLER MODEL**, save and restart
+after editing. An unfinished method reports its own exercise file while leaving
+the scene inspectable. After your attempt, compare with **reference**.
+Start with a maximum duration of **30 seconds**, press **Reset / Apply length**,
+then **Start**. Goal markers show positions and desired final headings.
+**Export CSV** records phases, errors, wheel speeds and completion evidence.
 
-Verify position and wrapped-angle tolerances at **each** completed waypoint,
-wheel limits throughout the run and zero wheel speeds at the end. `goal_index`
-identifies the goal active before the recorded step; `completed_waypoints`
-counts goals completed after that step. `DONE` and `TIMEOUT` are different
-outcomes. Both stop the robot. This controller uses ground-truth poses; the
-estimation exercise in Lesson 4 compares them with encoder and IMU estimates.
+Verify position and wrapped-angle tolerances at each arrival, wheel limits
+throughout the run and zero final wheel speeds. `goal_index` identifies the
+goal active before the step; `completed_waypoints` counts arrivals after it.
+DONE means all targets were reached; TIMEOUT stops without claiming completion.
+To test the common speed limit, change `WHEEL_MAX` in `control.py` and restart.
+Both exercises use ground-truth poses; Lesson 4 introduces sensor-based estimates.
+
+Standalone reference comparisons, from `simulator/`:
+
+```bash
+python -m robotics_sim.exercises.lesson03.control --model reference
+python -m robotics_sim.exercises.lesson03.waypoint --model reference
+```
 
 ## Scene and robot commands
 
 Open **[activity.py](activity.py)** to see how the selected activity creates
 the robot and chooses its command source. The four kinematics demonstrations
-use `update(robot, time, dt, ...)`; the goal activities attach the waypoint
+use `update(robot, time, dt, ...)`; the goal activities attach the selected
 controller to the same simulation loop.
 The `task` argument selects the example chosen in the UI. Edit this file to
-change a demonstration’s scene or assigned motion; edit `control.py` to
-implement the goal controller. Save and restart the application after changes.
+change a demonstration’s scene or assigned motion; edit `control.py` for the
+single-pose controller and `waypoint.py` for sequencing. Save and restart the
+application after changes.
 Use **Reset / Apply length** to recreate the scene and **Start** to run it. The UI
 owns simulation time and calls `update` before every physics step.
 

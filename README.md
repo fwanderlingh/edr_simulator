@@ -72,7 +72,8 @@ changes on the next launch. Until you complete an exercise, the app shows
 | 2 | `robotics_sim/exercises/lesson02/frames.py` | `point_in_world` (3D extension) |
 | 3 | `robotics_sim/exercises/lesson03/kinematics.py` | `forward`, `inverse` (select **student**) |
 | 3 | `robotics_sim/exercises/lesson03/proportional.py` | `StudentProportionalController.wheel_command` (first proportional controller) |
-| 3 | `robotics_sim/exercises/lesson03/control.py` | `StudentWaypointController.wheel_command` (goal and waypoint activities) |
+| 3 | `robotics_sim/exercises/lesson03/control.py` | `StudentPoseController.wheel_command` (reach one pose) |
+| 3 | `robotics_sim/exercises/lesson03/waypoint.py` | `StudentWaypointController.wheel_command` (sequence the pose controller) |
 | 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |
 | 4 | `robotics_sim/exercises/lesson04/estimation.py` | `StudentOdometry.update`, `StudentInertial.update` |
 | 4 | `robotics_sim/exercises/lesson04/avoidance.py` | `StudentSectors.summarize`, `StudentObstacleSupervisor.command` |
@@ -215,16 +216,22 @@ ideal-kinematics assumptions.
 
 The activities connect this model to odometry, target regulation, and waypoint
 following.
-Complete `StudentWaypointController.wheel_command` in
-[`lesson03/control.py`](robotics_sim/exercises/lesson03/control.py), then choose
-**Reach a goal: pose control**, **Follow two waypoints**, or
-**Reach a goal behind the robot** in Lesson 3. The **CONTROLLER MODEL** selector
-chooses **student** or **reference** for these activities. The wheel-kinematics
-demonstrations retain their separate **KINEMATICS MODEL** selector semantics.
-Use an initial maximum duration of 30 seconds, then check position and heading
-tolerances, completed-waypoint counts and `DONE` versus `TIMEOUT`. Goal positions
-and final headings are drawn in the scene; **Export CSV** saves the goal errors
-and controller state along with the robot measurements.
+Complete `StudentPoseController.wheel_command` in
+[`lesson03/control.py`](robotics_sim/exercises/lesson03/control.py) for
+**Reach a goal: pose control** and the behind-target test. Then complete
+`StudentWaypointController.wheel_command` in
+[`lesson03/waypoint.py`](robotics_sim/exercises/lesson03/waypoint.py) for
+**Follow two waypoints**, reusing the pose controller. Choose **student** in
+**CONTROLLER MODEL**, save and restart after editing. Both files contain only
+exercise settings and the student method; simulator support is in
+`_control_runtime.py`. The matching references are
+[`references/control.py`](robotics_sim/sim/references/control.py) and
+[`references/waypoint_control.py`](robotics_sim/sim/references/waypoint_control.py).
+Start with a maximum duration of 30 seconds. The GUI shows phase and completion
+count; Export CSV records targets, errors, wheel speeds and DONE/TIMEOUT evidence.
+Reach both position and heading tolerances at every target. Change `WHEEL_MAX`
+in `control.py` to test the supplied common wheel-speed limit.
+These exercises use ground-truth poses; Lesson 4 introduces sensor-based estimates.
 
 ### Lesson 4: sensors and noise
 

@@ -237,7 +237,8 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
             assert "Wheels L/R" in app.values.get()
             if app.session.controller is not None:
                 assert app.session.controller.__class__.__name__ == (
-                    "ReferenceProportionalController" if key == "drive_proportional" else "ReferenceWaypointController")
+                    "ReferenceProportionalController" if key == "drive_proportional" else
+                    "ReferenceWaypointController" if key == "drive_waypoints" else "ReferencePoseController")
             else:
                 assert app.session.robot.motor_model.__class__.__name__ == "StudentDifferentialDrive"
         app.lesson.set(LESSONS["4"])
@@ -558,7 +559,7 @@ def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
     from unittest.mock import patch
     from robotics_sim.app import SimulatorApp, enable_high_dpi
     from robotics_sim.session import LESSONS, TASKS
-    from robotics_sim.exercises.lesson03.control import StudentWaypointController
+    from robotics_sim.exercises.lesson03.waypoint import StudentWaypointController
 
     enable_high_dpi()
     root = tk.Tk()

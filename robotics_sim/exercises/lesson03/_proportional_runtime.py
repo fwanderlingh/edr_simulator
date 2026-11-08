@@ -2,10 +2,10 @@
 
 import math
 
-from .control import WaypointController
+from ._control_runtime import WheelController
 
 
-class ProportionalController(WaypointController):
+class ProportionalController(WheelController):
     """Lifecycle, validation and actuator limits; students edit proportional.py."""
 
     def __init__(self, goals=((1.0, 0.0, 0.0),), *, gain=0.4, eps_pos=0.03,

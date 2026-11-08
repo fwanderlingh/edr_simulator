@@ -5,7 +5,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from robotics_sim.exercises.lesson03.control import StudentWaypointController
+from robotics_sim.exercises.lesson03.control import StudentPoseController
+from robotics_sim.exercises.lesson03.waypoint import StudentWaypointController
 from robotics_sim.exercises.lesson03 import control
 from robotics_sim.robots.differential_drive import ReferenceDifferentialDrive
 from robotics_sim.session import ActivitySession, ACTIVITY_FILES, TASKS
@@ -18,7 +19,8 @@ def test_reference_goals_arrive_early_and_export_correct_targets(task, count, tm
     session = ActivitySession("3", task, duration=30, dt=1/120)
     try:
         assert task in TASKS["3"]
-        assert ACTIVITY_FILES[task][1].endswith("lesson03/control.py")
+        assert ACTIVITY_FILES[task][1].endswith(
+            "lesson03/waypoint.py" if task == "drive_waypoints" else "lesson03/control.py")
         assert session.controller.index == 0
         assert session.state == "Ready"
         assert session.robot.wheel_velocities == (0, 0)
@@ -67,13 +69,17 @@ def test_timeout_stops_and_new_session_resets_waypoint_state():
             session.close()
 
 
-def test_student_controller_is_inspectable_before_missing_step(monkeypatch):
+@pytest.mark.parametrize("task,controller", [
+    ("drive_goal", StudentPoseController), ("drive_goal_behind", StudentPoseController),
+    ("drive_waypoints", StudentWaypointController),
+])
+def test_student_controller_is_inspectable_before_missing_step(monkeypatch, task, controller):
     def unfinished(self, pose, r, L):
         raise NotImplementedError("Complete wheel_command")
-    monkeypatch.setattr(StudentWaypointController, "wheel_command", unfinished)
-    session = ActivitySession("3", "drive_goal", kinematics="student")
+    monkeypatch.setattr(controller, "wheel_command", unfinished)
+    session = ActivitySession("3", task, kinematics="student")
     try:
-        assert isinstance(session.controller, StudentWaypointController)
+        assert isinstance(session.controller, controller)
         assert type(session.robot.motor_model) is ReferenceDifferentialDrive
         assert session.state == "Ready" and session.sim.steps == 0
         assert session.robot.wheel_velocities == (0, 0)
@@ -88,7 +94,7 @@ def test_student_controller_is_inspectable_before_missing_step(monkeypatch):
 @pytest.mark.parametrize("r,L", [(0.12, 0.42), (0.09, 0.60)])
 def test_student_computes_wheel_references_without_automatic_inverse(monkeypatch, r, L):
     command = Mock(return_value=(1.0, 3.0))
-    monkeypatch.setattr(StudentWaypointController, "wheel_command", command)
+    monkeypatch.setattr(StudentPoseController, "wheel_command", command)
     session = ActivitySession("3", "drive_goal", kinematics="student", dt=.01)
     try:
         session.robot.motor_model = ReferenceDifferentialDrive(r, L)
@@ -105,17 +111,23 @@ def test_student_computes_wheel_references_without_automatic_inverse(monkeypatch
 
 
 @pytest.mark.parametrize("model", ["student", "reference"])
-def test_exercise_settings_reach_both_controller_models(monkeypatch, model):
+@pytest.mark.parametrize("task", ["drive_goal", "drive_waypoints"])
+def test_exercise_settings_reach_both_controller_models(monkeypatch, model, task):
     monkeypatch.setattr(control, "GAIN", .25)
     monkeypatch.setattr(control, "EPS_POS", .05)
     monkeypatch.setattr(control, "GAIN_BEARING", 3.0)
     monkeypatch.setattr(control, "GAIN_HEADING", 1.2)
     monkeypatch.setattr(control, "EPS_ANGLE", .02)
-    session = ActivitySession("3", "drive_goal", kinematics=model)
+    monkeypatch.setattr(control, "ANGLE_IN", .04)
+    monkeypatch.setattr(control, "ANGLE_OUT", .5)
+    monkeypatch.setattr(control, "WHEEL_MAX", 2.0)
+    session = ActivitySession("3", task, kinematics=model)
     try:
         ctrl = session.controller
-        assert (ctrl.gain, ctrl.eps_pos) == (.25, .05)
-        assert (ctrl.gain_bearing, ctrl.gain_heading, ctrl.eps_angle) == (3.0, 1.2, .02)
+        for configured in ([ctrl] + ctrl.controllers if task == "drive_waypoints" else [ctrl]):
+            assert (configured.gain, configured.eps_pos) == (.25, .05)
+            assert (configured.gain_bearing, configured.gain_heading, configured.eps_angle) == (3.0, 1.2, .02)
+            assert (configured.angle_in, configured.angle_out, configured.wheel_max) == (.04, .5, 2.0)
         assert session.sim.steps == 0
     finally:
         session.close()
