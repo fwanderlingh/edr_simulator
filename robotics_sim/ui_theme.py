@@ -46,6 +46,11 @@ def configure_theme(root):
                     font=(family, 10, "bold"))
     style.map("Primary.TButton", background=[("disabled", "#d7e4e6"), ("active", "#06676b")],
               foreground=[("disabled", "#718b8e"), ("!disabled", SURFACE)])
+    style.configure("Error.TButton", background="#fbe3e3", foreground="#8b1e24",
+                    bordercolor="#d99a9a", lightcolor="#d99a9a", darkcolor="#d99a9a")
+    style.map("Error.TButton", background=[("disabled", "#f4f6f8"), ("pressed", "#edb6b6"),
+                                          ("active", "#f5cccc")],
+              foreground=[("disabled", "#8b9aa5"), ("!disabled", "#8b1e24")])
     style.configure("TCombobox", padding=(8, 6), fieldbackground=SURFACE,
                     background="#f0f5f8", bordercolor=LINE, arrowcolor=MUTED)
     style.map("TCombobox", fieldbackground=[("readonly", SURFACE)],

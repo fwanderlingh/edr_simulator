@@ -469,6 +469,8 @@ class SimulatorApp:
         ):
             def highlight_notice(*_, variable=variable, label=label, default_style=default_style):
                 text = variable.get()
+                if variable is self.status:
+                    self.reload_button.configure(style="Error.TButton" if self._notice else "TButton")
                 if variable is self.status and text.startswith("⚠ "):
                     style = "Error.Footer.TLabel"
                 else:
