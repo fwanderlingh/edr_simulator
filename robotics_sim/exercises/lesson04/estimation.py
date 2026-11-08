@@ -5,17 +5,26 @@ then save your implementation and click Reload exercise.
 Complete the two Student.update methods after the guided exercise in the notes.
 """
 
-from robotics_sim.sim.references.sensors import ReferenceInertial, ReferenceOdometry
+from ._runtime import InertialState, OdometryState
 
 
-class StudentOdometry(ReferenceOdometry):
+# Select the component to implement, then save and click Reload exercise.
+# The other estimate is explicitly the supplied reference for comparison.
+ESTIMATION_STAGE = "both"  # "encoder", "imu", or "both"
+
+
+class StudentOdometry(OdometryState):
     def update(self, left_delta, right_delta, dt):
-        """Update x,y,yaw,speed,yaw_rate using measured wheel increments and dt."""
+        """Update x,y,yaw,speed,yaw_rate using wheel increments [rad] and dt [s].
+
+        Geometry is self.radius [m], self.width [m]; all states start at zero.
+        Use constant-arc or midpoint integration, as in Lesson 3.
+        """
         # TODO: wheel increments -> ds, da -> pose; never use ground truth here.
         raise NotImplementedError("Complete StudentOdometry.update in lesson04/estimation.py")
 
 
-class StudentInertial(ReferenceInertial):
+class StudentInertial(InertialState):
     def update(self, gyro, ax_body, ay_body, dt, *, truth_yaw=None):
         """Update yaw,x,y,vx,vy; body acceleration is already in m/s² without gravity.
 

@@ -13,7 +13,7 @@ from .exercises.lesson02 import frames as frame_exercise
 from .exercises.lesson02 import activity as frames_activity
 from .exercises.lesson02 import planar as planar_exercise
 from .exercises.lesson02 import module2
-from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS
+from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS, task_title
 from .sim.camera import Camera
 from .sim.scene_renderer import SceneRenderer
 from .exercises.lesson04.gui import SENSOR_EXERCISES
@@ -503,11 +503,11 @@ class SimulatorApp:
             return
         task = next(key for key, value in TASKS[self.lesson_id].items() if value == self.task.get())
         changed_task = (self.session is None or self.session.lesson != self.lesson_id or self.session.task != task)
-        editable_target = task in ("drive_goal", "drive_goal_behind", "sensor_avoidance") or self.lesson_id == "5"
+        editable_target = task in ("drive_goal", "drive_goal_behind", "sensor_front_stop", "sensor_avoidance") or self.lesson_id == "5"
         if changed_task and editable_target and not preserve_target:
             default = ((1, 0.5, 90) if task == "drive_goal" else
                        (-1, 0, 0) if task == "drive_goal_behind" else
-                       (3, 0, 0) if task == "sensor_avoidance" else (1, 1, 0))
+                       (3, 0, 0) if task in ("sensor_front_stop", "sensor_avoidance") else (1, 1, 0))
             for variable, value in zip((self.goal_x, self.goal_y, self.goal_yaw), default):
                 variable.set(str(value))
         try:
@@ -550,7 +550,10 @@ class SimulatorApp:
         if self.lesson_id in ("3", "5") or task in SENSOR_EXERCISES:
             self.model_controls.grid()
             self.model_heading.configure(text=("CONTROLLER MODEL" if self.session.controller is not None else
-                "ARM MODEL" if self.lesson_id == "5" else "SUPERVISOR MODEL" if task == "sensor_avoidance" else
+                "ARM MODEL" if self.lesson_id == "5" else
+                "STOP CONTROLLER MODEL" if task == "sensor_front_stop" else
+                "SECTOR MODEL" if task == "sensor_avoidance" and self.session.laboratory.stage == "sectors" else
+                "SUPERVISOR MODEL" if task == "sensor_avoidance" else
                 "ESTIMATOR MODEL" if task in SENSOR_EXERCISES else "KINEMATICS MODEL"))
         else:
             self.model_controls.grid_remove()
@@ -743,13 +746,17 @@ class SimulatorApp:
                 f"\nWheels L/R: {left:.2f} / {right:.2f} rad/s    v: {command.vx:.3f} m/s    omega: {command.omega:.3f} rad/s")
         if self.session.sensors is not None:
             sensors = self.session.sensors
-            left, right = sensors.encoder.read()
-            gyro, ax, ay = sensors.imu.read()
             middle = len(sensors.lidar.ranges) // 2
             distance = f"{sensors.lidar.ranges[middle]:.3f} m" if sensors.lidar.hits[middle] else "no return (4 m)"
-            self.values.set(self.values.get() +
-                f"\nSample: {sensors.time:.2f} s | Encoder L/R: {left:.4f} / {right:.4f} rad | Front: {distance}"
-                f"\nGyro z: {gyro:.3f} rad/s | Accel x/y: {ax:.3f} / {ay:.3f} m/s² | {self.session.sensor_mode}")
+            if self.session.task in ("sensor_front_stop", "sensor_lidar", "sensor_avoidance"):
+                self.values.set(self.values.get() +
+                    f"\nSample: {sensors.time:.2f} s | Front: {distance} | {self.session.sensor_mode}")
+            else:
+                left, right = sensors.encoder.read()
+                gyro, ax, ay = sensors.imu.read()
+                self.values.set(self.values.get() +
+                    f"\nSample: {sensors.time:.2f} s | Encoder L/R: {left:.4f} / {right:.4f} rad | Front: {distance}"
+                    f"\nGyro z: {gyro:.3f} rad/s | Accel x/y: {ax:.3f} / {ay:.3f} m/s² | {self.session.sensor_mode}")
         if self.session.controller is not None:
             ctrl = self.session.controller
             active = min(ctrl.index, len(ctrl.goals) - 1)
@@ -1152,7 +1159,7 @@ class SimulatorApp:
         self._plot_figure = figure
         window = tk.Toplevel(self.root)
         self._plot_window = window
-        window.title("Experiment plots · " + TASKS[snapshot["lesson"]][snapshot["task"]])
+        window.title("Experiment plots · " + task_title(snapshot["lesson"], snapshot["task"]))
         width = min(1120, max(700, self.root.winfo_screenwidth() - 120))
         height = min(820, max(520, self.root.winfo_screenheight() - 130))
         window.geometry(f"{width}x{height}")

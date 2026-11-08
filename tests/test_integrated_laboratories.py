@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from robotics_sim.exercise_checks import ExerciseChecks
-from robotics_sim.session import ActivitySession, TASKS
+from robotics_sim.session import ActivitySession, LEGACY_TASKS, TASKS
 from robotics_sim.exercises.lesson04.estimation import StudentOdometry
 from robotics_sim.exercises.lesson05.kinematics import StudentPlanarArm
 
@@ -29,7 +29,7 @@ def rows(path):
 def test_encoder_imu_comparison_uses_shared_clock_and_export(task, tmp_path):
     session = ActivitySession("4", task, duration=2, dt=1 / 120, exercise_model="reference")
     try:
-        assert task in TASKS["4"] and session.state == "Ready"
+        assert task in LEGACY_TASKS["4"] and session.state == "Ready"
         finish(session)
         assert session.state == "Completed"
         assert session.outcome == "COMPLETED"

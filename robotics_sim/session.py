@@ -16,7 +16,7 @@ from .exercises.lesson05 import gui as arm_gui
 
 
 LESSONS = {"1": "Lesson 1 - System overview", "2": "Lesson 2 - Frames and transformations",
-           "3": "Lesson 3 - Mobile base kinematics", "4": "Lesson 4 - Sensors and noise",
+           "3": "Lesson 3 - Mobile base kinematics", "4": "Lesson 4 - Sensors and obstacle control",
            "5": "Lesson 5 - Planar arm"}
 TASKS = {
     "1": {"straight": "Preview: straight-line motion", "circle": "Preview: circular motion", "square": "Preview: square motion"},
@@ -34,17 +34,26 @@ TASKS = {
           "drive_goal": "Reach a goal: pose control",
           "drive_goal_behind": "Reach a goal: pose behind robot",
           "drive_waypoints": "Follow two waypoints"},
-    "4": {"sensor_encoders": "Wheel encoders and forward range",
+    "4": {"sensor_front_stop": "Reach a goal: front rangefinder stop",
           "sensor_lidar": "Scan obstacles with 2D lidar",
-          "sensor_imu": "IMU during changing motion",
-          "sensor_estimation_straight": "Compare encoder and IMU: straight motion",
-          "sensor_estimation_curve": "Compare encoder and IMU: curved motion",
-          "sensor_estimation_blocked": "Compare estimates: blocked robot",
           "sensor_avoidance": "Reach a goal and avoid an obstacle"},
     "5": {"arm_forward": "Forward kinematics: endpoint",
           "arm_inverse": "Inverse kinematics: two branches",
           "arm_control": "Control the end-effector"},
 }
+# Retain older recordings/batch experiments without including them in the course menu.
+LEGACY_TASKS = {"4": {
+    "sensor_encoders": "Wheel encoders and forward range",
+    "sensor_imu": "IMU during changing motion",
+    "sensor_estimation_straight": "Compare encoder and IMU: straight motion",
+    "sensor_estimation_curve": "Compare encoder and IMU: curved motion",
+    "sensor_estimation_blocked": "Compare estimates: blocked robot",
+}}
+
+
+def task_title(lesson, task):
+    return {**LEGACY_TASKS.get(lesson, {}), **TASKS[lesson]}[task]
+
 DESCRIPTIONS = {
     "spatial": "Compose T_world_base and T_base_sensor, then transform P_sensor=(0,1,0). Base: Rz(90 deg), (1,2,0) m; sensor: Rx(90 deg), (0.2,0,0.5) m. Expected sensor origin (1,2.2,0.5), point (1,2.2,1.5) m. Edit solve_spatial_task. The base frame is at ground level as in the notes; the robot body centre is above it.",
     "rpy": "Assignment: sensor angles (roll,pitch,yaw)=(pi/6,-pi/9,2pi/9) rad and v_s=(1,0,0). Implement the expanded RPY matrix and Rz Ry Rx in solve_rpy_task. The sensor frame and purple vector show your result for this assignment. Compare v_w with (0.720,0.604,0.342). Checks compare the full matrix with the expected rotation and your product, and test orthogonality and determinant. The drawing origin is offset vertically for visibility; directions are not translated.",
@@ -95,18 +104,27 @@ ACTIVITY_FILES = {
 
 for task in SENSOR_EXERCISES:
     DESCRIPTIONS[task] = (
-        "Complete the sector summary and supervisor. Reach the visible goal around one isolated box; "
+        "Choose AVOIDANCE_STAGE in avoidance.py: sectors, stop, then avoid. "
+        "The nominal motion reuses lesson03/control.py. Reach the visible goal around one isolated box; "
         "compare DONE and TIMEOUT. The reference is a local detour, not a general path planner."
         if task == "sensor_avoidance" else
-        "Complete encoder odometry and inertial integration. Compare both estimates with the actual "
+        "Choose ESTIMATION_STAGE in estimation.py: encoder, imu, then both. "
+        "Implement each estimate separately before comparing both with the actual "
         "robot on the same sensor stream; orange is encoder odometry, purple is the IMU estimate. "
         "Use ideal data first, then noisy data. The blocked-robot task exposes wheel/chassis disagreement.")
     ACTIVITY_FILES[task] = (
-        "Complete StudentSectors.summarize and StudentObstacleSupervisor.command; select student, save and click Reload exercise."
+        "Choose AVOIDANCE_STAGE in avoidance.py; implement sectors, stop, then detour. Select student, save and click Reload exercise."
         if task == "sensor_avoidance" else
-        "Complete StudentOdometry.update and StudentInertial.update; select student, save and click Reload exercise.",
+        "Choose ESTIMATION_STAGE in estimation.py; implement encoder, IMU, then both. Select student, save and click Reload exercise.",
         "robotics_sim/exercises/lesson04/avoidance.py" if task == "sensor_avoidance" else
         "robotics_sim/exercises/lesson04/estimation.py")
+DESCRIPTIONS["sensor_front_stop"] = (
+    "Reuse the Lesson 3 controller with the simulator pose. Add a front rangefinder stop: "
+    "validate distance, hit/miss and age, stop before the box and keep STOP until the release "
+    "threshold is met. One ray provides no side information for an avoidance turn.")
+ACTIVITY_FILES["sensor_front_stop"] = (
+    "Complete StudentRangeStop.command in rangefinder.py; select student, save and click Reload exercise.",
+    "robotics_sim/exercises/lesson04/rangefinder.py")
 for task, method in (("arm_forward", "forward"), ("arm_inverse", "inverse"), ("arm_control", "jacobian")):
     DESCRIPTIONS[task] = {
         "arm_forward": "Predict the endpoint from the joint configuration. The teal arm follows the independent plant; compare your predicted purple point with the real endpoint.",
@@ -129,7 +147,7 @@ class ActivitySession:
         if lesson not in LESSONS:
             raise ValueError("Unknown lesson.")
         task = task or next(iter(TASKS[lesson]))
-        if task not in TASKS[lesson]:
+        if task not in TASKS[lesson] and task not in LEGACY_TASKS.get(lesson, {}):
             raise ValueError("This task does not belong to the selected lesson.")
         if not math.isfinite(duration) or duration <= 0:
             raise ValueError("Activity length must be finite and positive.")

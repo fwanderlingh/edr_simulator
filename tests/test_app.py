@@ -13,6 +13,49 @@ pytestmark = pytest.mark.skipif(os.environ.get("ROBOTICS_SIM_GUI_TEST") != "1",
                                 reason="Set ROBOTICS_SIM_GUI_TEST=1 with a desktop or Xvfb.")
 
 
+def test_lesson4_stages_use_the_same_ui_with_explicit_model_labels(tmp_path, monkeypatch):
+    import tkinter as tk
+    from robotics_sim.app import SimulatorApp
+    from robotics_sim.session import TASKS
+    from robotics_sim.exercises.lesson03 import control
+    from robotics_sim.exercises.lesson04 import avoidance, rangefinder
+    from robotics_sim.sim.references.control import ReferencePoseController
+    from robotics_sim.sim.references.sensors import ReferenceRangeStop, ReferenceSectors, ReferenceObstacleSupervisor
+
+    monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "sectors")
+    monkeypatch.setattr(avoidance.StudentSectors, "summarize", ReferenceSectors.summarize)
+    root = tk.Tk()
+    root.withdraw()  # This checks actual Tk state without opening an interactive window.
+    app = SimulatorApp(root, lesson="4", duration=.2, dt=.01,
+                       settings_path=tmp_path / "stages.json")
+    try:
+        app.task.set(TASKS["4"]["sensor_avoidance"])
+        app.exercise_model.set("student")
+        app.load_task()
+        app.single_step()
+        assert app.model_heading.cget("text") == "SECTOR MODEL"
+        assert "Stage: sectors" in app.values.get()
+        assert app.session.sim.steps == 1
+
+        monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "stop")
+        monkeypatch.setattr(rangefinder.StudentRangeStop, "command", ReferenceRangeStop.command)
+        monkeypatch.setattr(avoidance.StudentObstacleSupervisor, "command", ReferenceObstacleSupervisor.command)
+        monkeypatch.setattr(control.StudentPoseController, "wheel_command", ReferencePoseController.wheel_command)
+        app.load_task()
+        app.single_step()
+        assert app.model_heading.cget("text") == "SUPERVISOR MODEL"
+        assert "Stage: stop" in app.values.get()
+        assert app.session.laboratory.pose_controller.__class__ is control.StudentPoseController
+        app.task.set(TASKS["4"]["sensor_front_stop"])
+        app.load_task()
+        app.single_step()
+        assert app.model_heading.cget("text") == "STOP CONTROLLER MODEL"
+        assert "front rangefinder" in app.values.get()
+        assert "Encoder" not in app.values.get() and "Gyro" not in app.values.get()
+    finally:
+        app.close()
+
+
 def desktop_process(test):
     """Run each desktop scenario in its own process, like a real app launch."""
     @functools.wraps(test)
@@ -243,8 +286,8 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
                 assert app.session.robot.motor_model.__class__.__name__ == "StudentDifferentialDrive"
         app.lesson.set(LESSONS["4"])
         app.select_lesson()
-        for mode, task in (("ideal", "sensor_encoders"), ("noisy", "sensor_imu"),
-                           ("student", "sensor_lidar")):
+        for mode, task in (("ideal", "sensor_front_stop"), ("noisy", "sensor_avoidance"),
+                           ("ideal", "sensor_lidar")):
             app.sensor_mode.set(mode)
             app.task.set(TASKS["4"][task])
             app.load_task()
@@ -254,8 +297,9 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
             while app.session.state != "Completed":
                 app.single_step()
             assert app.session.sensors.time == pytest.approx(0.04)
-            assert "Encoder L/R" in app.values.get()
-            assert "Gyro z" in app.values.get()
+            assert "front" in app.values.get().lower()
+            assert "Encoder L/R" not in app.values.get()
+            assert "Gyro z" not in app.values.get()
             assert app.canvas.find_withtag("scene")
     finally:
         app.close()
@@ -447,7 +491,7 @@ def test_student_runtime_errors_stop_motion_and_leave_the_ui_usable(tmp_path):
     from robotics_sim.session import LESSONS, TASKS
     from robotics_sim.exercises.lesson03.control import StudentPoseController
     from robotics_sim.exercises.lesson03.proportional import StudentProportionalController
-    from robotics_sim.exercises.lesson04.estimation import StudentOdometry
+    from robotics_sim.exercises.lesson04.rangefinder import StudentRangeStop
     from robotics_sim.exercises.lesson04.avoidance import StudentSectors
     from robotics_sim.exercises.lesson05.kinematics import StudentPlanarArm
 
@@ -458,7 +502,7 @@ def test_student_runtime_errors_stop_motion_and_leave_the_ui_usable(tmp_path):
     cases = (
         ("3", "drive_proportional", StudentProportionalController, "wheel_command", NameError),
         ("3", "drive_goal", StudentPoseController, "wheel_command", RuntimeError),
-        ("4", "sensor_estimation_straight", StudentOdometry, "update", IndexError),
+        ("4", "sensor_front_stop", StudentRangeStop, "command", IndexError),
         ("4", "sensor_avoidance", StudentSectors, "summarize", KeyError),
         ("5", "arm_forward", StudentPlanarArm, "forward", AttributeError),
     )
@@ -826,12 +870,12 @@ def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
         assert "not implemented" in app.status.get().lower()
         assert app.session.sim.time == 0
 
-        choose("4", "sensor_estimation_curve")
+        choose("4", "sensor_front_stop")
         for _ in range(5):
             app.single_step()
-        assert "Encoder error" in app.values.get()
+        assert "front rangefinder" in app.values.get()
         assert app.session.sensors.time > 0
-        assert str(app.model_heading.cget("text")) == "ESTIMATOR MODEL"
+        assert str(app.model_heading.cget("text")) == "STOP CONTROLLER MODEL"
         choose("4", "sensor_avoidance")
         app.single_step()
         assert "Goal error" in app.values.get()

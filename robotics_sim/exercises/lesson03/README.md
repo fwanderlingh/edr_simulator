@@ -156,7 +156,11 @@ goal active before the step; `completed_waypoints` counts arrivals after it.
 DONE means all targets were reached; TIMEOUT stops without claiming completion.
 To test the common speed limit, change `WHEEL_MAX` in `control.py` and click **Reload exercise**.
 For the proportional exercise, change `WHEEL_MAX` in `proportional.py` instead.
-Both exercises use ground-truth poses; Lesson 4 introduces sensor-based estimates.
+Both exercises use simulator poses. Lesson 4 keeps that pose input and adds
+rangefinder/LiDAR supervision for obstacles.
+Lesson 4 also reuses this `StudentPoseController` for nominal motion toward its
+position goal, with the same gains, position tolerance and wheel limit. Its
+supplied adapter preserves this interface while scan supervision is added.
 
 ## Scene and robot commands
 

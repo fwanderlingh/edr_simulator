@@ -116,3 +116,25 @@ for suffix, expected in (("\ndef broken(\n", SyntaxError),
     finally:
         session.close()
 ''')
+
+
+def test_lesson4_reload_reads_the_saved_lesson3_controller_and_parameters(tmp_path):
+    run_in_copy(tmp_path, r'''
+from pathlib import Path
+from robotics_sim.exercise_reload import reload_lesson
+from robotics_sim.exercises.lesson03 import control
+from robotics_sim.session import ActivitySession
+
+previous = control.StudentPoseController
+path = Path(control.__file__)
+path.write_text(path.read_text(encoding="utf-8") + "\nGAIN_POS = .123\nWHEEL_MAX = .75\n", encoding="utf-8")
+reload_lesson("4")
+assert control.StudentPoseController is not previous
+session = ActivitySession("4", "sensor_avoidance", exercise_model="student")
+try:
+    assert type(session.laboratory.pose_controller) is control.StudentPoseController
+    assert session.laboratory.pose_controller.gain_pos == .123
+    assert session.laboratory.wheel_max == .75
+finally:
+    session.close()
+''')

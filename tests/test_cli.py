@@ -19,5 +19,6 @@ def test_headless_entry_point_and_csv(tmp_path):
         rows = list(csv.DictReader(stream))
     assert len(rows) == 10
     assert float(rows[-1]["time_s"]) == pytest.approx(0.1)
-    assert float(rows[-1]["x_m"]) == pytest.approx(0.015, abs=1e-6)
+    # Lesson 4 starts with the front stop using Lesson 3's 0.6 m/s nominal command.
+    assert float(rows[-1]["x_m"]) == pytest.approx(0.06, abs=1e-6)
     assert destination.with_name("poses_sensors.csv").exists()

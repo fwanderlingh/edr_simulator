@@ -16,12 +16,17 @@ LESSON_MODULES = {
           "exercises.lesson03.control", "exercises.lesson03.waypoint",
           "sim.references.control", "sim.references.proportional_control",
           "sim.references.waypoint_control", "exercises.lesson03.activity"),
-    "4": ("exercises.lesson04.sensors.encoder", "exercises.lesson04.sensors.imu",
+    "4": ("exercises.lesson04._runtime", "sim.references.sensors",
+          "exercises.lesson04.sensors.encoder", "exercises.lesson04.sensors.imu",
           "exercises.lesson04.sensors.lidar", "exercises.lesson04.lidar",
           "exercises.lesson04.sensors.suite", "exercises.lesson04.estimation",
-          "exercises.lesson04.avoidance", "exercises.lesson04.gui", "exercises.lesson04.activity"),
+          "exercises.lesson04.rangefinder", "exercises.lesson04.avoidance",
+          "exercises.lesson04.gui", "exercises.lesson04.activity"),
     "5": ("exercises.lesson05.kinematics", "exercises.lesson05.control", "exercises.lesson05.gui"),
 }
+
+# Lesson 4's nominal controller is the saved Lesson 3 exercise, not a duplicate.
+LESSON_MODULES["4"] = LESSON_MODULES["3"] + LESSON_MODULES["4"]
 
 
 def reload_lesson(lesson):

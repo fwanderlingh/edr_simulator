@@ -18,7 +18,7 @@ in the escape room course sequence.
   - [Lesson 1: System overview](#lesson-1-system-overview)
   - [Lesson 2: Frames and transformations](#lesson-2-frames-and-transformations)
   - [Lesson 3: Mobile base kinematics](#lesson-3-mobile-base-kinematics)
-  - [Lesson 4: Sensors and noise](#lesson-4-sensors-and-noise)
+  - [Lesson 4: sensors and obstacle control](#lesson-4-sensors-and-obstacle-control)
   - [Lesson 5: Planar arm](#lesson-5-planar-arm)
 - [Guided implementation workflow](#guided-implementation-workflow)
 ---
@@ -76,7 +76,7 @@ exercise, the app shows
 | 3 | `robotics_sim/exercises/lesson03/control.py` | `StudentPoseController.wheel_command` (reach one pose) |
 | 3 | `robotics_sim/exercises/lesson03/waypoint.py` | `StudentWaypointController.wheel_command` (sequence the pose controller) |
 | 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |
-| 4 | `robotics_sim/exercises/lesson04/estimation.py` | `StudentOdometry.update`, `StudentInertial.update` |
+| 4 | `robotics_sim/exercises/lesson04/rangefinder.py` | `StudentRangeStop.command` (front stop and hysteresis) |
 | 4 | `robotics_sim/exercises/lesson04/avoidance.py` | `StudentSectors.summarize`, `StudentObstacleSupervisor.command` |
 | 5 | `robotics_sim/exercises/lesson05/kinematics.py` | `StudentPlanarArm.forward`, `inverse`, `jacobian` |
 | 5 | `robotics_sim/exercises/lesson05/control.py` | `StudentArmController.velocity` |
@@ -232,18 +232,18 @@ Start with a maximum duration of 30 seconds. The GUI shows phase and completion
 count; Export CSV records targets, errors, wheel speeds and DONE/TIMEOUT evidence.
 Reach both position and heading tolerances at every target. Change `WHEEL_MAX`
 in `control.py` to test the common wheel-speed saturation implemented by the student.
-These exercises use ground-truth poses; Lesson 4 introduces sensor-based estimates.
+These exercises use simulator poses. Lesson 4 keeps that pose input and adds
+rangefinder/LiDAR supervision of the same goal controller.
 
-### Lesson 4: sensors and noise
+### Lesson 4: sensors and obstacle control
 
 [Lesson 4 exercise details](robotics_sim/exercises/lesson04/README.md) cover
-the encoder, lidar and IMU activities, sensor modes, sampling and noise models.
-The same lesson also offers **Compare encoder and IMU: straight motion**,
-**Compare encoder and IMU: curved motion**, **Compare estimates: blocked robot**,
-and **Reach a goal and avoid an obstacle**. Complete the estimation or supervisor
-methods, choose the student model, and compare their traces and outcomes with
-the reference. Sensor mode selects ideal or noisy measurements independently
-of the estimation/control implementation.
+three steps: **Reach a goal: front rangefinder stop**, **Scan obstacles with 2D
+lidar**, and **Reach a goal and avoid an obstacle**. Complete the front stop,
+ray directions, sector summary, and detour supervisor in that order. The LiDAR
+stop stage reuses the first controller on the front-sector minimum. All goal
+control uses the simulator pose and the Lesson 3 pose controller. Sensor mode
+selects ideal or noisy distance measurements independently of the control model.
 
 ### Lesson 5: planar arm
 

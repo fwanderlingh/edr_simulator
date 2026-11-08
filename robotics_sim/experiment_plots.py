@@ -200,9 +200,9 @@ def _raw_sensors(axes, sensors, snapshot):
             _line(axes[2], sensors["time_s"], counts, "Hits", GREEN, step=True)
             axes[2].set(title="Returns per scan", xlabel="Time [s]", ylabel="Ray count")
         _front_range(axes[1], sensors)
-        _series(axes[3], sensors, [("gyro_z_rad_s", "Measured", TEAL),
-                                  ("true_gyro_z_rad_s", "Ideal", SLATE)],
-                title="Yaw rate", ylabel="Angular speed [rad/s]")
+        poses = _numeric_table(snapshot["columns"], snapshot["samples"])
+        _series(axes[3], poses, [("yaw_rad", "Simulator pose", TEAL)],
+                title="Heading supplied by the simulator", ylabel="Angle [rad]")
         return
     if task == "sensor_imu":
         _series(axes[0], sensors, [("gyro_z_rad_s", "Measured", TEAL),
@@ -335,8 +335,10 @@ def create_experiment_figure(snapshot):
         _arm(axes, data, snapshot)
     elif task.startswith("sensor_estimation_"):
         _estimation(axes, data)
-    elif task == "sensor_avoidance":
+    elif task in ("sensor_front_stop", "sensor_avoidance"):
         _avoidance(axes, data, snapshot)
+        if task == "sensor_front_stop":
+            axes[2].set_title("Front range used by the stop controller")
     elif task.startswith("sensor_") and len(sensors.get("time_s", ())):
         _raw_sensors(axes, sensors, snapshot)
     else:

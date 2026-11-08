@@ -30,6 +30,7 @@ class ExerciseChecks:
     def __init__(self, session):
         self.session = session
         self.odom = ReferenceOdometry()
+        self.odom_midpoint = ReferenceOdometry(integration="midpoint")
         self.imu = ReferenceInertial()
         self._sensor_row = 1  # The initial capture has no elapsed interval.
         self._sensor_time = 0.0
@@ -119,32 +120,58 @@ class ExerciseChecks:
             for row in sensors.rows[self._sensor_row:]:
                 interval = row[0] - self._sensor_time
                 self.odom.update(*row[1:3], interval)
+                self.odom_midpoint.update(*row[1:3], interval)
                 self.imu.update(*row[5:8], interval,
                                 truth_yaw=sample_yaws[row[0]] if lab.truth_orientation else None)
                 self._sensor_time = row[0]
             self._sensor_row = len(sensors.rows)
             sampled = self._sensor_row > 1
-            return (
-                ("Run completed", completed),
-                ("Encoder estimate matches the sampled-data reference", sampled and verified(lambda: close(
+            odom_check = (
+                "Encoder estimate matches arc or midpoint integration", sampled and verified(lambda: any(close(
                     [lab.odom.x, lab.odom.y, lab.odom.yaw, lab.odom.speed, lab.odom.yaw_rate],
-                    [self.odom.x, self.odom.y, self.odom.yaw, self.odom.speed, self.odom.yaw_rate]))),
+                    [ref.x, ref.y, ref.yaw, ref.speed, ref.yaw_rate])
+                    for ref in (self.odom, self.odom_midpoint))))
+            imu_check = (
                 ("IMU estimate matches the sampled-data reference", sampled and verified(lambda: close(
                     [lab.imu.x, lab.imu.y, lab.imu.yaw, lab.imu.vx, lab.imu.vy],
-                    [self.imu.x, self.imu.y, self.imu.yaw, self.imu.vx, self.imu.vy]))),
-            )
+                    [self.imu.x, self.imu.y, self.imu.yaw, self.imu.vx, self.imu.vy]))))
+            return (("Run completed", completed),
+                    *((odom_check,) if lab.stage in ("encoder", "both") else ()),
+                    *((imu_check,) if lab.stage in ("imu", "both") else ()))
         if lab is not None:
             lidar = sensors.lidar
+            if lab.front_only:
+                data = [dict(zip(session.columns, row)) for row in session.samples]
+                stopped = any(row["front_m"] != "" and row["front_m"] < lab.controller.enter
+                              and row["left_rad_s"] == row["right_rad_s"] == 0 for row in data)
+                return (
+                    ("Rangefinder stop experiment completed", completed),
+                    ("Robot stopped for a nearby obstacle", stopped),
+                    ("Only the front ray is used", len(lidar.angles) == 1 and lidar.angles[0] == 0),
+                    (f"Wheel speeds stay within {lab.wheel_max:g} rad/s", ran and all(
+                        max(abs(row[-3]), abs(row[-2])) <= lab.wheel_max + 1e-9 for row in session.samples)),
+                )
             expected = ReferenceSectors().summarize(lidar.angles, lidar.scan(), lidar.hits, lidar.max_range)
+            sector_check = (
+                "Scan sectors match the reference", ran and verified(lambda:
+                    lab.summary.summarize(lidar.angles, lidar.scan(), lidar.hits, lidar.max_range) == expected
+                    and expected is not None))
+            wheel_check = (
+                f"Wheel speeds stay within {lab.wheel_max:g} rad/s", ran and all(
+                    max(abs(row[-3]), abs(row[-2])) <= lab.wheel_max + 1e-9 for row in session.samples))
+            if lab.stage == "sectors":
+                return (("Sector observation completed", completed), sector_check, wheel_check)
+            if lab.stage == "stop":
+                data = [dict(zip(session.columns, row)) for row in session.samples]
+                stopped = any(row["front_m"] != "" and row["front_m"] < lab.controller.enter
+                              and row["left_rad_s"] == row["right_rad_s"] == 0 for row in data)
+                return (("Stop experiment completed", completed),
+                        ("Robot stopped for a nearby obstacle", stopped), sector_check, wheel_check)
             return (
                 ("Supervisor reached DONE", lab.outcome == "DONE"),
-                ("Goal distance ≤ 0.05 m", ran and math.hypot(
-                    lab.target[0] - session.robot.pose().x, lab.target[1] - session.robot.pose().y) <= 0.05),
-                ("Scan sectors match the reference", ran and verified(lambda:
-                    lab.summary.summarize(lidar.angles, lidar.scan(), lidar.hits, lidar.max_range) == expected
-                    and expected is not None)),
-                ("Wheel speeds stay within 5 rad/s", ran and all(
-                    max(abs(row[-3]), abs(row[-2])) <= 5 + 1e-9 for row in session.samples)),
+                (f"Goal distance ≤ {lab.controller.eps_pos:g} m", ran and math.hypot(
+                    lab.target[0] - session.robot.pose().x, lab.target[1] - session.robot.pose().y) <= lab.controller.eps_pos),
+                sector_check, wheel_check,
             )
         lidar = sensors.lidar
         yaw = session.robot.pose().yaw

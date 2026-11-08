@@ -37,7 +37,7 @@ def snapshot_of(session, tmp_path):
 @pytest.mark.parametrize("lesson,task", [
     ("1", "square"), ("2", "planar"), ("3", "drive_line"), ("3", "drive_waypoints"),
     ("4", "sensor_encoders"), ("4", "sensor_imu"), ("4", "sensor_lidar"),
-    ("4", "sensor_estimation_curve"), ("4", "sensor_avoidance"),
+    ("4", "sensor_estimation_curve"), ("4", "sensor_front_stop"), ("4", "sensor_avoidance"),
     ("5", "arm_forward"), ("5", "arm_inverse"), ("5", "arm_control"),
 ])
 def test_all_practical_activity_plots_render(lesson, task, tmp_path):

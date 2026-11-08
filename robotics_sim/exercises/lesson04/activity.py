@@ -17,7 +17,8 @@ def setup(world, *, task):
 
 def setup_sensors(robot, *, task, mode, dt):
     """Attach sensors to this explicit robot; the UI selects their mode."""
-    return SensorSuite(robot, mode, dt, rangefinder=task == "sensor_encoders")
+    return SensorSuite(robot, mode, dt, rangefinder=task == "sensor_encoders",
+                       motion_sensors=task != "sensor_lidar")
 
 
 def update(robot, time, dt, *, task):

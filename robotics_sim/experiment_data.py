@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 
-from .session import LESSONS, TASKS
+from .session import LESSONS, task_title
 
 
 def capture_experiment(session):
@@ -23,6 +23,9 @@ def capture_experiment(session):
         metadata["wheel_radius"] = model.wheel_radius
         metadata["track_width"] = model.track_width
     laboratory = session.laboratory
+    if session.lesson == "4" and laboratory is not None:
+        metadata["exercise_stage"] = laboratory.stage
+        metadata["exercise_model"] = laboratory.model_name
     if session.lesson == "5":
         for key, name in (("arm_points", "points"), ("arm_branches", "branches"),
                           ("arm_predictions", "predictions"), ("arm_target", "target")):
@@ -33,7 +36,7 @@ def capture_experiment(session):
              and laboratory.has_goal else ())
     return deepcopy({
         "lesson": session.lesson, "task": session.task,
-        "title": f"{LESSONS[session.lesson]} · {TASKS[session.lesson][session.task]}",
+        "title": f"{LESSONS[session.lesson]} · {task_title(session.lesson, session.task)}",
         "columns": tuple(session.columns), "samples": tuple(tuple(row) for row in session.samples),
         "sensor_columns": tuple(session.sensors.columns) if session.sensors is not None else (),
         "sensor_samples": tuple(tuple(row) for row in session.sensors.rows)
