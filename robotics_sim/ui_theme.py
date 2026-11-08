@@ -53,7 +53,9 @@ def configure_theme(root):
               foreground=[("disabled", "#8b9aa5"), ("!disabled", "#8b1e24")])
     style.configure("TCombobox", padding=(8, 6), fieldbackground=SURFACE,
                     background="#f0f5f8", bordercolor=LINE, arrowcolor=MUTED)
-    style.map("TCombobox", fieldbackground=[("readonly", SURFACE)],
+    # Clam otherwise uses white text for focused read-only fields.
+    style.map("TCombobox", foreground=[("disabled", "#8b9aa5"), ("readonly", INK)],
+              fieldbackground=[("readonly", SURFACE)],
               selectbackground=[("readonly", SURFACE)], selectforeground=[("readonly", INK)])
     style.configure("TEntry", padding=(8, 6), fieldbackground=SURFACE, bordercolor=LINE)
     style.configure("TCheckbutton", background=SURFACE, foreground=MUTED, font=(family, 9))
