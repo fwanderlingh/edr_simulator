@@ -1,7 +1,7 @@
 """Implement the two formulas below.
 
 Conventions: metres, seconds, radians; left is +y; positive yaw turns left.
-Select Student in the application to run this class, then restart after editing.
+Select Student in the application to run this class, then click Reload exercise after saving.
 """
 
 from ...robots.differential_drive import ReferenceDifferentialDrive

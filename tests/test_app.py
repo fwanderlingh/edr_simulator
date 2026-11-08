@@ -537,13 +537,15 @@ def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(
     import tkinter as tk
     from unittest.mock import patch
     from robotics_sim.app import SimulatorApp
-    from robotics_sim.exercises.lesson04.lidar import StudentLidar
+    from robotics_sim.exercises.lesson04 import lidar
     from robotics_sim.session import LESSONS, TASKS
 
     settings = tmp_path / "loading-error.json"
     settings.write_text(json.dumps({"lesson": "4", "task": "sensor_lidar", "sensor_mode": "student"}))
+    saved = tmp_path / "lidar.py"
     root = tk.Tk()
-    with patch.object(StudentLidar, "directions", side_effect=RuntimeError("bad scan directions")), \
+    with patch.object(lidar.StudentLidar, "directions", side_effect=RuntimeError("bad scan directions")), \
+         patch.object(lidar, "__file__", str(saved)), \
          patch("robotics_sim.app.messagebox.showerror") as showerror:
         app = SimulatorApp(root, settings_path=settings)
         try:
@@ -559,6 +561,10 @@ def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(
             assert previous.world.physics.connected
             app._render()
             root.update()
+            # Simulate saving a repair without depending on completed exercises:
+            # the public student clone has an unfinished lidar implementation.
+            saved.write_text("from .sensors.lidar import LidarSensor\n"
+                             "class StudentLidar(LidarSensor):\n    pass\n", encoding="utf-8")
             # Reload also retries the activity whose student sensor failed to load.
             app.reload_button.invoke()
             assert app.session.lesson == "4" and app.session.task == "sensor_encoders"

@@ -304,14 +304,12 @@ class SimulatorApp:
             self._queue_save()
         inspector.bind("<Configure>", sidebar_resized)
         inspector.columnconfigure(0, weight=1)
-        inspector.rowconfigure(1, weight=1)
-        self.reload_button = ttk.Button(inspector, text="Reload exercise", command=self.reload_exercise)
-        self.reload_button.grid(row=0, column=0, columnspan=2, sticky="ew", padx=14, pady=(10, 6))
+        inspector.rowconfigure(0, weight=1)
         self.inspector_canvas = tk.Canvas(inspector, background=SURFACE,
                                          highlightthickness=0, width=278)
-        self.inspector_canvas.grid(row=1, column=0, sticky="nsew")
+        self.inspector_canvas.grid(row=0, column=0, sticky="nsew")
         scroll = ttk.Scrollbar(inspector, orient="vertical", command=self.inspector_canvas.yview)
-        scroll.grid(row=1, column=1, sticky="ns")
+        scroll.grid(row=0, column=1, sticky="ns")
         self.inspector_canvas.configure(yscrollcommand=scroll.set)
         details = ttk.Frame(self.inspector_canvas, style="Card.TFrame", padding=(14, 12))
         details.columnconfigure(0, weight=1)
@@ -401,23 +399,40 @@ class SimulatorApp:
 
         transport = ttk.Frame(panel, style="Card.TFrame", padding=(12, 10))
         transport.grid(row=3, column=0, sticky="ew")
-        self.start_button = ttk.Button(transport, text="Start", command=self.toggle_running,
+        transport.columnconfigure(0, weight=1)
+        buttons = ttk.Frame(transport, style="Card.TFrame")
+        buttons.grid(row=0, column=0, sticky="w")
+        self.start_button = ttk.Button(buttons, text="Start", command=self.toggle_running,
                                        style="Primary.TButton", width=9)
         self.start_button.pack(side="left")
-        self.step_button = ttk.Button(transport, text="Step", command=self.single_step, width=6)
+        self.step_button = ttk.Button(buttons, text="Step", command=self.single_step, width=6)
         self.step_button.pack(side="left", padx=6)
-        ttk.Button(transport, text="Reset ■ / Apply length", command=self.load_task).pack(side="left")
+        ttk.Button(buttons, text="Reset ■ / Apply length", command=self.load_task).pack(side="left")
+        self.reload_button = ttk.Button(buttons, text="Reload exercise", command=self.reload_exercise)
+        self.reload_button.pack(side="left", padx=(6, 0))
         analysis = ttk.Frame(transport, style="Card.TFrame")
-        analysis.pack(side="right")
+        analysis.grid(row=0, column=2, sticky="e")
         ttk.Button(analysis, text="Export CSV…", command=self.export).pack(side="left")
         self.plot_button = ttk.Button(analysis, text="Plot results…", command=self.plot_results,
                                        state="disabled")
         self.plot_button.pack(side="left", padx=(6, 0))
         timeline = ttk.Frame(transport, style="Card.TFrame")
-        timeline.pack(side="right", padx=(12, 20))
+        timeline.grid(row=0, column=1, padx=(12, 20))
         ttk.Label(timeline, textvariable=self.time_readout, style="Muted.TLabel").pack(anchor="e", pady=(0, 4))
         self.progress = ttk.Progressbar(timeline, orient="horizontal", length=115, maximum=100)
         self.progress.pack(fill="x")
+
+        def fit_transport(event):
+            # Keep the exercise buttons together; wrap the other controls on small windows.
+            required = buttons.winfo_reqwidth() + timeline.winfo_reqwidth() + analysis.winfo_reqwidth() + 56
+            narrow = event.width < required
+            buttons.grid_configure(columnspan=3 if narrow else 1)
+            timeline.grid_configure(row=1 if narrow else 0, column=0 if narrow else 1,
+                                    sticky="w", padx=0 if narrow else (12, 20))
+            analysis.grid_configure(row=1 if narrow else 0, column=1 if narrow else 2,
+                                    columnspan=2 if narrow else 1)
+
+        transport.bind("<Configure>", fit_transport)
         self.status_label = ttk.Label(panel, textvariable=self.status, style="Footer.TLabel", wraplength=1000)
         self.status_label.grid(row=4, column=0, sticky="ew", pady=(8, 0))
         panel.bind("<Configure>", lambda event:

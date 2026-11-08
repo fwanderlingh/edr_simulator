@@ -256,7 +256,7 @@ limits in the shared scene. **Export CSV** records the numerical evidence.
 
 ## Guided implementation workflow
 
-**Reload exercise**, at the top of the sidebar, loads the saved files for the
+**Reload exercise**, to the right of **Reset / Apply length**, loads the saved files for the
 current lesson and resets the activity without closing the app. It preserves
 the selected model, target and duration. Related files are refreshed together,
 including the pose controller used by the waypoint exercise. If loading fails,
@@ -267,7 +267,7 @@ core or the UI itself still require restarting the application.
 All practical exercises run in the desktop app. Read the guided exercise first,
 predict the result, then edit the `Student` method named in the exercise guide
 and in the **YOUR IMPLEMENTATION** panel. Select the student model, save the
-file and click **Reload exercise** at the top of the sidebar. An unfinished
+file and click **Reload exercise** to the right of **Reset / Apply length**. An unfinished
 method names the file and function to
 complete. After your attempt, use the reference model to compare the same
 initial conditions, target and parameters.
