@@ -34,22 +34,6 @@ class StudentPoseController(PoseController):
         self.phase == "DONE" whenever you read it, without parentheses.
         It is not a separate flag to update. Set self.phase = "DONE" when
         both pose tolerances are met; self.done then becomes True automatically.
-        For the next exercise, the supplied set_goal(next_goal) method changes
-        the target and resets the phase to TURN so the same object can be reused.
-
-        1. If self.done, return two zeros. Otherwise compute ex, ey and rho.
-        2. If rho <= eps_pos, choose ALIGN before computing any bearing.
-           Use v = 0 and omega = gain_heading * wrap(goal_heading - pose.yaw).
-           Within eps_angle, set self.phase = "DONE" and return two zeros.
-        3. Otherwise, if leaving ALIGN, reset self.phase to TURN. Compute
-           alpha = wrap(math.atan2(ey, ex) - pose.yaw).
-           TURN -> DRIVE when abs(alpha) <= angle_in;
-           DRIVE -> TURN when abs(alpha) > angle_out; otherwise keep the phase.
-        4. Use the updated phase: v = gain * rho in DRIVE, v = 0 in TURN.
-           Both use omega = gain_bearing * alpha.
-        5. Convert (v, omega) with both complete inverse-kinematics equations
-           using r and L, as in proportional.py. Return the wheel references;
-           the supplied loop applies the common speed limit.
         """
         
         # TODO: errors -> phase -> (v, omega) -> left/right wheel references.
