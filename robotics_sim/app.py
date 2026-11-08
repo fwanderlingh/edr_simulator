@@ -9,9 +9,9 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 
 import numpy as np
 
-from .exercises.lesson02.frames import point_in_world
+from .exercises.lesson02 import frames as frame_exercise
 from .exercises.lesson02 import activity as frames_activity
-from .exercises.lesson02.planar import solve_planar_task
+from .exercises.lesson02 import planar as planar_exercise
 from .exercises.lesson02 import module2
 from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS
 from .sim.camera import Camera
@@ -20,6 +20,7 @@ from .exercises.lesson04.gui import SENSOR_EXERCISES
 from .preferences import DEFAULT_PATH, load_preferences, save_preferences
 from .experiment_data import capture_experiment
 from .exercise_checks import ExerciseChecks
+from .exercise_reload import reload_lesson
 from .label_image import solid_rgba_png
 from .selectable_text import SelectableText
 from .ui_theme import configure_theme, ACCENT, PAGE, SURFACE, VIEWPORT
@@ -27,6 +28,7 @@ from .ui_theme import configure_theme, ACCENT, PAGE, SURFACE, VIEWPORT
 
 class SimulatorApp:
     _notice = ""
+    _reload_failed = False
     def __init__(self, root, *, lesson=None, duration=None, dt=1 / 240, csv_path=None, settings_path=DEFAULT_PATH):
         self.root = root
         self.settings_path = settings_path
@@ -48,6 +50,8 @@ class SimulatorApp:
         self._plot_figure = None
         self.camera = Camera()
         self.closed = False
+        self._reload_failed = False
+        self._reload_target = None
         self._accumulator = 0.0
         self._last_tick = time.perf_counter()
         self._dirty = True
@@ -215,7 +219,8 @@ class SimulatorApp:
             "Use View > Label settings to change label size, colors, and backgrounds.\n\n"
             "Drag the divider beside the right panel to adjust its width.\n\n"
             "Use File > Export measurements... to save the recorded data.\n"
-            "After editing a student exercise, save the file and restart the simulator.", parent=self.root))
+            "After editing an exercise, save it and click Reload exercise.\n"
+            "Reload exercise loads the saved code and resets the activity.", parent=self.root))
         menu.add_cascade(label="Help", menu=help_menu)
         self.root.configure(menu=menu)
 
@@ -299,12 +304,14 @@ class SimulatorApp:
             self._queue_save()
         inspector.bind("<Configure>", sidebar_resized)
         inspector.columnconfigure(0, weight=1)
-        inspector.rowconfigure(0, weight=1)
+        inspector.rowconfigure(1, weight=1)
+        self.reload_button = ttk.Button(inspector, text="Reload exercise", command=self.reload_exercise)
+        self.reload_button.grid(row=0, column=0, columnspan=2, sticky="ew", padx=14, pady=(10, 6))
         self.inspector_canvas = tk.Canvas(inspector, background=SURFACE,
                                          highlightthickness=0, width=278)
-        self.inspector_canvas.grid(row=0, column=0, sticky="nsew")
+        self.inspector_canvas.grid(row=1, column=0, sticky="nsew")
         scroll = ttk.Scrollbar(inspector, orient="vertical", command=self.inspector_canvas.yview)
-        scroll.grid(row=0, column=1, sticky="ns")
+        scroll.grid(row=1, column=1, sticky="ns")
         self.inspector_canvas.configure(yscrollcommand=scroll.set)
         details = ttk.Frame(self.inspector_canvas, style="Card.TFrame", padding=(14, 12))
         details.columnconfigure(0, weight=1)
@@ -446,7 +453,11 @@ class SimulatorApp:
             (self.status, self.status_label, "Footer.TLabel"),
         ):
             def highlight_notice(*_, variable=variable, label=label, default_style=default_style):
-                style = "NotImplemented.TLabel" if "not implemented" in variable.get().lower() else default_style
+                text = variable.get()
+                if variable is self.status and text.startswith("⚠ "):
+                    style = "Error.Footer.TLabel"
+                else:
+                    style = "NotImplemented.TLabel" if "not implemented" in text.lower() else default_style
                 if isinstance(label, SelectableText):
                     label.set_style(style)
                 else:
@@ -460,7 +471,7 @@ class SimulatorApp:
         self.task.set(next(iter(TASKS[self.lesson_id].values())))
         self.load_task()
 
-    def load_task(self, event=None):
+    def load_task(self, event=None, *, preserve_target=False):
         try:
             duration = float(self.duration.get())
             if not math.isfinite(duration) or duration <= 0:
@@ -476,7 +487,7 @@ class SimulatorApp:
         task = next(key for key, value in TASKS[self.lesson_id].items() if value == self.task.get())
         changed_task = (self.session is None or self.session.lesson != self.lesson_id or self.session.task != task)
         editable_target = task in ("drive_goal", "drive_goal_behind", "sensor_avoidance") or self.lesson_id == "5"
-        if changed_task and editable_target:
+        if changed_task and editable_target and not preserve_target:
             default = ((1, 0.5, 90) if task == "drive_goal" else
                        (-1, 0, 0) if task == "drive_goal_behind" else
                        (3, 0, 0) if task == "sensor_avoidance" else (1, 1, 0))
@@ -491,6 +502,7 @@ class SimulatorApp:
                                           kinematics=self.kinematics.get(), sensor_mode=self.sensor_mode.get(),
                                           exercise_model=self.exercise_model.get(), goal=goal)
         except Exception as error:
+            failed_activity = (self.lesson_id, task)
             if self.session is None:
                 # A student sensor can be evaluated while constructing an
                 # activity. Keep the UI open on the introductory preview if
@@ -504,6 +516,7 @@ class SimulatorApp:
                 self.lesson.set(LESSONS[self.lesson_id])
                 self.tasks.configure(values=list(TASKS[self.lesson_id].values()))
                 self.task.set(TASKS[self.lesson_id][self.session.task])
+            self._reload_target = failed_activity
             self._report_exercise_error(error)
             self._update_status()
             messagebox.showerror("Could not load activity",
@@ -557,6 +570,8 @@ class SimulatorApp:
                 files += f"\nScene and robot commands: {scene_path}"
         self.edit_file.configure(text=files)
         self._notice = ""
+        self._reload_failed = False
+        self._reload_target = None
         self._accumulator = 0
         self._last_tick = time.perf_counter()
         self._redraw()
@@ -564,6 +579,29 @@ class SimulatorApp:
         self._update_plot_button()
 
         self._queue_save()
+
+    def reload_exercise(self):
+        """Load saved code, then recreate the current activity and its controllers."""
+        self.session.pause()
+        self.session.sim.stop()
+        if self.session.laboratory is not None:
+            self.session.laboratory.stop()
+        self._remember_experiment()
+        self._accumulator = 0
+        lesson, task = self._reload_target or (self.lesson_id, self.session.task)
+        try:
+            reload_lesson(lesson)
+        except Exception as error:
+            self._reload_failed = True
+            self._report_exercise_error(error)
+            self._update_status()
+            self._redraw()
+            return
+        self.lesson_id = lesson
+        self.lesson.set(LESSONS[lesson])
+        self.tasks.configure(values=list(TASKS[lesson].values()))
+        self.task.set(TASKS[lesson][task])
+        self.load_task(preserve_target=True)
 
     def toggle_running(self):
         if self.session.state == "Running":
@@ -603,11 +641,13 @@ class SimulatorApp:
         if isinstance(error, NotImplementedError):
             self._notice = f"Exercise not implemented yet: {error}"
         else:
-            self._notice = f"Check your implementation: {type(error).__name__}: {error}"
+            self._notice = f"⚠ Check your implementation: {type(error).__name__}: {error}"
         self.status.set(self._notice)
 
     def _guarded_step(self, *, single=False):
         """Student callbacks must not abort the UI's simulation timer."""
+        if self._reload_failed:
+            return False
         try:
             self.session.step(single=single)
         except Exception as error:
@@ -616,9 +656,11 @@ class SimulatorApp:
         return True
 
     def _planar_output(self):
+        if self._reload_failed:
+            return None
         scene = self.session.planar_scene
         try:
-            return solve_planar_task(
+            return planar_exercise.solve_planar_task(
                 scene.world_from_robot(), scene.robot_from_sensor,
                 scene.point_in_sensor, scene.direction_in_sensor)
         except NotImplementedError:
@@ -628,6 +670,8 @@ class SimulatorApp:
             return None
 
     def _module2_output(self):
+        if self._reload_failed:
+            return None
         try:
             return module2.evaluate(self.session.task)
         except NotImplementedError:
@@ -637,8 +681,10 @@ class SimulatorApp:
             return None
 
     def _frame_output(self):
+        if self._reload_failed:
+            return None
         try:
-            return point_in_world(self.session.robot.pose().matrix(),
+            return frame_exercise.point_in_world(self.session.robot.pose().matrix(),
                                   frames_activity.ROBOT_FROM_SENSOR,
                                   frames_activity.POINT_IN_SENSOR)
         except NotImplementedError:
@@ -715,8 +761,8 @@ class SimulatorApp:
             text[state] = f"{self.session.outcome} — the scene remains open. Reset to repeat or choose another task."
         self.status.set(self._notice or text[state])
         self.start_button.configure(text="Pause ⏸︎" if state == "Running" else "Resume" if state == "Paused" else "Start ▶",
-                                    state="disabled" if state == "Completed" else "normal")
-        self.step_button.configure(state="disabled" if state in ("Running", "Completed") else "normal")
+                                    state="disabled" if self._reload_failed or state == "Completed" else "normal")
+        self.step_button.configure(state="disabled" if self._reload_failed or state in ("Running", "Completed") else "normal")
 
     def _update_checks(self, checks):
         if checks == self._displayed_checks:

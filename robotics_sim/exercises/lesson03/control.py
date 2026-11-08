@@ -1,6 +1,6 @@
 """Reach one target pose: turn, drive, then align the final heading.
 
-Complete StudentPoseController.wheel_command, save and restart the app.
+Complete StudentPoseController.wheel_command, save and click Reload exercise.
 Choose Lesson 3 > Reach a goal: pose control > student.
 Reference: robotics_sim/sim/references/control.py (ReferencePoseController).
 The next exercise, waypoint.py, sequences this controller over multiple goals.
@@ -44,6 +44,7 @@ class StudentPoseController(PoseController):
            using r and L, as in proportional.py. Return the wheel references;
            the supplied loop applies the common speed limit.
         """
+        
         # TODO: errors -> phase -> (v, omega) -> left/right wheel references.
         raise NotImplementedError(
             "Complete StudentPoseController.wheel_command in "

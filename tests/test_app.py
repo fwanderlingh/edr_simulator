@@ -421,8 +421,8 @@ def test_unimplemented_exercises_show_a_hint_instead_of_crashing(tmp_path):
     def todo(*args, **kwargs):
         raise NotImplementedError("complete the exercise")
 
-    application.solve_planar_task = todo
-    application.point_in_world = todo
+    application.planar_exercise.solve_planar_task = todo
+    application.frame_exercise.point_in_world = todo
     application.enable_high_dpi()
     root = tk.Tk()
     app = application.SimulatorApp(root, duration=0.04, dt=0.01, settings_path=tmp_path / "settings.json")
@@ -503,7 +503,7 @@ def test_lesson2_exceptions_are_handled_during_startup_and_rendering(tmp_path):
     root = tk.Tk()
     callback_errors = []
     root.report_callback_exception = lambda *error: callback_errors.append(error)
-    with patch.object(application, "solve_planar_task", side_effect=NameError("bad planar formula")):
+    with patch.object(application.planar_exercise, "solve_planar_task", side_effect=NameError("bad planar formula")):
         app = application.SimulatorApp(root, lesson="2", settings_path=tmp_path / "static-errors.json")
         try:
             assert "NameError: bad planar formula" in app.status.get()
@@ -518,7 +518,7 @@ def test_lesson2_exceptions_are_handled_during_startup_and_rendering(tmp_path):
                 app._render()
                 root.update()
                 assert "IndexError: bad transform index" in app.status.get()
-            with patch.object(application, "point_in_world", side_effect=AttributeError("bad frame")):
+            with patch.object(application.frame_exercise, "point_in_world", side_effect=AttributeError("bad frame")):
                 for task in ("frames", "static"):
                     app.task.set(TASKS["2"][task])
                     app.load_task()
@@ -559,6 +559,103 @@ def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(
             assert previous.world.physics.connected
             app._render()
             root.update()
+            # Reload also retries the activity whose student sensor failed to load.
+            app.reload_button.invoke()
+            assert app.session.lesson == "4" and app.session.task == "sensor_encoders"
+            assert app.session is not previous and not app._notice
+            assert showerror.call_count == 2
+        finally:
+            app.close()
+
+
+@desktop_process
+def test_reload_button_loads_saved_fixes_and_recovers_from_invalid_source(tmp_path):
+    import math
+    import tkinter as tk
+    from textwrap import dedent
+    from unittest.mock import patch
+    from robotics_sim.app import SimulatorApp
+    from robotics_sim.exercises.lesson03 import control, waypoint
+    from robotics_sim.session import LESSONS, TASKS
+
+    def source(command):
+        return dedent('''\
+            from ._control_runtime import PoseController
+            GOAL = (1, .5, 0)
+            GAIN = .8
+            GAIN_BEARING = 2.0
+            GAIN_HEADING = 1.5
+            EPS_POS = .03
+            EPS_ANGLE = .03
+            ANGLE_IN = .08
+            ANGLE_OUT = .6
+            WHEEL_MAX = 5.0
+            class StudentPoseController(PoseController):
+                def wheel_command(self, pose, r, L):
+                    ''') + '        ' + command + '\n'
+
+    saved = tmp_path / "control.py"
+    saved.write_text(source('raise NameError("fix this exercise")'), encoding="utf-8")
+    root = tk.Tk()
+    callback_errors = []
+    root.report_callback_exception = lambda *error: callback_errors.append(error)
+    app = SimulatorApp(root, lesson="1", dt=.01, settings_path=tmp_path / "reload.json")
+    with patch.object(control, "__file__", str(saved)):
+        try:
+            root.geometry("900x620+20+20")
+            app.lesson.set(LESSONS["3"])
+            app.select_lesson()
+            app.kinematics.set("student")
+            app.task.set(TASKS["3"]["drive_goal"])
+            app.load_task()
+            app.goal_x.set("2")
+            app.goal_y.set(".25")
+            app.goal_yaw.set("60")
+            app.duration.set("5")
+            app.load_task()
+            app.reload_button.invoke()
+            app.single_step()
+            assert "NameError: fix this exercise" in app.status.get()
+
+            previous = app.session
+            saved.write_text(source("return 2.0, 2.0"), encoding="utf-8")
+            app.reload_button.invoke()
+            assert app.session is not previous and not previous.world.physics.connected
+            assert root.winfo_exists() and app.session.state == "Ready"
+            assert app.session.sim.time == 0 and app.session.samples == []
+            assert app.session.duration == 5 and app.kinematics.get() == "student"
+            assert app.session.controller.goal == (2, .25, math.radians(60))
+            assert waypoint.StudentWaypointController.pose_controller_class is control.StudentPoseController
+            app.single_step()
+            assert app.session.robot.wheel_velocities == (2, 2)
+            assert not app._notice
+
+            previous = app.session
+            saved.write_text("def invalid(\n", encoding="utf-8")
+            app.reload_button.invoke()
+            assert app.session is previous and app.session.state == "Paused"
+            assert app.session.robot.wheel_velocities == (0, 0)
+            assert "SyntaxError" in app.status.get()
+            assert str(app.start_button.cget("state")) == "disabled"
+            assert str(app.step_button.cget("state")) == "disabled"
+            assert str(app.reload_button.cget("state")) == "normal"
+            app._render()
+            root.update()
+            assert not callback_errors
+
+            saved.write_text(source("return 3.0, 3.0"), encoding="utf-8")
+            app.reload_button.invoke()
+            app.single_step()
+            assert app.session.robot.wheel_velocities == (3, 3)
+            assert not app._notice and not app._reload_failed
+            root.update()
+            assert app.reload_button.winfo_viewable()
+            assert not callback_errors
+            app.toggle_running()
+            assert app.session.state == "Running"
+            app.reload_button.invoke()
+            assert app.session.state == "Ready" and app.session.sim.time == 0
+            assert app.session.robot.wheel_velocities == (0, 0)
         finally:
             app.close()
 

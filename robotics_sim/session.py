@@ -10,8 +10,9 @@ from .exercises.lesson01 import circle, square, straight
 from .exercises.lesson02 import activity as frames_activity
 from .exercises.lesson03 import activity as drive_activity
 from .exercises.lesson04 import activity as sensors_activity
-from .exercises.lesson04.gui import SENSOR_EXERCISES, SensorActivity
-from .exercises.lesson05.gui import ArmActivity
+from .exercises.lesson04 import gui as sensors_gui
+from .exercises.lesson04.gui import SENSOR_EXERCISES
+from .exercises.lesson05 import gui as arm_gui
 
 
 LESSONS = {"1": "Lesson 1 - System overview", "2": "Lesson 2 - Frames and transformations",
@@ -70,26 +71,26 @@ DESCRIPTIONS = {
 
 # Paths are relative to the simulator folder; previews need no implementation.
 ACTIVITY_FILES = {
-    "spatial": ("Edit solve_spatial_task; save and restart.", "robotics_sim/exercises/lesson02/spatial.py"),
-    "rpy": ("Edit solve_rpy_task; save and restart.", "robotics_sim/exercises/lesson02/rpy.py"),
-    "quaternions": ("Edit solve_quaternion_task and hamilton (wxyz); save and restart.", "robotics_sim/exercises/lesson02/quaternions.py"),
-    "straight": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/straight.py"),
-    "circle": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/circle.py"),
-    "square": ("Optional: edit setup and update; save and restart.", "robotics_sim/exercises/lesson01/square.py"),
-    "planar": ("Edit solve_planar_task; save and restart the simulator.", "robotics_sim/exercises/lesson02/planar.py"),
-    "frames": ("Edit point_in_world; save and restart the simulator.", "robotics_sim/exercises/lesson02/frames.py"),
+    "spatial": ("Edit solve_spatial_task; save and click Reload exercise.", "robotics_sim/exercises/lesson02/spatial.py"),
+    "rpy": ("Edit solve_rpy_task; save and click Reload exercise.", "robotics_sim/exercises/lesson02/rpy.py"),
+    "quaternions": ("Edit solve_quaternion_task and hamilton (wxyz); save and click Reload exercise.", "robotics_sim/exercises/lesson02/quaternions.py"),
+    "straight": ("Optional: edit setup and update; save and click Reload exercise.", "robotics_sim/exercises/lesson01/straight.py"),
+    "circle": ("Optional: edit setup and update; save and click Reload exercise.", "robotics_sim/exercises/lesson01/circle.py"),
+    "square": ("Optional: edit setup and update; save and click Reload exercise.", "robotics_sim/exercises/lesson01/square.py"),
+    "planar": ("Edit solve_planar_task; save and click Reload exercise.", "robotics_sim/exercises/lesson02/planar.py"),
+    "frames": ("Edit point_in_world; save and click Reload exercise.", "robotics_sim/exercises/lesson02/frames.py"),
     "static": ("Optional: customize ROBOT_FROM_SENSOR and POINT_IN_SENSOR.", "robotics_sim/exercises/lesson02/activity.py"),
-    "drive_line": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
-    "drive_circle": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
-    "drive_spin": ("Edit StudentDifferentialDrive.forward; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
-    "drive_inverse": ("Edit StudentDifferentialDrive.forward and inverse; select student kinematics and restart after editing.", "robotics_sim/exercises/lesson03/kinematics.py"),
-    "drive_proportional": ("Complete StudentProportionalController.wheel_command; calculate both wheel references, save and restart.", "robotics_sim/exercises/lesson03/proportional.py"),
-    "drive_goal": ("Complete StudentPoseController.wheel_command; select student controller and restart after editing.", "robotics_sim/exercises/lesson03/control.py"),
+    "drive_line": ("Edit StudentDifferentialDrive.forward; select student kinematics and click Reload exercise after saving.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_circle": ("Edit StudentDifferentialDrive.forward; select student kinematics and click Reload exercise after saving.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_spin": ("Edit StudentDifferentialDrive.forward; select student kinematics and click Reload exercise after saving.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_inverse": ("Edit StudentDifferentialDrive.forward and inverse; select student kinematics and click Reload exercise after saving.", "robotics_sim/exercises/lesson03/kinematics.py"),
+    "drive_proportional": ("Complete StudentProportionalController.wheel_command; calculate both wheel references, save and click Reload exercise.", "robotics_sim/exercises/lesson03/proportional.py"),
+    "drive_goal": ("Complete StudentPoseController.wheel_command; select student controller and click Reload exercise after saving.", "robotics_sim/exercises/lesson03/control.py"),
     "drive_waypoints": ("Complete StudentWaypointController.wheel_command after control.py; advance only after both tolerances are met.", "robotics_sim/exercises/lesson03/waypoint.py"),
     "drive_goal_behind": ("Complete StudentPoseController.wheel_command; test a target behind the robot without commanding lateral motion.", "robotics_sim/exercises/lesson03/control.py"),
-    "sensor_encoders": ("Optional: inspect or customize the encoder model; restart after editing.", "robotics_sim/exercises/lesson04/sensors/encoder.py"),
-    "sensor_lidar": ("Edit StudentLidar.directions; select student sensor mode and restart after editing.", "robotics_sim/exercises/lesson04/lidar.py"),
-    "sensor_imu": ("Optional: inspect or customize the IMU model; restart after editing.", "robotics_sim/exercises/lesson04/sensors/imu.py"),
+    "sensor_encoders": ("Optional: inspect or customize the encoder model; click Reload exercise after saving.", "robotics_sim/exercises/lesson04/sensors/encoder.py"),
+    "sensor_lidar": ("Edit StudentLidar.directions; select student sensor mode and click Reload exercise after saving.", "robotics_sim/exercises/lesson04/lidar.py"),
+    "sensor_imu": ("Optional: inspect or customize the IMU model; click Reload exercise after saving.", "robotics_sim/exercises/lesson04/sensors/imu.py"),
 }
 
 for task in SENSOR_EXERCISES:
@@ -101,9 +102,9 @@ for task in SENSOR_EXERCISES:
         "robot on the same sensor stream; orange is encoder odometry, purple is the IMU estimate. "
         "Use ideal data first, then noisy data. The blocked-robot task exposes wheel/chassis disagreement.")
     ACTIVITY_FILES[task] = (
-        "Complete StudentSectors.summarize and StudentObstacleSupervisor.command; select student and restart."
+        "Complete StudentSectors.summarize and StudentObstacleSupervisor.command; select student, save and click Reload exercise."
         if task == "sensor_avoidance" else
-        "Complete StudentOdometry.update and StudentInertial.update; select student and restart.",
+        "Complete StudentOdometry.update and StudentInertial.update; select student, save and click Reload exercise.",
         "robotics_sim/exercises/lesson04/avoidance.py" if task == "sensor_avoidance" else
         "robotics_sim/exercises/lesson04/estimation.py")
 for task, method in (("arm_forward", "forward"), ("arm_inverse", "inverse"), ("arm_control", "jacobian")):
@@ -113,8 +114,8 @@ for task, method in (("arm_forward", "forward"), ("arm_inverse", "inverse"), ("a
         "arm_control": "Complete the Jacobian and the joint-velocity controller. Move the endpoint toward the target with damping and joint-speed limits; distinguish DONE, TIMEOUT and JOINT_LIMIT.",
     }[task]
     ACTIVITY_FILES[task] = (
-        "Complete StudentArmController.velocity and StudentPlanarArm.jacobian; save and restart."
-        if task == "arm_control" else f"Complete StudentPlanarArm.{method}; save and restart.",
+        "Complete StudentArmController.velocity and StudentPlanarArm.jacobian; save and click Reload exercise."
+        if task == "arm_control" else f"Complete StudentPlanarArm.{method}; save and click Reload exercise.",
         "robotics_sim/exercises/lesson05/control.py" if task == "arm_control" else
         "robotics_sim/exercises/lesson05/kinematics.py")
 
@@ -162,12 +163,12 @@ class ActivitySession:
     def _build_activity(self, kinematics):
         if self.lesson == "5":
             options = {"target": self.goal[:2]} if self.goal is not None else {}
-            self.laboratory = ArmActivity(self.world, self.task, model=self.exercise_model, **options)
+            self.laboratory = arm_gui.ArmActivity(self.world, self.task, model=self.exercise_model, **options)
             self.robot = self.laboratory.robot
             update = lambda robot, time, dt: self.laboratory.step(dt)
         elif self.task in SENSOR_EXERCISES:
             options = {"target": self.goal[:2]} if self.goal is not None else {}
-            self.laboratory = SensorActivity(self.world, self.task, model=self.exercise_model,
+            self.laboratory = sensors_gui.SensorActivity(self.world, self.task, model=self.exercise_model,
                                              mode=self.sensor_mode, dt=self.dt, **options)
             self.robot = self.laboratory.robot
             self.sensors = self.laboratory.sensors

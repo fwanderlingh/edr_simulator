@@ -1,4 +1,4 @@
-"""Overview preview: circle motion. Edit here, then restart the UI."""
+"""Overview preview: circle motion. Edit here, then click Reload exercise."""
 
 from robotics_sim import Pose, Robot
 

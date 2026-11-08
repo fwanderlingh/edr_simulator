@@ -1,6 +1,6 @@
 """Sensor-estimation and reactive-control exercises in the desktop application.
 
-Edit the Student methods in estimation.py / avoidance.py, then restart the app.
+Edit the Student methods in estimation.py / avoidance.py, then click Reload exercise.
 This adapter supplies the shared scene, sampling, recording and run lifecycle.
 """
 

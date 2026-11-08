@@ -17,7 +17,7 @@ The **Sensor mode** selector offers `ideal`, `noisy`, and `student`. Selecting
 a mode resets the activity and is remembered in `settings.json`. Student mode
 uses ideal encoders/IMU and [StudentLidar](lidar.py). Replace its working
 ray-direction formula to implement the rotation from sensor bearings to
-world-space unit vectors, then restart the application. The inherited sampler
+world-space unit vectors, then click **Reload exercise**. The inherited sampler
 calls the world's ray-casting interface and converts hit fractions to
 distances. Sensor and exercise code do not need PyBullet API calls.
 
@@ -63,7 +63,7 @@ advancing shaft angles and sampling on the simulation clock.
 Open **[activity.py](activity.py)** to see `setup(world, ...)` explicitly
 create the robot and `update(robot, time, dt, ...)` issue commands to it.
 The `task` argument selects the example chosen in the UI. Edit this file to
-change the initial scene or motion, then save and restart the application.
+change the initial scene or motion, then save and click **Reload exercise**.
 Use **Reset / Apply length** to recreate the scene and **Start** to run it. The UI
 owns simulation time and calls `update` before every physics step.
 
@@ -93,7 +93,7 @@ missing method instead of silently replacing your work. Initial pose,
 orientation, and velocity are zero. Accelerations are already in m/s² without
 gravity; do not convert them from g or remove gravity again.
 
-Save the file and restart the simulator. In **Lesson 4 - Sensors and noise**,
+Save the file and click **Reload exercise**. In **Lesson 4 - Sensors and noise**,
 set **ESTIMATOR MODEL** to **student**, then choose:
 
 1. **Compare encoder and IMU: straight motion** to verify direction, speed
@@ -129,7 +129,7 @@ Draw your state diagram and stopping conditions before editing
   Old or invalid data must stop the robot. Keep enough state to avoid turning
   immediately back toward the same box. Report completion as `DONE`.
 
-Save and restart the simulator, choose **Reach a goal and avoid an obstacle**,
+Save and click **Reload exercise**, choose **Reach a goal and avoid an obstacle**,
 set **SUPERVISOR MODEL** to **student** and **Sensor mode** to **ideal**, then
 press **Start**. The target is `(3, 0) m`, with an isolated box centred at
 `(1.5, 0) m`. Predict the initial path and stopping condition before running it.
@@ -143,7 +143,7 @@ phase changes. `DONE` and `TIMEOUT` are different outcomes; both stop the robot.
 
 The scenes for the estimation and avoidance activities are in
 [gui.py](gui.py). As an extension, replace the isolated box with a wide wall,
-save, restart and explain the observed failure. This local exercise is not a
+save, click **Reload exercise** and explain the observed failure. This local exercise is not a
 general path planner.
 
 ## Instructor comparison after attempting the exercises

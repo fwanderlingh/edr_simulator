@@ -1,6 +1,6 @@
 """First feedback exercise: reach a goal straight ahead using wheel references.
 
-Complete StudentProportionalController.wheel_command, save and restart the app.
+Complete StudentProportionalController.wheel_command, save and click Reload exercise.
 Choose Lesson 3 > Reach a goal: proportional control > student.
 """
 

@@ -53,7 +53,7 @@ The method `wheel_command(self, pose, r, L)` receives the robot's wheel radius
 `self.gain` and `self.eps_pos`.
 The exercise intentionally asks for wheel references rather than a body command.
 
-Choose **student** in **CONTROLLER MODEL**, save and restart after editing.
+Choose **student** in **CONTROLLER MODEL**, save and click **Reload exercise** after editing.
 The scene, wheel-command application, common actuator limit, arrival detection
 and CSV recording are supplied. The activity remains inspectable before an
 unfinished method is first called with Start/Step. Use a 20-second duration and
@@ -112,7 +112,7 @@ The corresponding solution is
 [`ReferenceWaypointController`](../../sim/references/waypoint_control.py),
 which reuses the reference pose controller.
 
-For both exercises, choose **student** in **CONTROLLER MODEL**, save and restart
+For both exercises, choose **student** in **CONTROLLER MODEL**, save and click **Reload exercise**
 after editing. An unfinished method reports its own exercise file while leaving
 the scene inspectable. After your attempt, compare with **reference**.
 Start with a maximum duration of **30 seconds**, press **Reset / Apply length**,
@@ -123,7 +123,7 @@ Verify position and wrapped-angle tolerances at each arrival, wheel limits
 throughout the run and zero final wheel speeds. `goal_index` identifies the
 goal active before the step; `completed_waypoints` counts arrivals after it.
 DONE means all targets were reached; TIMEOUT stops without claiming completion.
-To test the common speed limit, change `WHEEL_MAX` in `control.py` and restart.
+To test the common speed limit, change `WHEEL_MAX` in `control.py` and click **Reload exercise**.
 Both exercises use ground-truth poses; Lesson 4 introduces sensor-based estimates.
 
 ## Scene and robot commands
@@ -134,8 +134,8 @@ use `update(robot, time, dt, ...)`; the goal activities attach the selected
 controller to the same simulation loop.
 The `task` argument selects the example chosen in the UI. Edit this file to
 change a demonstration’s scene or assigned motion; edit `control.py` for the
-single-pose controller and `waypoint.py` for sequencing. Save and restart the
-application after changes.
+single-pose controller and `waypoint.py` for sequencing. Save and click **Reload exercise**
+after changes.
 Use **Reset / Apply length** to recreate the scene and **Start** to run it. The UI
 owns simulation time and calls `update` before every physics step.
 

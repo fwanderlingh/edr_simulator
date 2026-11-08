@@ -3,7 +3,7 @@
 All practical activities are in the same desktop application. Select **Lesson 5 -
 Planar arm** and choose an activity. Use **Student** for your implementation and
 **reference** for comparison after your own attempt. Save source changes and
-restart the application before repeating the experiment.
+click **Reload exercise** before repeating the experiment.
 
 ## Part I: predict, implement and inspect
 
@@ -42,7 +42,7 @@ configuration, actual endpoint, residual, joint speed and outcome.
 Compare `DONE`, `TIMEOUT`, `JOINT_LIMIT` and `UNREACHABLE`; a stopped arm need not
 have reached its target. Joints are limited to `[-pi, pi]` and speeds to the
 controller's `max_speed`. Adjust `damping` or `max_speed` in the `ArmActivity` configuration in
-`gui.py`, save, restart and repeat with the same target. `DEFAULT_INITIAL` in [gui.py](gui.py)
+`gui.py`, save, click **Reload exercise** and repeat with the same target. `DEFAULT_INITIAL` in [gui.py](gui.py)
 sets the initial configuration for additional experiments.
 
 The plant integrates prescribed joint velocities. The common application draws

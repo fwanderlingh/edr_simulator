@@ -1,7 +1,7 @@
 """Guided reactive supervisor for one isolated obstacle; this is not a planner.
 
 Choose Lesson 4 > Reach a goal and avoid an obstacle, select the student
-supervisor, then save your implementation and restart the app.
+supervisor, then save your implementation and click Reload exercise.
 The student sector summary and supervisor command are deliberately unfinished.
 """
 

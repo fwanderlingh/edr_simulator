@@ -60,7 +60,8 @@ then **Module 1: Planar transforms**.
 Lesson 1 provides ready-to-run motion previews, including the square; no code
 changes are needed. Select **Preview: square motion** and press **Start**.
 Lessons 2–5 contain exercises with `TODO` markers; the simulator reads your
-changes on the next launch. Until you complete an exercise, the app shows
+saved changes when you click **Reload exercise**. Until you complete an
+exercise, the app shows
 "not implemented yet" with a yellow background instead of results.
 
 | Lesson | File | Complete |
@@ -222,7 +223,7 @@ Complete `StudentPoseController.wheel_command` in
 `StudentWaypointController.wheel_command` in
 [`lesson03/waypoint.py`](robotics_sim/exercises/lesson03/waypoint.py) for
 **Follow two waypoints**, reusing the pose controller. Choose **student** in
-**CONTROLLER MODEL**, save and restart after editing. Both files contain only
+**CONTROLLER MODEL**, save and click **Reload exercise** after editing. Both files contain only
 exercise settings and the student method; simulator support is in
 `_control_runtime.py`. The matching references are
 [`references/control.py`](robotics_sim/sim/references/control.py) and
@@ -255,18 +256,27 @@ limits in the shared scene. **Export CSV** records the numerical evidence.
 
 ## Guided implementation workflow
 
+**Reload exercise**, at the top of the sidebar, loads the saved files for the
+current lesson and resets the activity without closing the app. It preserves
+the selected model, target and duration. Related files are refreshed together,
+including the pose controller used by the waypoint exercise. If loading fails,
+the error appears in the bottom bar; fix the file, save and retry the button.
+**Reset / Apply length** uses the code already loaded. Changes to the simulator
+core or the UI itself still require restarting the application.
+
 All practical exercises run in the desktop app. Read the guided exercise first,
 predict the result, then edit the `Student` method named in the exercise guide
-and in the **YOUR IMPLEMENTATION** panel. Save, restart the app and select the same activity
-with the student model. An unfinished method names the file and function to
+and in the **YOUR IMPLEMENTATION** panel. Select the student model, save the
+file and click **Reload exercise** at the top of the sidebar. An unfinished
+method names the file and function to
 complete. After your attempt, use the reference model to compare the same
 initial conditions, target and parameters.
 
 Use **Pause** and **Step** to inspect the motion and **Export CSV** to retain
 the measurements. The duration is the maximum available time: completing a
 control task ends it early; reaching the limit without completion reports a
-timeout. Files with terminal runners remain available for automated developer
-checks, but they are not a separate practical assignment for students.
+timeout. The optional Example 3.5 calculation is a separate terminal-only
+numerical check; the graphical practical exercises use the UI.
 
 ---
 
@@ -359,7 +369,7 @@ their lesson folders. Lesson 1 has one file per preview (`straight.py`, `circle.
 `square.py`); Lessons 2, 3, and 4 each use `activity.py`, whose `task` argument
 selects the UI example. Lesson 4 also declares obstacles and attaches sensors
 there. The UI lists these paths in bold alongside the formula exercise file.
-Edit and save the source, then restart the application to load changes.
+Edit and save the source, then click **Reload exercise** to load changes.
 
 The simulation core already supports `sim.register_robot(name, robot,
 update=callback)` before the first step. Robots must belong to the same world

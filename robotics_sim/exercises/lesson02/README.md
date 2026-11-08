@@ -17,7 +17,7 @@ In the student version, complete
 2. Transform the direction using homogeneous coordinate `0`.
 3. Return the two Cartesian components of the point and direction.
 
-Save the file, close and reopen the simulator, and select the same activity.
+Save the file and click **Reload exercise** to reset the same activity with the new code.
 Unimplemented exercises display a yellow warning. Compare the **World**,
 **Robot**, and **Sensor** frames with the notes' diagram. The sensor origin is
 `(2, 1.5) m`; **Sensor point** and the live `point in world` readout should show
@@ -39,7 +39,7 @@ between the calculation on paper and the interactive scene.
 ## Module 2: spatial transforms, RPY and quaternions
 
 Select the corresponding **Module 2** activity in Lesson 2. Edit its exercise
-file, save and restart the simulator. The public student version contains TODO
+file, save and click **Reload exercise**. The public student version contains TODO
 stubs and displays a warning until implemented. The private version includes
 worked solutions. All three scenes are static: inspect them immediately or use
 Start, Pause and Reset normally. Results appear below the scene.
@@ -117,7 +117,7 @@ against PyBullet's independent transform operations.
 Open **[activity.py](activity.py)** to see `setup(world, ...)` explicitly
 create the robot and `update(robot, time, dt, ...)` issue commands to it.
 The `task` argument selects the example chosen in the UI. Edit this file to
-change the initial scene or motion, then save and restart the application.
+change the initial scene or motion, then save and click **Reload exercise**.
 Use **Reset / Apply length** to recreate the scene and **Start** to run it. The UI
 owns simulation time and calls `update` before every physics step.
 
@@ -133,4 +133,4 @@ frame and local observations to that specific robot. Both the drawing and the
 exercise inputs use its current simulated pose, so the sensor follows any
 translation or rotation you add in `update`. Reset recreates the attachment.
 **planar.py** contains only the mathematical exercise, with its inputs supplied
-by the scene. Editing the initial scene data requires restarting the app.
+by the scene. After editing the initial scene data, save and click **Reload exercise**.

@@ -35,6 +35,8 @@ def configure_theme(root):
     style.configure("Code.TLabel", font=(fixed, 9), foreground=ACCENT)
     style.configure("Readout.TLabel", font=(fixed, 10), foreground=INK)
     style.configure("Footer.TLabel", background=PAGE, foreground=MUTED, font=(family, 9))
+    style.configure("Error.Footer.TLabel", background=PAGE, foreground="#c61821",
+                    font=(family, 9, "bold"))
     style.configure("TButton", background="#f1f5f8", foreground=INK, bordercolor=LINE,
                     lightcolor=LINE, darkcolor=LINE, relief="flat", padding=(12, 7))
     style.map("TButton", background=[("active", "#e2ebf0"), ("disabled", "#f4f6f8")],

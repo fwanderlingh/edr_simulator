@@ -133,7 +133,7 @@ def test_planar_attachment_and_exercise_follow_moving_robot(monkeypatch):
 
     monkeypatch.setattr(activity, "update", move)
     solver = Mock(return_value=(np.zeros(2), np.zeros(2)))
-    monkeypatch.setattr(app, "solve_planar_task", solver)
+    monkeypatch.setattr(app.planar_exercise, "solve_planar_task", solver)
     for _ in range(2):
         session = ActivitySession("2", "planar", duration=1, dt=0.1)
         try:

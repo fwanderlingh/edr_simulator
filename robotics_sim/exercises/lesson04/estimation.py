@@ -1,7 +1,7 @@
 """Compare encoder odometry and inertial integration on the same sensor stream.
 
 Choose Lesson 4 > Compare encoder and IMU, select the student estimator,
-then save your implementation and restart the app.
+then save your implementation and click Reload exercise.
 Complete the two Student.update methods after the guided exercise in the notes.
 """
 

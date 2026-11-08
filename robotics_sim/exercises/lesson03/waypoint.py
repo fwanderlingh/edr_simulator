@@ -1,6 +1,6 @@
 """Follow a sequence of poses using the controller completed in control.py.
 
-Complete StudentWaypointController.wheel_command, save and restart the app.
+Complete StudentWaypointController.wheel_command, save and click Reload exercise.
 Choose Lesson 3 > Follow two waypoints > student.
 Reference: robotics_sim/sim/references/waypoint_control.py.
 """

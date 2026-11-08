@@ -46,8 +46,8 @@ The UI owns the world, simulation loop, pause, reset, and cleanup. Do not create
 a separate `World`, call physics stepping, or add a `while` loop in the example.
 
 As an optional extension, edit the selected file's initial pose or commands,
-save, and restart the app. **Reset / Apply length** creates a fresh robot and
-restarts simulation time; restarting the app loads source-code changes.
+save, and click **Reload exercise** to load the new code and create a fresh
+robot. **Reset / Apply length** restarts simulation time using the loaded code.
 
 The simulation core registers robots by name and applies their commands before
 advancing the shared world once per tick. This prepares for multi-robot
