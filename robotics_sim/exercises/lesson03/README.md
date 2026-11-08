@@ -89,7 +89,7 @@ and `WHEEL_MAX` (rad/s). Both models use these settings. Validation, wheel limit
 CSV recording and the standalone runner are supplied in `_control_runtime.py`.
 The corresponding solution is
 [`ReferencePoseController`](../../sim/references/control.py).
-Use **Reach a goal behind the robot** to test the same pose controller's
+Use **Reach a goal: pose behind robot** to test the same pose controller's
 initial turn. Single-goal activities also accept a target through the GUI's
 **TARGET** fields; Heading is entered in degrees and converted to radians.
 
