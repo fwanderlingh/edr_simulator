@@ -2,8 +2,9 @@
 
 Read visual shapes once per world and poses from PyBullet. Project only the
 handful of visible faces instead of rasterizing/copying millions of pixels.
-The painter's algorithm is intended for these opaque, non-intersecting boxes;
-complex meshes/transparency will need a different viewport backend.
+Compact lesson scenes use mean-depth ordering. Enclosed scene previews opt in
+to cached world-space BSP splitting, so long walls occlude props correctly.
+Complex meshes/transparency will need a different viewport backend.
 """
 
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ import numpy as np
 import pybullet as bullet
 
 from ..geometry.rotations import quaternion_to_matrix
+from .occlusion import Surface, SurfaceTree
 
 
 @dataclass
@@ -48,6 +50,8 @@ def convex_hull(points):
 
 def clip_polygon(vertices):
     """Clip homogeneous vertices against all six view-frustum planes."""
+    if len(vertices) and np.all(np.abs(vertices[:, :3]) <= vertices[:, 3, None]):
+        return vertices
     for axis, sign in ((0, 1), (0, -1), (1, 1), (1, -1), (2, 1), (2, -1)):
         if not len(vertices):
             break
@@ -84,6 +88,10 @@ class BoxScene:
         self._shadow_cache = {}
         self._grid_key = None
         self._grid_faces = []
+        self._surface_tree = None
+        self._surface_poses = None
+        self._ordered_view = None
+        self._ordered_faces = []
         client = world.physics.client
         for index in range(bullet.getNumBodies(physicsClientId=client)):
             body = bullet.getBodyUniqueId(index, physicsClientId=client)
@@ -110,13 +118,20 @@ class BoxScene:
 
     def faces(self, camera, ground_paths=(), shadow_paths=()):
         faces = []
+        exact_occlusion = getattr(self.world, "exact_occlusion", False)
         for index, (body, local_vertices, sides, local_normals, offset, local_rotation, color) in enumerate(self.shapes):
             position, orientation = bullet.getBasePositionAndOrientation(body, physicsClientId=self.world.physics.client)
-            key = camera.key, position, orientation
+            key = camera.key, position, orientation, exact_occlusion
             cached = self._cache.get(index)
             if cached is None or cached[0] != key:
                 rotation = quaternion_to_matrix(orientation)
                 vertices = (local_vertices @ local_rotation.T + offset) @ rotation.T + position
+                if exact_occlusion and index != 0:
+                    # BSP projects these solids below; retain only their shadows here.
+                    self._cache[index] = key, []
+                    self._shadow_cache[index] = self.contact_shadow(camera, index, vertices)
+                    faces.extend(self._shadow_cache[index])
+                    continue
                 normals = local_normals @ local_rotation.T @ rotation.T
                 homogeneous = np.column_stack((vertices, np.ones(len(vertices))))
                 clip = homogeneous @ camera.transform.T
@@ -150,8 +165,53 @@ class BoxScene:
         faces.extend(self.path_shadows(camera, shadow_paths))
         faces.extend(self.ground_grid(camera))
         faces.extend(self.ground_paths(camera, ground_paths))
-        return sorted(faces, key=lambda face: (
+        ordered = sorted(faces, key=lambda face: (
             {0: 0, -3: 1, -1: 2, -2: 3}.get(face.key[0], 4), face.depth))
+        if exact_occlusion:
+            # Keep the floor, grid and contact shadows beneath solid geometry.
+            return [face for face in ordered if face.key[0] <= 0] + self.ordered_solids(camera)
+        return ordered
+
+    def ordered_solids(self, camera):
+        """Rebuild geometry only on pose changes; orbiting only reorders/projects."""
+        poses = tuple(bullet.getBasePositionAndOrientation(shape[0],
+                      physicsClientId=self.world.physics.client) for shape in self.shapes)
+        if poses != self._surface_poses:
+            surfaces = []
+            for index, (_, local_vertices, sides, local_normals, offset, local_rotation, color) in enumerate(self.shapes):
+                if index == 0:
+                    continue
+                position, orientation = poses[index]
+                rotation = quaternion_to_matrix(orientation)
+                vertices = (local_vertices @ local_rotation.T + offset) @ rotation.T + position
+                normals = local_normals @ local_rotation.T @ rotation.T
+                for side, ids in enumerate(sides):
+                    normal = normals[side]
+                    shade = .62 + .30 * max(0, np.dot(normal, self.light)) + .08 * max(0, normal[2])
+                    rgb = np.clip(color * shade * 255, 0, 255).astype(int)
+                    surfaces.append(Surface((index, side), vertices[list(ids)], normal,
+                                            "#%02x%02x%02x" % tuple(rgb)))
+            self._surface_tree = SurfaceTree(surfaces) if surfaces else None
+            self._surface_poses = poses
+            self._ordered_view = None
+        if camera.key != self._ordered_view:
+            projected = []
+            surfaces = self._surface_tree.ordered(camera.eye) if self._surface_tree else ()
+            for surface in surfaces:
+                if np.dot(surface.normal, camera.eye - surface.vertices[0]) <= 0:
+                    continue
+                homogeneous = np.column_stack((surface.vertices, np.ones(len(surface.vertices))))
+                polygon = clip_polygon(homogeneous @ camera.transform.T)
+                if len(polygon) < 3:
+                    continue
+                ndc = polygon[:, :2] / polygon[:, 3, None]
+                pixels = (ndc + (1, -1)) * (camera.width / 2, -camera.height / 2)
+                projected.append(Face(surface.key, tuple(pixels.ravel()), 0, surface.color,
+                                      surface.color, .5))
+            # Matching fill/outline avoids artificial dark edges at BSP cuts.
+            self._ordered_faces = projected
+            self._ordered_view = camera.key
+        return self._ordered_faces
 
     def contact_shadow(self, camera, index, vertices):
         """Three cached opaque tonal bands approximate a soft ground shadow.

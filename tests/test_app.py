@@ -56,6 +56,41 @@ def test_lesson4_stages_use_the_same_ui_with_explicit_model_labels(tmp_path, mon
         app.close()
 
 
+def test_escape_room_preview_has_scene_labels_and_its_own_camera(tmp_path):
+    import tkinter as tk
+    from robotics_sim.app import SimulatorApp
+    from robotics_sim.session import LESSONS
+    from robotics_sim.exercises.lesson08.activity import CAMERA
+
+    root = tk.Tk()
+    root.withdraw()
+    app = SimulatorApp(root, lesson="8", settings_path=tmp_path / "preview.json")
+    try:
+        assert app.session.task == "escape_room_preview" and app.session.sim.time == 0
+        assert app.camera.distance == CAMERA["distance"]
+        assert not app.model_controls.grid_info()
+        assert not app.sensor_controls.grid_info() and not app.goal_controls.grid_info()
+        assert not app.checks_card.grid_info()
+        assert app.implementation_heading.cget("text") == "SCENE SETUP"
+        assert "stationary" in app.values.get()
+        app._render()
+        labels = [app.canvas.itemcget(i, "text") for i in app.canvas.find_all()
+                  if app.canvas.type(i) == "text"]
+        assert "EXIT" in labels and "Switch" in labels and "Medical kit" in labels
+        app.camera.distance = 3
+        app.reset_camera()
+        assert app.camera.distance == CAMERA["distance"]
+        initial = app.session.robot.pose()
+        app.single_step()
+        assert app.session.robot.pose() == initial
+        app.lesson.set(LESSONS["1"])
+        app.select_lesson()
+        assert app.camera.distance == 5.5
+        assert app.implementation_heading.cget("text") == "YOUR IMPLEMENTATION"
+    finally:
+        app.close()
+
+
 def desktop_process(test):
     """Run each desktop scenario in its own process, like a real app launch."""
     @functools.wraps(test)

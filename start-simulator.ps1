@@ -4,7 +4,7 @@ No global Python installation, shell activation, or administrator access require
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet(1, 2, 3, 4, 5)][int]$Lesson = 1,
+    [ValidateSet(1, 2, 3, 4, 5, 8)][int]$Lesson = 1,
     [switch]$Headless,
     [double]$Duration = 16,
     [double]$Dt = 1.0 / 240.0,

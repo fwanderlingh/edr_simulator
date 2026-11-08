@@ -5,7 +5,8 @@ simulation basics, coordinate frames, mobile-base kinematics and control, sensor
 local obstacle avoidance, and a planar 2R arm. The lesson exercise guides below
 help you turn each model into an implementation that runs in the same
 application. Base–arm coordination, grasping and the integrated mission follow
-in the escape room course sequence.
+in the escape room course sequence. **Lesson 8** already provides a static
+escape-room scene preview for presenting the final setting to the class.
 
 ![Screenshot of the simulator](img/sim_screenshot.png)
 
@@ -20,6 +21,7 @@ in the escape room course sequence.
   - [Lesson 3: Mobile base kinematics](#lesson-3-mobile-base-kinematics)
   - [Lesson 4: sensors and obstacle control](#lesson-4-sensors-and-obstacle-control)
   - [Lesson 5: Planar arm](#lesson-5-planar-arm)
+  - [Lesson 8: Escape the Lab scene preview](#lesson-8-escape-the-lab-scene-preview)
 - [Guided implementation workflow](#guided-implementation-workflow)
 ---
 ### Dev
@@ -254,6 +256,18 @@ desktop app. Complete the arm model and controller methods, select the student
 model and inspect endpoint predictions, inverse branches, residuals and joint
 limits in the shared scene. **Export CSV** records the numerical evidence.
 
+### Lesson 8: Escape the Lab scene preview
+
+Select **Lesson 8 - Escape the Lab (scene preview)** to inspect the final
+laboratory setting. It appears immediately, with a stationary robot, folded
+arm display, equipment, barriers, a crate blocking a switch and a medical kit.
+Solid walls enclose the room; only the green exit portal is open. Orbit, pan
+and zoom, or use **View > Reset camera** for an overview. This preview contains
+no controller, interactive props or mission solution. **Start** only advances
+time. See the [scene guide](robotics_sim/exercises/lesson08/README.md) for details.
+
+![Escape the Lab scene preview](img/escape_room_preview.png)
+
 ## Guided implementation workflow
 
 **Reload exercise**, to the right of **Reset / Apply length**, loads the saved files for the
@@ -422,8 +436,11 @@ Delete `settings.json` to restore defaults; this personal file is ignored by Git
 
 The interactive renderer targets the opaque boxes and cylinders used by current
 lessons, with directional shading and simple planar contact shadows. The arm
-is drawn from its kinematic chain. Mesh materials, transparency and general
-intersecting-surface rendering require a different rendering backend.
+is drawn from its kinematic chain. The enclosed escape-room preview uses cached
+BSP splitting and ordering for correct wall/prop occlusion while orbiting.
+The partition is reused until body poses change. Other compact lesson scenes
+retain their simpler depth ordering. Mesh materials and transparency require
+a different rendering backend.
 `Camera.render()` is available for explicit raster captures, but the app uses
 the canvas renderer.
 

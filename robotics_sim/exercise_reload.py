@@ -23,6 +23,7 @@ LESSON_MODULES = {
           "exercises.lesson04.rangefinder", "exercises.lesson04.avoidance",
           "exercises.lesson04.gui", "exercises.lesson04.activity"),
     "5": ("exercises.lesson05.kinematics", "exercises.lesson05.control", "exercises.lesson05.gui"),
+    "8": ("exercises.lesson08.activity",),
 }
 
 # Lesson 4's nominal controller is the saved Lesson 3 exercise, not a duplicate.

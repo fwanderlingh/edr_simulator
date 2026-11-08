@@ -13,11 +13,12 @@ from .exercises.lesson04 import activity as sensors_activity
 from .exercises.lesson04 import gui as sensors_gui
 from .exercises.lesson04.gui import SENSOR_EXERCISES
 from .exercises.lesson05 import gui as arm_gui
+from .exercises.lesson08 import activity as escape_activity
 
 
 LESSONS = {"1": "Lesson 1 - System overview", "2": "Lesson 2 - Frames and transformations",
            "3": "Lesson 3 - Mobile base kinematics", "4": "Lesson 4 - Sensors and obstacle control",
-           "5": "Lesson 5 - Planar arm"}
+           "5": "Lesson 5 - Planar arm", "8": "Lesson 8 - Escape the Lab (scene preview)"}
 TASKS = {
     "1": {"straight": "Preview: straight-line motion", "circle": "Preview: circular motion", "square": "Preview: square motion"},
     "2": {"planar": "Module 1: Planar transforms",
@@ -40,6 +41,7 @@ TASKS = {
     "5": {"arm_forward": "Forward kinematics: endpoint",
           "arm_inverse": "Inverse kinematics: two branches",
           "arm_control": "Control the end-effector"},
+    "8": {"escape_room_preview": "Explore the final escape-room scene"},
 }
 # Retain older recordings/batch experiments without including them in the course menu.
 LEGACY_TASKS = {"4": {
@@ -55,6 +57,7 @@ def task_title(lesson, task):
     return {**LEGACY_TASKS.get(lesson, {}), **TASKS[lesson]}[task]
 
 DESCRIPTIONS = {
+    "escape_room_preview": "Scene preview: inspect a compact laboratory with barriers, an equipment bench, a raised control deck, a crate in front of a switch and an optional medical kit. Solid walls enclose the room; only the green exit portal is passable. The portal is open for this preview. Orbit, pan and zoom to inspect. The robot and its display-only folded arm remain stationary; no controller, interactions or mission solution are included.",
     "spatial": "Compose T_world_base and T_base_sensor, then transform P_sensor=(0,1,0). Base: Rz(90 deg), (1,2,0) m; sensor: Rx(90 deg), (0.2,0,0.5) m. Expected sensor origin (1,2.2,0.5), point (1,2.2,1.5) m. Edit solve_spatial_task. The base frame is at ground level as in the notes; the robot body centre is above it.",
     "rpy": "Assignment: sensor angles (roll,pitch,yaw)=(pi/6,-pi/9,2pi/9) rad and v_s=(1,0,0). Implement the expanded RPY matrix and Rz Ry Rx in solve_rpy_task. The sensor frame and purple vector show your result for this assignment. Compare v_w with (0.720,0.604,0.342). Checks compare the full matrix with the expected rotation and your product, and test orthogonality and determinant. The drawing origin is offset vertically for visibility; directions are not translated.",
     "quaternions": "q=(sqrt(2)/2,0,0,sqrt(2)/2) in wxyz order, v=(0,1,0). Compute inverse, q*q, q*(0,v)*q_inverse and distance(q,-q). Expected rotated vector (-1,0,0), distance 0 rad. Edit solve_quaternion_task and hamilton. The exercise uses scalar-first quaternions, exactly as in the notes.",
@@ -80,6 +83,7 @@ DESCRIPTIONS = {
 
 # Paths are relative to the simulator folder; previews need no implementation.
 ACTIVITY_FILES = {
+    "escape_room_preview": ("Scene preview only. Optional: customize the primitive shapes, save and click Reload exercise.", "robotics_sim/exercises/lesson08/activity.py"),
     "spatial": ("Edit solve_spatial_task; save and click Reload exercise.", "robotics_sim/exercises/lesson02/spatial.py"),
     "rpy": ("Edit solve_rpy_task; save and click Reload exercise.", "robotics_sim/exercises/lesson02/rpy.py"),
     "quaternions": ("Edit solve_quaternion_task and hamilton (wxyz); save and click Reload exercise.", "robotics_sim/exercises/lesson02/quaternions.py"),
@@ -179,7 +183,10 @@ class ActivitySession:
         self.samples = []
 
     def _build_activity(self, kinematics):
-        if self.lesson == "5":
+        if self.lesson == "8":
+            self.robot = escape_activity.setup(self.world)
+            update = escape_activity.update
+        elif self.lesson == "5":
             options = {"target": self.goal[:2]} if self.goal is not None else {}
             self.laboratory = arm_gui.ArmActivity(self.world, self.task, model=self.exercise_model, **options)
             self.robot = self.laboratory.robot

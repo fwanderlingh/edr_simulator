@@ -102,7 +102,7 @@ class SimulatorApp:
             self.task.set(TASKS[lesson][saved["task"]])
             self.load_task()
         for name in ("yaw", "pitch", "distance"):
-            if f"camera_{name}" in saved:
+            if f"camera_{name}" in saved and saved.get("lesson") == self.lesson_id:
                 setattr(self.camera, name, saved[f"camera_{name}"])
         root.bind("<Configure>", self._window_changed, add="+")
         self._loading_preferences = False
@@ -373,7 +373,8 @@ class SimulatorApp:
         description = SelectableText(details, textvariable=self.description)
         description.grid(row=8, column=0, sticky="ew")
         ttk.Separator(details).grid(row=9, column=0, sticky="ew", pady=16)
-        ttk.Label(details, text="YOUR IMPLEMENTATION", style="Section.TLabel").grid(row=10, column=0, sticky="w", pady=(0, 8))
+        self.implementation_heading = ttk.Label(details, text="YOUR IMPLEMENTATION", style="Section.TLabel")
+        self.implementation_heading.grid(row=10, column=0, sticky="w", pady=(0, 8))
         self.edit_hint = ttk.Label(details, wraplength=246, justify="left", style="Muted.TLabel")
         self.edit_hint.grid(row=11, column=0, sticky="ew", pady=(0, 8))
         self.edit_file = ttk.Label(details, wraplength=246, justify="left", style="Code.TLabel")
@@ -578,8 +579,16 @@ class SimulatorApp:
                                   (0.6, 0, 0.8) if task in module2.TASKS else (0.25, 0, 0.2))
         else:
             self.camera.target = (0.8, 0.7, 0.1)
+        preview_camera = getattr(self.session.world, "preview_camera", None)
+        if preview_camera:
+            for name, value in preview_camera.items():
+                setattr(self.camera, name, value)
+        elif getattr(self, "_preview_camera_active", False):
+            self.camera.reset()
+        self._preview_camera_active = bool(preview_camera)
         self._camera_home_target = self.camera.target
         self.description.set(DESCRIPTIONS[task])
+        self.implementation_heading.configure(text="SCENE SETUP" if task == "escape_room_preview" else "YOUR IMPLEMENTATION")
         hint, path = ACTIVITY_FILES[task]
         self.edit_hint.configure(text=hint)
         files = f"File (relative to simulator/): {path}"
@@ -767,6 +776,8 @@ class SimulatorApp:
                             f"\nGoal error: {distance:.3f} m\nHeading error: {heading:.3f} rad\nOutcome: {self.session.outcome}")
         if self.session.laboratory is not None:
             self.values.set(self.values.get() + "\n" + self.session.laboratory.readout)
+        if self.session.task == "escape_room_preview":
+            self.values.set(self.values.get() + "\nScene preview | Robot stationary\nExit open | Switch and props inactive")
         checks = self.exercise_checks.evaluate(module2_output=module2_output,
                                                planar_output=planar_output, frame_output=frame_output)
         if self._notice:
@@ -863,6 +874,8 @@ class SimulatorApp:
     def reset_camera(self):
         self.camera.target = self._camera_home_target
         self.camera.reset()
+        for name, value in getattr(self.session.world, "preview_camera", {}).items():
+            setattr(self.camera, name, value)
         self._redraw()
         self._queue_save()
 
@@ -1027,6 +1040,10 @@ class SimulatorApp:
                            shadow_paths=tuple((chain, 0.02) for chain in chains))
         self.canvas.delete("overlay")
         self._label_bounds = []
+        if self.session.task == "escape_room_preview":
+            for point, label in self.session.world.preview_labels:
+                self._label(point, label)
+            return
         if self.session.controller is not None:
             controller = self.session.controller
             for index, (gx, gy, heading) in enumerate(controller.goals):
