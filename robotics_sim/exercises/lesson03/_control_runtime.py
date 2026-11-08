@@ -77,13 +77,22 @@ class PoseController(WheelController):
     def goal(self):
         return self.goals[0]
 
+    def set_goal(self, goal):
+        """Select a new pose and restart from TURN; call only when changing target."""
+        goal = tuple(goal)
+        if len(goal) != 3 or not all(math.isfinite(value) for value in goal):
+            raise ValueError("Supply a finite (x_m, y_m, yaw_rad) goal.")
+        self.goals = (goal,)
+        self.index, self.phase = 0, "TURN"
+        self.nominal, self.scale = (0.0, 0.0), 1.0
+
     @property
     def done(self):
         return self.phase == "DONE"
 
 
 class WaypointController(WheelController):
-    """Prepare one pose controller per target; students implement the sequencing."""
+    """Prepare one reusable pose controller; students implement the sequencing."""
 
     def __init__(self, *args, **options):
         super().__init__(*args, **options)
@@ -91,9 +100,8 @@ class WaypointController(WheelController):
             "gain", "gain_bearing", "gain_heading", "eps_pos", "eps_angle",
             "angle_in", "angle_out", "wheel_max")}
         # self is the student or reference subclass instance, so Python finds
-        # pose_controller_class on that subclass. Calling the class creates an
-        # object; keep one per goal so its phase persists across updates.
-        # (goal,) is a tuple containing one goal; **parameters passes settings
-        # as keyword arguments to each pose controller's constructor.
-        self.controllers = [self.pose_controller_class((goal,), **parameters)
-                            for goal in self.goals]
+        # pose_controller_class on that subclass. Create one object for the
+        # first target; set_goal(next_goal) will reset it at each arrival.
+        # (self.goals[0],) is a tuple containing one goal; **parameters passes
+        # the shared settings as keyword arguments to the constructor.
+        self.pose_controller = self.pose_controller_class((self.goals[0],), **parameters)

@@ -51,6 +51,9 @@ for lesson, name, definition, task in cases:
             assert type(session.controller) is module.StudentPoseController
             assert activity.StudentPoseController is module.StudentPoseController
             assert waypoint.StudentWaypointController.pose_controller_class is module.StudentPoseController
+            sequencer = waypoint.StudentWaypointController()
+            assert type(sequencer.pose_controller) is module.StudentPoseController
+            assert sequencer.pose_controller.goal == sequencer.goals[0]
         elif lesson == "4":
             from robotics_sim.exercises.lesson04 import gui, lidar
             from robotics_sim.exercises.lesson04.sensors import suite

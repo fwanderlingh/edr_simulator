@@ -44,12 +44,22 @@ def test_position_check_precedes_bearing_and_heading_error_is_wrapped(monkeypatc
 
 def test_waypoint_arrival_waits_for_heading_and_stops_for_one_sample():
     controller = ReferenceWaypointController(((0, 0, math.pi / 2), (1, 0, 0)))
+    pose_controller = controller.pose_controller
+    assert pose_controller.goal == controller.goals[0]
     controller.wheel_command(Pose(), .12, .42)
     assert controller.index == 0 and controller.phase == "ALIGN"
+    assert pose_controller.phase == "ALIGN" and not pose_controller.done
     assert controller.wheel_command(Pose(yaw=math.pi / 2), .12, .42) == (0, 0)
     assert controller.index == 1 and controller.phase == "TURN"
+    assert controller.pose_controller is pose_controller
+    assert pose_controller.goal == controller.goals[1]
+    assert pose_controller.phase == "TURN" and not pose_controller.done
     assert controller.wheel_command(Pose(), .12, .42) == pytest.approx((.8 / .12,) * 2)
     assert controller.phase == "DRIVE"
+    assert controller.wheel_command(Pose(x=1), .12, .42) == (0, 0)
+    assert controller.done and pose_controller.done and controller.phase == "DONE"
+    assert controller.index == 2 and controller.pose_controller is pose_controller
+    assert controller.wheel_command(Pose(), .12, .42) == (0, 0)
 
 
 def test_student_waypoint_sequencing_reuses_the_student_pose_exercise(monkeypatch):
@@ -60,7 +70,7 @@ def test_student_waypoint_sequencing_reuses_the_student_pose_exercise(monkeypatc
     monkeypatch.setattr(StudentWaypointController, "wheel_command",
                         ReferenceWaypointController.wheel_command)
     controller = StudentWaypointController()
-    assert all(type(pose) is StudentPoseController for pose in controller.controllers)
+    assert type(controller.pose_controller) is StudentPoseController
     with pytest.raises(NotImplementedError, match="StudentPoseController.*control.py"):
         controller.wheel_command(Pose(), .12, .42)
     monkeypatch.setattr(StudentPoseController, "wheel_command",

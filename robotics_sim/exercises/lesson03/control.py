@@ -30,6 +30,13 @@ class StudentPoseController(PoseController):
         Read self.gain, self.gain_bearing, self.gain_heading, self.eps_pos,
         self.eps_angle, self.angle_in and self.angle_out. Initially phase is TURN.
 
+        self.done is an inherited, read-only @property: Python evaluates
+        self.phase == "DONE" whenever you read it, without parentheses.
+        It is not a separate flag to update. Set self.phase = "DONE" when
+        both pose tolerances are met; self.done then becomes True automatically.
+        For the next exercise, the supplied set_goal(next_goal) method changes
+        the target and resets the phase to TURN so the same object can be reused.
+
         1. If self.done, return two zeros. Otherwise compute ex, ey and rho.
         2. If rho <= eps_pos, choose ALIGN before computing any bearing.
            Use v = 0 and omega = gain_heading * wrap(goal_heading - pose.yaw).

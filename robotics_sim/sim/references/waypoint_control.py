@@ -5,17 +5,21 @@ from .control import ReferencePoseController
 
 
 class ReferenceWaypointController(WaypointController):
-    # The same inherited initializer now creates ReferencePoseController objects.
+    # The same inherited initializer creates one reusable ReferencePoseController.
     pose_controller_class = ReferencePoseController
 
     def wheel_command(self, pose, r, L):
         if self.done:
             return 0.0, 0.0
-        controller = self.controllers[self.index]
+        controller = self.pose_controller
         wheels = controller.wheel_command(pose, r, L)
         self.phase = controller.phase
         if controller.done:
             self.index += 1
-            self.phase = "DONE" if self.done else "TURN"
+            if self.done:
+                self.phase = "DONE"
+            else:
+                controller.set_goal(self.goals[self.index])
+                self.phase = "TURN"
             return 0.0, 0.0
         return wheels

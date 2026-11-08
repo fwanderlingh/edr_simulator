@@ -128,7 +128,7 @@ def test_exercise_settings_reach_both_controller_models(monkeypatch, model, task
     session = ActivitySession("3", task, kinematics=model)
     try:
         ctrl = session.controller
-        for configured in ([ctrl] + ctrl.controllers if task == "drive_waypoints" else [ctrl]):
+        for configured in ([ctrl, ctrl.pose_controller] if task == "drive_waypoints" else [ctrl]):
             assert (configured.gain, configured.eps_pos) == (.25, .05)
             assert (configured.gain_bearing, configured.gain_heading, configured.eps_angle) == (3.0, 1.2, .02)
             assert (configured.angle_in, configured.angle_out, configured.wheel_max) == (.04, .5, 2.0)

@@ -74,6 +74,11 @@ pose control**. The default target is `(1 m, 0.5 m, pi/2 rad)`.
 The method receives `(pose, r, L)` and returns `(w_left, w_right)` in rad/s,
 just like `proportional.py`. Read the single target from `self.goal`.
 
+For this pose controller, `self.done` is equivalent to `self.phase == "DONE"`.
+It is an inherited, read-only Python `@property`: reading `self.done` (without
+parentheses) computes the result each time. Set `self.phase = "DONE"` when
+the pose is reached; do not assign to `self.done` or maintain a separate flag.
+
 Draw the TURN, DRIVE and ALIGN transitions from the notes first. Check distance
 before computing the bearing. Within position tolerance, enter ALIGN and correct
 the wrapped final-heading error; when both tolerances are met, set
@@ -100,14 +105,26 @@ Next, complete [`StudentWaypointController.wheel_command`](waypoint.py) and
 choose **Follow two waypoints**. `GOALS` is editable at the top of `waypoint.py`;
 the gains, tolerances and wheel limit are reused from `control.py`.
 
-The supplied adapter prepares `self.controllers`, one independent
-`StudentPoseController` per goal. Select `self.controllers[self.index]`, call
-its `wheel_command(pose, r, L)`, and copy its phase into `self.phase`.
+For the waypoint controller, the inherited `self.done` property instead checks
+`self.index == len(self.goals)`: the whole sequence is complete. By contrast,
+`self.pose_controller.done` checks the pose controller's phase and means
+only that pose is complete. Advance `self.index` after each arrival; do not
+assign to `self.done`. The sequence's `self.phase` displays the current phase
+and does not determine this completion check.
+
+The supplied adapter creates one `StudentPoseController` in `self.pose_controller`
+with `self.goals[0]` as its initial target. Call its `wheel_command(pose, r, L)`
+and copy its phase into `self.phase`. Reuse the same object throughout the sequence.
 Advance `self.index` only when that pose controller reports `done`, so both
-position and heading must be reached at every waypoint. Return two zeros on
-the arrival sample and choose TURN for the next target, or DONE after the last.
-Otherwise return the current controller's wheel references. This exercise
-adds sequencing to the pose controller you already completed.
+position and heading must be reached at every waypoint. If the sequence is complete,
+set `self.phase = "DONE"`. Otherwise call
+`self.pose_controller.set_goal(self.goals[self.index])` and set `self.phase = "TURN"`.
+The supplied `set_goal(next_goal)` method changes the target and resets the pose
+controller to TURN. Call it only when advancing to the next waypoint: calling it
+on every step would erase the controller's phase. Return two zeros on the arrival
+sample; the next target starts on the following sample. Otherwise return the pose
+controller's wheel references. This exercise adds sequencing to the pose controller
+you already completed.
 The corresponding solution is
 [`ReferenceWaypointController`](../../sim/references/waypoint_control.py),
 which reuses the reference pose controller.
