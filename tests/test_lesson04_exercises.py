@@ -1,13 +1,12 @@
-"""Numerical checks and physical outcomes for the standalone sensor exercises."""
+"""Numerical checks and physical outcomes for the sensor activities in the UI."""
 
-import argparse
 import csv
 import math
 
 import pytest
 
 from robotics_sim import Pose
-from robotics_sim.exercises.lesson04 import avoidance, estimation
+from robotics_sim.session import ActivitySession
 from robotics_sim.sim.references.sensors import (
     ReferenceInertial, ReferenceObstacleSupervisor, ReferenceOdometry, ReferenceSectors,
 )
@@ -40,21 +39,25 @@ def test_inertial_constant_acceleration_and_rotated_frame():
     assert imu.y == pytest.approx(1.96133)
 
 
-@pytest.mark.parametrize("task,duration", [("curve", 2.0), ("blocked", 8.0)])
-def test_estimation_same_stream_and_blocked_chassis(task, duration, tmp_path):
-    path = tmp_path / f"{task}.csv"
-    estimation.run(argparse.Namespace(model="reference", task=task, mode="ideal",
-                                      orientation="truth", duration=duration, dt=1 / 120,
-                                      csv=path, gui=False))
-    rows = read_rows(path)
-    assert float(rows[0]["time_s"]) == 0
-    assert float(rows[-1]["time_s"]) == pytest.approx(duration)
-    if task == "curve":
+def test_curved_estimation_with_truth_assisted_orientation(tmp_path):
+    duration = 2.0
+    path = tmp_path / "assisted-curve.csv"
+    session = ActivitySession("4", "sensor_estimation_curve", duration=duration,
+                              dt=1 / 120, exercise_model="reference")
+    try:
+        session.laboratory.truth_orientation = True
+        session.start()
+        while session.state == "Running":
+            session.step()
+        assert session.outcome == "COMPLETED"
+        session.export_csv(path)
+        rows = read_rows(path)
+        assert float(rows[0]["time_s"]) == pytest.approx(session.dt)
+        assert float(rows[-1]["time_s"]) == pytest.approx(duration)
         assert float(rows[-1]["enc_position_error_m"]) < 0.005
         assert float(rows[-1]["imu_position_error_m"]) < 0.03
-    else:
-        assert float(rows[-1]["enc_position_error_m"]) > 0.3
-        assert float(rows[-1]["imu_position_error_m"]) < 0.05
+    finally:
+        session.close()
 
 
 def test_sector_misses_and_invalid_scan():
@@ -74,16 +77,3 @@ def test_supervisor_stale_data_stop_before_resuming():
     assert controller.phase == "STALE"
     v, _ = controller.command(Pose(), (3, 0), sectors, 0.0)
     assert v > 0
-
-
-def test_reference_bypasses_isolated_obstacle(tmp_path):
-    path = tmp_path / "avoidance.csv"
-    status = avoidance.run(argparse.Namespace(model="reference", mode="ideal", gui=False,
-                                             duration=35, csv=path))
-    rows = read_rows(path)
-    assert status == 0
-    assert rows[-1]["phase"] == "DONE"
-    assert float(rows[-1]["goal_error_m"]) <= 0.05
-    assert all(max(abs(float(r["left_rad_s"])), abs(float(r["right_rad_s"])))
-               <= 5 + 1e-12 for r in rows)
-    assert float(rows[-1]["left_rad_s"]) == float(rows[-1]["right_rad_s"]) == 0

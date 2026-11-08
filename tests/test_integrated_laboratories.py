@@ -3,8 +3,10 @@
 import csv
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 
+from robotics_sim.exercise_checks import ExerciseChecks
 from robotics_sim.session import ActivitySession, TASKS
 from robotics_sim.exercises.lesson04.estimation import StudentOdometry
 from robotics_sim.exercises.lesson05.kinematics import StudentPlanarArm
@@ -61,6 +63,8 @@ def test_blocked_encoder_exercise_reveals_disagreement():
 def test_avoidance_is_available_in_catalog_and_reaches_goal(tmp_path):
     session = ActivitySession("4", "sensor_avoidance", duration=35, exercise_model="reference")
     try:
+        checks = ExerciseChecks(session)
+        assert not all(passed for _, passed in checks.evaluate())
         finish(session)
         assert session.outcome == "DONE"
         assert session.laboratory.done
@@ -71,6 +75,11 @@ def test_avoidance_is_available_in_catalog_and_reaches_goal(tmp_path):
         data = rows(path)
         assert float(data[-1]["goal_error_m"]) <= 0.05
         assert data[-1]["outcome"] == "DONE"
+        assert data[-1]["phase"] == "DONE"
+        assert all(max(abs(float(row["left_rad_s"])), abs(float(row["right_rad_s"])))
+                   <= 5 + 1e-12 for row in data)
+        assert float(data[-1]["left_rad_s"]) == float(data[-1]["right_rad_s"]) == 0
+        assert all(passed for _, passed in checks.evaluate())
     finally:
         session.close()
 
@@ -81,6 +90,8 @@ def test_arm_catalog_evaluates_stays_open_and_exports(task, expected, tmp_path):
     session = ActivitySession("5", task, duration=10, exercise_model="reference")
     try:
         assert task in TASKS["5"] and session.state == "Ready"
+        checks = ExerciseChecks(session)
+        assert not all(passed for _, passed in checks.evaluate())
         finish(session)
         assert session.state == "Completed" and session.outcome == expected
         assert session.world.physics.connected
@@ -91,8 +102,23 @@ def test_arm_catalog_evaluates_stays_open_and_exports(task, expected, tmp_path):
         assert float(data[-1]["q1_dot_rad_s"]) == float(data[-1]["q2_dot_rad_s"]) == 0
         if task == "arm_control":
             assert float(data[-1]["residual_m"]) <= 0.001
+            assert all(max(abs(float(row[key])) for key in ("q1_rad", "q2_rad")) <= np.pi
+                       for row in data)
+            assert all(max(abs(float(row[key])) for key in ("q1_dot_rad_s", "q2_dot_rad_s"))
+                       <= session.laboratory.controller.max_speed + 1e-12 for row in data)
         elif task == "arm_inverse":
             assert int(data[-1]["branch_count"]) == 2
+            for branch in session.laboratory.branches:
+                np.testing.assert_allclose(branch[-1, :2], (1, 1), atol=1e-12)
+        else:
+            assert session.laboratory.model_error < 1e-12
+        assert all(passed for _, passed in checks.evaluate())
+        assert len(session.laboratory.extra_columns) == len(session.laboratory.extra_values)
+        # Completed results stay inspectable, including if the adapter is called again.
+        points, time = session.laboratory.points.copy(), session.laboratory.time
+        session.laboratory.step(session.dt)
+        np.testing.assert_array_equal(session.laboratory.points, points)
+        assert session.laboratory.time == time
     finally:
         session.close()
 
@@ -112,10 +138,15 @@ def test_arm_one_shared_physics_step_and_timeout():
                               dt=0.01, exercise_model="reference")
     try:
         with patch.object(session.world.physics, "step", wraps=session.world.physics.step) as physics_step:
-            finish(session)
+            session.start()
+            session.step()
+            assert np.max(np.abs(session.laboratory.dq)) > 0
+            while session.state == "Running":
+                session.step()
             assert physics_step.call_count == session.sim.steps == 3
         assert session.outcome == "TIMEOUT"
         assert tuple(session.laboratory.dq) == (0, 0)
+        assert not all(passed for _, passed in ExerciseChecks(session).evaluate())
     finally:
         session.close()
 
@@ -128,9 +159,13 @@ def test_incomplete_student_models_do_not_fall_back_to_reference(monkeypatch):
     arm = ActivitySession("5", "arm_forward", exercise_model="student")
     try:
         assert arm.state == "Ready"
+        assert not arm.laboratory.done and not arm.laboratory.evaluated
+        np.testing.assert_allclose(arm.laboratory.points[-1, :2],
+                                   arm.laboratory.plant.forward(arm.laboratory.q))
         with pytest.raises(NotImplementedError, match="student implementation requested"):
             arm.step(single=True)
         assert arm.sim.time == 0
+        assert arm.laboratory.time == 0 and not arm.laboratory.evaluated
     finally:
         arm.close()
 

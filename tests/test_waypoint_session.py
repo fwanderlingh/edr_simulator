@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from robotics_sim.exercise_checks import ExerciseChecks
 from robotics_sim.exercises.lesson03.control import StudentPoseController
 from robotics_sim.exercises.lesson03.waypoint import StudentWaypointController
 from robotics_sim.exercises.lesson03 import control
@@ -24,6 +25,8 @@ def test_reference_goals_arrive_early_and_export_correct_targets(task, count, tm
         assert session.controller.index == 0
         assert session.state == "Ready"
         assert session.robot.wheel_velocities == (0, 0)
+        checks = ExerciseChecks(session)
+        assert not all(passed for _, passed in checks.evaluate())
         session.start()
         while session.state == "Running":
             session.step()
@@ -46,6 +49,7 @@ def test_reference_goals_arrive_early_and_export_correct_targets(task, count, tm
         assert all(None not in row for row in rows)
         assert all(max(abs(float(row["left_rad_s"])), abs(float(row["right_rad_s"])))
                    <= session.controller.wheel_max + 1e-12 for row in rows)
+        assert all(passed for _, passed in checks.evaluate())
     finally:
         session.close()
 

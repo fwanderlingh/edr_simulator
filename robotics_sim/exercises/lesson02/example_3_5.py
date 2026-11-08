@@ -1,4 +1,8 @@
-"""Run from simulator/: python -m robotics_sim.exercises.lesson02.example_3_5."""
+"""Optional terminal-only numerical check for worked Example 3.5.
+
+Run from simulator/: python -m robotics_sim.exercises.lesson02.example_3_5.
+For the simulator exercise, use Lesson 2 > Module 1: Planar transforms in the UI.
+"""
 
 import numpy as np
 

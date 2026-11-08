@@ -7,7 +7,6 @@ import pytest
 
 from robotics_sim import Pose
 from robotics_sim.exercises.lesson03 import control
-from robotics_sim.exercises.lesson03._control_runtime import main, run
 from robotics_sim.exercises.lesson03.control import StudentPoseController
 from robotics_sim.exercises.lesson03.waypoint import StudentWaypointController
 from robotics_sim.sim.references.control import ReferencePoseController
@@ -77,26 +76,25 @@ def test_student_waypoint_sequencing_reuses_the_student_pose_exercise(monkeypatc
         session.close()
 
 
-@pytest.mark.parametrize("task", ["pose", "waypoints"])
-def test_standalone_runner_uses_editable_wheel_limit_and_cli_override(monkeypatch, tmp_path, task):
-    monkeypatch.setattr(control, "WHEEL_MAX", .75)
-    for override, expected in ((None, .75), (1.25, 1.25)):
-        path = tmp_path / f"{task}-{expected}.csv"
-        result = run(task=task, model="reference", duration=.02,
-                     wheel_max=override, csv_path=path)
-        assert result["status"] == "TIMEOUT" and result["final_wheels"] == (0, 0)
-        with path.open() as stream:
-            rows = list(csv.DictReader(stream))
-        assert max(abs(float(rows[0][column])) for column in
-                   ("w_left_rad_s", "w_right_rad_s")) == pytest.approx(expected)
-
-
-def test_pose_cli_reports_its_own_unfinished_exercise(monkeypatch, capsys, tmp_path):
-    def unfinished(self, pose, r, L):
-        raise NotImplementedError("Complete StudentPoseController.wheel_command in control.py")
-    monkeypatch.setattr(StudentPoseController, "wheel_command", unfinished)
-    assert main(["--csv", str(tmp_path / "pose.csv")]) == 2
-    assert "StudentPoseController.wheel_command" in capsys.readouterr().out
+@pytest.mark.parametrize("task", ["drive_goal", "drive_waypoints"])
+def test_ui_session_uses_editable_wheel_limit(monkeypatch, tmp_path, task):
+    for limit in (.75, 1.25):
+        monkeypatch.setattr(control, "WHEEL_MAX", limit)
+        session = ActivitySession("3", task, duration=.02)
+        try:
+            session.start()
+            while session.state == "Running":
+                session.step()
+            assert session.outcome == "TIMEOUT"
+            assert session.robot.wheel_velocities == (0, 0)
+            path = tmp_path / f"{task}-{limit}.csv"
+            session.export_csv(path)
+            with path.open() as stream:
+                rows = list(csv.DictReader(stream))
+            assert max(abs(float(rows[0][column])) for column in
+                       ("left_rad_s", "right_rad_s")) == pytest.approx(limit)
+        finally:
+            session.close()
 
 
 def test_single_pose_target_fields_apply_to_the_pose_controller():

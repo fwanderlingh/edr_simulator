@@ -22,7 +22,7 @@ def verified(probe):
     """An unfinished or invalid numerical result is a failed check, not a UI error."""
     try:
         return bool(probe())
-    except (NotImplementedError, ValueError, TypeError, ArithmeticError, np.linalg.LinAlgError):
+    except Exception:
         return False
 
 

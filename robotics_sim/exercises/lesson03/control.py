@@ -49,8 +49,3 @@ class StudentPoseController(PoseController):
             "Complete StudentPoseController.wheel_command in "
             "robotics_sim/exercises/lesson03/control.py."
         )
-
-
-if __name__ == "__main__":
-    from ._control_runtime import main
-    raise SystemExit(main())

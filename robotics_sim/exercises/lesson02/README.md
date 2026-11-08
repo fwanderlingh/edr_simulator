@@ -28,7 +28,7 @@ its components contain no translation.
 This planar activity is the core Module 1 exercise; the other Lesson 2
 core activities are listed below under Module 2; optional activities are labelled as extensions.
 
-### Standalone Example 3.5 script
+### Optional terminal-only calculation: Example 3.5
 
 [example_3_5.py](example_3_5.py) is an optional terminal script that executes
 the calculations from Example 3.5 and checks their numerical results,

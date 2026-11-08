@@ -1,13 +1,6 @@
-"""Supplied lifecycle, wheel limits and CLI for the Lesson 3 feedback exercises."""
+"""Supplied controller state and wheel limits for the Lesson 3 UI exercises."""
 
-import argparse
-import csv
 import math
-from pathlib import Path
-import time
-
-from robotics_sim import DifferentialDriveRobot, Pose, Simulator, World
-from robotics_sim.sim.visualizer import Visualizer
 
 
 def controller_parameters():
@@ -97,101 +90,10 @@ class WaypointController(WheelController):
         parameters = {name: getattr(self, name) for name in (
             "gain", "gain_bearing", "gain_heading", "eps_pos", "eps_angle",
             "angle_in", "angle_out", "wheel_max")}
+        # self is the student or reference subclass instance, so Python finds
+        # pose_controller_class on that subclass. Calling the class creates an
+        # object; keep one per goal so its phase persists across updates.
+        # (goal,) is a tuple containing one goal; **parameters passes settings
+        # as keyword arguments to each pose controller's constructor.
         self.controllers = [self.pose_controller_class((goal,), **parameters)
                             for goal in self.goals]
-
-
-def run(*, task="pose", model="student", goals=None, csv_path="output/control.csv",
-        gui=False, duration=60.0, dt=1 / 240, wheel_max=None):
-    """Run the exercise and return evidence for each reached target."""
-    if not math.isfinite(duration) or duration <= 0:
-        raise ValueError("Duration must be positive and finite.")
-    from . import control, waypoint
-    from robotics_sim.sim.references.control import ReferencePoseController
-    from robotics_sim.sim.references.waypoint_control import ReferenceWaypointController
-    if task == "pose":
-        classes = {"student": control.StudentPoseController, "reference": ReferencePoseController}
-        defaults = (control.GOAL,)
-    elif task == "waypoints":
-        classes = {"student": waypoint.StudentWaypointController, "reference": ReferenceWaypointController}
-        defaults = waypoint.GOALS
-    else:
-        raise ValueError("Choose task pose or waypoints.")
-    if model not in classes:
-        raise ValueError("Choose model student or reference.")
-    parameters = controller_parameters()
-    if wheel_max is not None:
-        parameters["wheel_max"] = wheel_max
-    controller = classes[model](defaults if goals is None else goals, **parameters)
-    csv_path = Path(csv_path)
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    arrivals = []
-    with World(gui=gui, dt=dt) as world:
-        robot = DifferentialDriveRobot(world, Pose(x=0, y=0, yaw=0))
-        sim = Simulator(world, robot, update=controller.update)
-        view = Visualizer(world)
-        for i, (gx, gy, _) in enumerate(controller.goals):
-            view.draw_point((gx, gy, 0.2), name=f"goal {i + 1}")
-        with csv_path.open("w", newline="", encoding="utf-8") as stream:
-            out = csv.writer(stream)
-            out.writerow(("time_s", "goal_index", "completed_waypoints", "phase",
-                          "x_m", "y_m", "yaw_rad", "position_error_m", "angle_error_rad",
-                          "w_left_rad_s", "w_right_rad_s", "wheel_scale"))
-            try:
-                for _ in range(math.ceil(duration / dt)):
-                    active = controller.index
-                    sim.step()
-                    pose = robot.pose()
-                    gx, gy, gt = controller.goals[active]
-                    ep = math.hypot(gx - pose.x, gy - pose.y)
-                    ea = wrap(gt - pose.yaw)
-                    wl, wr = robot.wheel_velocities
-                    out.writerow((sim.time, active, controller.index, controller.phase,
-                                  pose.x, pose.y, pose.yaw, ep, ea, wl, wr, controller.scale))
-                    if controller.index > active:
-                        arrivals.append({"index": active, "time_s": sim.time,
-                                         "position_error_m": ep, "angle_error_rad": ea})
-                    view.draw_text((pose.x, pose.y, 0.7),
-                                   f"{controller.phase} {controller.index}/{len(controller.goals)}",
-                                   name="controller")
-                    if controller.done:
-                        break
-                    if gui:
-                        time.sleep(dt)
-            finally:
-                sim.stop()
-        result = {"status": "DONE" if controller.done else "TIMEOUT",
-                  "completed": controller.index, "arrivals": arrivals,
-                  "final_wheels": robot.wheel_velocities, "csv": str(csv_path)}
-    return result
-
-
-def main(argv=None, *, task="pose"):
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--model", choices=("student", "reference"), default="student")
-    parser.add_argument("--csv", default=f"output/{'control' if task == 'pose' else 'waypoint'}.csv")
-    parser.add_argument("--gui", action="store_true")
-    parser.add_argument("--behind", action="store_true", help="Start with a target behind the base.")
-    parser.add_argument("--duration", type=float, default=60.0)
-    parser.add_argument("--dt", type=float, default=1 / 240)
-    parser.add_argument("--wheel-max", type=float, default=None)
-    args = parser.parse_args(argv)
-    from . import control, waypoint
-    goals = ((-1.0, 0.0, 0.0),) if args.behind else ((control.GOAL,) if task == "pose" else waypoint.GOALS)
-    try:
-        result = run(task=task, model=args.model, goals=goals, csv_path=args.csv, gui=args.gui,
-                     duration=args.duration, dt=args.dt, wheel_max=args.wheel_max)
-    except NotImplementedError as error:
-        print(f"NOT IMPLEMENTED: {error}")
-        return 2
-    except ValueError as error:
-        parser.error(str(error))
-    print(f"{result['status']}: {result['completed']}/{len(goals)} targets; {result['csv']}")
-    for arrival in result["arrivals"]:
-        print(f"  Goal {arrival['index'] + 1}: {arrival['position_error_m']:.5f} m, "
-              f"{arrival['angle_error_rad']:.5f} rad at {arrival['time_s']:.2f} s")
-    return 0 if result["status"] == "DONE" else 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

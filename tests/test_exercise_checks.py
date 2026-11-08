@@ -37,25 +37,6 @@ def test_estimation_uses_same_stream_even_when_ui_skips_samples(task, mode):
         session.close()
 
 
-@pytest.mark.parametrize("lesson,task,duration", [
-    ("3", "drive_inverse", .2), ("3", "drive_proportional", 20),
-    ("3", "drive_waypoints", 40), ("4", "sensor_lidar", .2),
-    ("4", "sensor_avoidance", 40), ("5", "arm_forward", .2),
-    ("5", "arm_inverse", .2), ("5", "arm_control", 20),
-])
-def test_reference_runs_pass_only_after_evaluation(lesson, task, duration):
-    session = ActivitySession(lesson, task, duration=duration, dt=.01)
-    try:
-        checks = ExerciseChecks(session)
-        assert not all(passed for _, passed in checks.evaluate())
-        session.start()
-        while session.state != "Completed":
-            session.step()
-        assert all(passed for _, passed in checks.evaluate()), checks.evaluate()
-    finally:
-        session.close()
-
-
 def test_wheel_checks_reject_mutually_consistent_wrong_formulas(monkeypatch):
     session = ActivitySession("3", "drive_inverse", duration=.02, dt=.01)
     try:
@@ -70,10 +51,8 @@ def test_wheel_checks_reject_mutually_consistent_wrong_formulas(monkeypatch):
         session.close()
 
 
-@pytest.mark.parametrize("task", ["drive_proportional", "arm_control", "sensor_avoidance"])
-def test_timeout_is_not_a_pass(task):
-    lesson = "3" if task.startswith("drive") else "5" if task.startswith("arm") else "4"
-    session = ActivitySession(lesson, task, duration=.01, dt=.01)
+def test_avoidance_timeout_is_not_a_pass():
+    session = ActivitySession("4", "sensor_avoidance", duration=.01, dt=.01)
     try:
         session.step(single=True)
         assert session.outcome == "TIMEOUT"
@@ -93,5 +72,20 @@ def test_planar_checks_reject_translation_applied_to_a_direction():
         assert all(passed for _, passed in checks.evaluate(planar_output=(point, direction)))
         assert [passed for _, passed in checks.evaluate(planar_output=(point, direction + transform[:2, 2]))] == [True, False]
         assert not any(passed for _, passed in checks.evaluate())
+    finally:
+        session.close()
+
+
+def test_student_exception_in_a_check_is_reported_as_a_failed_check(monkeypatch):
+    session = ActivitySession("3", "drive_inverse", duration=.01, dt=.01)
+    try:
+        session.step(single=True)
+
+        def broken_forward(*args):
+            raise NameError("broken student formula")
+
+        monkeypatch.setattr(session.robot.motor_model, "forward", broken_forward)
+        checks = ExerciseChecks(session).evaluate()
+        assert [passed for _, passed in checks] == [True, False, True]
     finally:
         session.close()

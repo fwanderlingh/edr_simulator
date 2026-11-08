@@ -94,7 +94,7 @@ class SimulatorApp:
         self._build_menu()
         self._build_widgets()
         self.select_lesson()
-        if saved.get("lesson") == lesson and saved.get("task") in TASKS[lesson]:
+        if self.lesson_id == lesson and saved.get("lesson") == lesson and saved.get("task") in TASKS[lesson]:
             self.task.set(TASKS[lesson][saved["task"]])
             self.load_task()
         for name in ("yaw", "pitch", "distance"):
@@ -492,11 +492,20 @@ class SimulatorApp:
                                           exercise_model=self.exercise_model.get(), goal=goal)
         except Exception as error:
             if self.session is None:
-                raise
-            self.lesson_id = self.session.lesson
-            self.lesson.set(LESSONS[self.lesson_id])
-            self.tasks.configure(values=list(TASKS[self.lesson_id].values()))
-            self.task.set(TASKS[self.lesson_id][self.session.task])
+                # A student sensor can be evaluated while constructing an
+                # activity. Keep the UI open on the introductory preview if
+                # this happens before there is a previous session to retain.
+                if self.lesson_id == "1" and task == "straight":
+                    raise
+                self.lesson.set(LESSONS["1"])
+                self.select_lesson()
+            else:
+                self.lesson_id = self.session.lesson
+                self.lesson.set(LESSONS[self.lesson_id])
+                self.tasks.configure(values=list(TASKS[self.lesson_id].values()))
+                self.task.set(TASKS[self.lesson_id][self.session.task])
+            self._report_exercise_error(error)
+            self._update_status()
             messagebox.showerror("Could not load activity",
                 f"{type(error).__name__}: {error}\nCheck your exercise implementation and try again.", parent=self.root)
             return
@@ -584,19 +593,25 @@ class SimulatorApp:
         self._redraw()
         self._update_status()
 
+    def _report_exercise_error(self, error):
+        """Stop commands and keep a student exception visible in the UI."""
+        self.session.pause()
+        self.session.sim.stop()
+        if self.session.laboratory is not None:
+            self.session.laboratory.stop()
+        self._accumulator = 0
+        if isinstance(error, NotImplementedError):
+            self._notice = f"Exercise not implemented yet: {error}"
+        else:
+            self._notice = f"Check your implementation: {type(error).__name__}: {error}"
+        self.status.set(self._notice)
+
     def _guarded_step(self, *, single=False):
-        """Step the session; pause with a hint if an exercise is still a TODO stub."""
+        """Student callbacks must not abort the UI's simulation timer."""
         try:
             self.session.step(single=single)
-        except NotImplementedError as error:
-            self.session.pause()
-            self.session.sim.stop()
-            self._notice = f"Exercise not implemented yet: {error}"
-            return False
-        except (ValueError, TypeError, ArithmeticError, np.linalg.LinAlgError) as error:
-            self.session.pause()
-            self.session.sim.stop()
-            self._notice = f"Check your implementation: {error}"
+        except Exception as error:
+            self._report_exercise_error(error)
             return False
         return True
 
@@ -608,11 +623,28 @@ class SimulatorApp:
                 scene.point_in_sensor, scene.direction_in_sensor)
         except NotImplementedError:
             return None
+        except Exception as error:
+            self._report_exercise_error(error)
+            return None
 
     def _module2_output(self):
         try:
             return module2.evaluate(self.session.task)
         except NotImplementedError:
+            return None
+        except Exception as error:
+            self._report_exercise_error(error)
+            return None
+
+    def _frame_output(self):
+        try:
+            return point_in_world(self.session.robot.pose().matrix(),
+                                  frames_activity.ROBOT_FROM_SENSOR,
+                                  frames_activity.POINT_IN_SENSOR)
+        except NotImplementedError:
+            return None
+        except Exception as error:
+            self._report_exercise_error(error)
             return None
 
     def _update_status(self):
@@ -623,24 +655,24 @@ class SimulatorApp:
             output = self._module2_output()
             module2_output = output
             self.values.set(self.values.get() + "\n" + (output.readout if output else
-                "Module 2 not implemented yet: complete the exercise file shown below."))
+                self._notice or "Module 2 not implemented yet: complete the exercise file shown below."))
         if self.session.task == "planar":
             output = self._planar_output()
             planar_output = output
             if output is None:
                 self.values.set(self.values.get() +
-                    "\nModule 1 not implemented yet: complete solve_planar_task in exercises/lesson02/planar.py")
+                    "\n" + (self._notice or
+                    "Module 1 not implemented yet: complete solve_planar_task in exercises/lesson02/planar.py"))
             else:
                 point, direction = output
                 self.values.set(self.values.get() +
                     f"\nModule 1 output: point in world ({point[0]:.2f}, {point[1]:.2f}) m"
                     f" | direction in world ({direction[0]:.2f}, {direction[1]:.2f})")
         if self.session.task in ("frames", "static"):
-            try:
-                frame_output = point_in_world(pose.matrix(), frames_activity.ROBOT_FROM_SENSOR,
-                                              frames_activity.POINT_IN_SENSOR)
-            except NotImplementedError:
-                self.values.set(self.values.get() + "\nExercise not implemented yet: complete point_in_world.")
+            frame_output = self._frame_output()
+            if frame_output is None:
+                self.values.set(self.values.get() + "\n" +
+                                (self._notice or "Exercise not implemented yet: complete point_in_world."))
         if self.session.lesson == "3":
             left, right = self.session.robot.wheel_velocities
             command = self.session.robot.command
@@ -1011,10 +1043,7 @@ class SimulatorApp:
                 sensor_frame = frames_activity.ROBOT_FROM_SENSOR
                 world_sensor = robot_frame @ sensor_frame
                 self._frame(world_sensor, "Sensor", scale=0.3, offset=(12, -55))
-                try:
-                    point = point_in_world(robot_frame, sensor_frame, frames_activity.POINT_IN_SENSOR)
-                except NotImplementedError:
-                    point = None
+                point = self._frame_output()
                 if point is not None:
                     self._line(world_sensor[:3, 3], point, "#773baa")
                     self._label(point, "Sensor point", offset=(12, 20))

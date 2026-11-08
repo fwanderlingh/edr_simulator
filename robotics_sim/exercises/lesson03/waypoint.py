@@ -15,12 +15,17 @@ GOALS = ((1.0, 0.5, math.pi / 2), (1.0, 1.5, 0.0))  # x [m], y [m], heading [rad
 
 
 class StudentWaypointController(WaypointController):
+    # Store the class itself (no parentheses). The inherited __init__ uses it
+    # to create the controller objects in self.controllers, one for each goal.
     pose_controller_class = StudentPoseController
 
     def wheel_command(self, pose, r, L):
         """Return wheel references for the current waypoint, then advance in order.
 
-        self.controllers contains a fresh StudentPoseController for each goal.
+        The inherited initializer creates self.controllers once, using
+        pose_controller_class: one independent StudentPoseController per goal.
+        Reuse these objects here so each keeps its phase between updates;
+        creating a new controller on every call would reset its phase to TURN.
         Gains, tolerances and wheel limit come from control.py.
         Initially self.index = 0 and self.phase = "TURN".
 
@@ -37,8 +42,3 @@ class StudentWaypointController(WaypointController):
             "Complete StudentWaypointController.wheel_command in "
             "robotics_sim/exercises/lesson03/waypoint.py."
         )
-
-
-if __name__ == "__main__":
-    from ._control_runtime import main
-    raise SystemExit(main(task="waypoints"))

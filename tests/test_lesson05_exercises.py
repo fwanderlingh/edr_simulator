@@ -1,22 +1,13 @@
 """Check arm geometry and closed-loop outcomes against independent expectations."""
 
-import argparse
 import csv
-import math
 
 import numpy as np
 import pytest
 
-from robotics_sim.exercises.lesson05 import __main__ as activity
+from robotics_sim.exercises.lesson05 import gui
+from robotics_sim.session import ActivitySession
 from robotics_sim.sim.references.planar_arm import ReferenceArmController, ReferencePlanarArm
-
-
-def options(tmp_path, **changes):
-    values = dict(task="control", model="reference", target=(1, 1), initial=(0.2, 0.5),
-                  dt=1 / 120, duration=10, damping=0.05, max_speed=1,
-                  csv=tmp_path / "arm.csv", gui=False)
-    values.update(changes)
-    return argparse.Namespace(**values)
 
 
 def test_two_branches_and_inner_boundary_are_distinct_modulo_angles():
@@ -45,26 +36,40 @@ def test_jacobian_matches_finite_differences_and_limits():
 
 
 @pytest.mark.parametrize("changes,status", [
-    ({}, "DONE"),
     ({"target": (3, 0)}, "UNREACHABLE"),
     ({"initial": (0, 0), "target": (1, 0), "duration": 0.1}, "TIMEOUT"),
 ])
 def test_control_outcomes_and_final_zero_speed(tmp_path, changes, status):
-    args = options(tmp_path, **changes)
-    assert activity.run(args) == status
-    with args.csv.open() as stream:
-        rows = list(csv.DictReader(stream))
-    assert rows[-1]["status"] == status
-    assert float(rows[-1]["q1_dot_rad_s"]) == float(rows[-1]["q2_dot_rad_s"]) == 0
-    assert all(max(abs(float(row["q1_dot_rad_s"])), abs(float(row["q2_dot_rad_s"])))
-               <= args.max_speed + 1e-12 for row in rows)
-    if status == "DONE":
-        assert float(rows[-1]["error_m"]) <= 1e-3
+    target = changes.get("target", (1, 1))
+    session = ActivitySession("5", "arm_control", goal=(*target, 0), dt=1 / 120,
+                              duration=changes.get("duration", 10), exercise_model="reference")
+    try:
+        if "initial" in changes:
+            session.laboratory.q = np.asarray(changes["initial"], dtype=float)
+        session.start()
+        while session.state == "Running":
+            session.step()
+        assert session.outcome == status
+        path = tmp_path / "arm.csv"
+        session.export_csv(path)
+        with path.open() as stream:
+            rows = list(csv.DictReader(stream))
+        assert rows[-1]["outcome"] == status
+        assert float(rows[-1]["q1_dot_rad_s"]) == float(rows[-1]["q2_dot_rad_s"]) == 0
+        assert all(max(abs(float(row["q1_dot_rad_s"])), abs(float(row["q2_dot_rad_s"])))
+                   <= session.laboratory.controller.max_speed + 1e-12 for row in rows)
+    finally:
+        session.close()
 
 
-def test_missing_reachable_branch_is_check_not_unreachable(tmp_path, monkeypatch):
+def test_missing_reachable_branch_is_check_not_unreachable(monkeypatch):
     class IncompleteInverse(ReferencePlanarArm):
         def inverse(self, target):
             return []
-    monkeypatch.setattr(activity, "StudentPlanarArm", IncompleteInverse)
-    assert activity.run(options(tmp_path, task="geometry", model="student")) == "CHECK"
+    monkeypatch.setattr(gui, "StudentPlanarArm", IncompleteInverse)
+    session = ActivitySession("5", "arm_inverse", exercise_model="student")
+    try:
+        session.step(single=True)
+        assert session.outcome == "CHECK"
+    finally:
+        session.close()

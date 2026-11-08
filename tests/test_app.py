@@ -440,6 +440,130 @@ def test_unimplemented_exercises_show_a_hint_instead_of_crashing(tmp_path):
 
 
 @desktop_process
+def test_student_runtime_errors_stop_motion_and_leave_the_ui_usable(tmp_path):
+    import tkinter as tk
+    from unittest.mock import patch
+    from robotics_sim.app import SimulatorApp
+    from robotics_sim.session import LESSONS, TASKS
+    from robotics_sim.exercises.lesson03.control import StudentPoseController
+    from robotics_sim.exercises.lesson03.proportional import StudentProportionalController
+    from robotics_sim.exercises.lesson04.estimation import StudentOdometry
+    from robotics_sim.exercises.lesson04.avoidance import StudentSectors
+    from robotics_sim.exercises.lesson05.kinematics import StudentPlanarArm
+
+    root = tk.Tk()
+    callback_errors = []
+    root.report_callback_exception = lambda *error: callback_errors.append(error)
+    app = SimulatorApp(root, lesson="1", dt=.01, settings_path=tmp_path / "runtime-errors.json")
+    cases = (
+        ("3", "drive_proportional", StudentProportionalController, "wheel_command", NameError),
+        ("3", "drive_goal", StudentPoseController, "wheel_command", RuntimeError),
+        ("4", "sensor_estimation_straight", StudentOdometry, "update", IndexError),
+        ("4", "sensor_avoidance", StudentSectors, "summarize", KeyError),
+        ("5", "arm_forward", StudentPlanarArm, "forward", AttributeError),
+    )
+    try:
+        app.kinematics.set("student")
+        app.exercise_model.set("student")
+        for lesson, task, controller, method, error_type in cases:
+            with patch.object(controller, method, side_effect=error_type("student mistake")):
+                app.lesson.set(LESSONS[lesson])
+                app.select_lesson()
+                app.task.set(TASKS[lesson][task])
+                app.load_task()
+                app.toggle_running()
+                wait_for_ui(root, lambda: "student mistake" in app.status.get(),
+                            description=f"handled {error_type.__name__} in {task}")
+                assert app.session.state == "Paused"
+                assert error_type.__name__ in app.status.get()
+                assert "Check your implementation:" in app.status.get()
+                assert app.session.robot.command.vx == app.session.robot.command.omega == 0
+                if lesson == "5":
+                    assert tuple(app.session.laboratory.dq) == (0, 0)
+                else:
+                    assert app.session.robot.wheel_velocities == (0, 0)
+                assert root.tk.call("after", "info", app._timer)
+                assert not callback_errors
+        app.lesson.set(LESSONS["1"])
+        app.select_lesson()
+        app.single_step()
+        assert app.session.sim.steps == 1
+        assert not app._notice and not callback_errors
+    finally:
+        app.close()
+
+
+@desktop_process
+def test_lesson2_exceptions_are_handled_during_startup_and_rendering(tmp_path):
+    import tkinter as tk
+    from unittest.mock import patch
+    import robotics_sim.app as application
+    from robotics_sim.session import TASKS
+
+    root = tk.Tk()
+    callback_errors = []
+    root.report_callback_exception = lambda *error: callback_errors.append(error)
+    with patch.object(application, "solve_planar_task", side_effect=NameError("bad planar formula")):
+        app = application.SimulatorApp(root, lesson="2", settings_path=tmp_path / "static-errors.json")
+        try:
+            assert "NameError: bad planar formula" in app.status.get()
+            assert "not implemented" not in app.values.get().lower()
+            app._render()
+            root.update()
+            assert not callback_errors
+            with patch.object(application.module2.spatial, "solve_spatial_task",
+                              side_effect=IndexError("bad transform index")):
+                app.task.set(TASKS["2"]["spatial"])
+                app.load_task()
+                app._render()
+                root.update()
+                assert "IndexError: bad transform index" in app.status.get()
+            with patch.object(application, "point_in_world", side_effect=AttributeError("bad frame")):
+                for task in ("frames", "static"):
+                    app.task.set(TASKS["2"][task])
+                    app.load_task()
+                    app._render()
+                    root.update()
+                    assert "AttributeError: bad frame" in app.status.get()
+            assert not callback_errors
+            assert app.session.world.physics.connected
+        finally:
+            app.close()
+
+
+@desktop_process
+def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(tmp_path):
+    import json
+    import tkinter as tk
+    from unittest.mock import patch
+    from robotics_sim.app import SimulatorApp
+    from robotics_sim.exercises.lesson04.lidar import StudentLidar
+    from robotics_sim.session import LESSONS, TASKS
+
+    settings = tmp_path / "loading-error.json"
+    settings.write_text(json.dumps({"lesson": "4", "task": "sensor_lidar", "sensor_mode": "student"}))
+    root = tk.Tk()
+    with patch.object(StudentLidar, "directions", side_effect=RuntimeError("bad scan directions")), \
+         patch("robotics_sim.app.messagebox.showerror") as showerror:
+        app = SimulatorApp(root, settings_path=settings)
+        try:
+            assert app.session.lesson == "1" and app.session.task == "straight"
+            assert "RuntimeError: bad scan directions" in app.status.get()
+            assert showerror.call_count == 1
+            previous = app.session
+            app.lesson.set(LESSONS["4"])
+            app.select_lesson()
+            assert app.session is previous
+            assert app.lesson_id == "1" and app.task.get() == TASKS["1"]["straight"]
+            assert showerror.call_count == 2
+            assert previous.world.physics.connected
+            app._render()
+            root.update()
+        finally:
+            app.close()
+
+
+@desktop_process
 def test_saved_student_kinematics_opens_and_uses_the_todo_warning(tmp_path):
     import json
     import tkinter as tk

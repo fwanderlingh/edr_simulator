@@ -5,6 +5,7 @@ from .control import ReferencePoseController
 
 
 class ReferenceWaypointController(WaypointController):
+    # The same inherited initializer now creates ReferencePoseController objects.
     pose_controller_class = ReferencePoseController
 
     def wheel_command(self, pose, r, L):

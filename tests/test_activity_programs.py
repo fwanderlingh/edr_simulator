@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from robotics_sim import Pose, Robot, Simulator, World
+from robotics_sim.exercise_checks import ExerciseChecks
 from robotics_sim.exercises.lesson01 import circle, square, straight
 from robotics_sim.session import ActivitySession
 
@@ -99,6 +100,9 @@ def test_lesson_callbacks_preserve_motion_and_reset(lesson, task, vx, omega):
     for _ in range(2):
         session = ActivitySession(lesson, task, duration=0.03, dt=0.01)
         try:
+            checks = ExerciseChecks(session)
+            if lesson in ("3", "4"):
+                assert not all(passed for _, passed in checks.evaluate())
             initial = session.robot.pose()
             session.step(single=True)
             assert session.robot.command.vx == pytest.approx(vx)
@@ -114,6 +118,8 @@ def test_lesson_callbacks_preserve_motion_and_reset(lesson, task, vx, omega):
             assert session.state == "Completed"
             assert session.robot.command.vx == session.robot.command.omega == 0
             assert session.sim.steps == 3
+            if lesson in ("3", "4"):
+                assert all(passed for _, passed in checks.evaluate())
         finally:
             session.close()
 

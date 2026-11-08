@@ -7,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from robotics_sim import Pose
+from robotics_sim.exercise_checks import ExerciseChecks
 from robotics_sim.exercises.lesson03.proportional import StudentProportionalController
 from robotics_sim.sim.references.proportional_control import ReferenceProportionalController
 from robotics_sim.exercises.lesson03 import activity
@@ -24,6 +25,8 @@ def test_reference_reaches_front_goal_and_exports_results(gain, tmp_path, monkey
         assert isinstance(session.controller, ReferenceProportionalController)
         assert session.state == "Ready" and session.robot.wheel_velocities == (0, 0)
         assert session.controller.gain == gain
+        checks = ExerciseChecks(session)
+        assert not all(passed for _, passed in checks.evaluate())
         session.step(single=True)
         assert session.robot.wheel_velocities == pytest.approx((gain / .12, gain / .12))
         session.start()
@@ -44,6 +47,7 @@ def test_reference_reaches_front_goal_and_exports_results(gain, tmp_path, monkey
         assert rows[-1]["completed_waypoints"] == "1"
         assert rows[-1]["left_rad_s"] == rows[-1]["right_rad_s"] == "0.0"
         assert all(None not in row for row in rows)
+        assert all(passed for _, passed in checks.evaluate())
     finally:
         session.close()
 
@@ -96,6 +100,7 @@ def test_common_wheel_limit_and_timeout_stop_the_robot():
         assert session.state == "Completed" and session.outcome == "TIMEOUT"
         assert session.controller.index == 0
         assert session.robot.wheel_velocities == (0, 0)
+        assert not all(passed for _, passed in ExerciseChecks(session).evaluate())
     finally:
         session.close()
 

@@ -85,8 +85,9 @@ inverse-kinematics equations. No waypoint index is needed in this exercise.
 
 The editable settings at the top of `control.py` are `GOAL`, `GAIN`,
 `GAIN_BEARING`, `GAIN_HEADING`, `EPS_POS`, `EPS_ANGLE`, `ANGLE_IN`, `ANGLE_OUT`
-and `WHEEL_MAX` (rad/s). Both models use these settings. Validation, wheel limits,
-CSV recording and the standalone runner are supplied in `_control_runtime.py`.
+and `WHEEL_MAX` (rad/s). Both models use these settings. Controller validation
+and wheel limits are supplied in `_control_runtime.py`; the UI session owns
+the simulation loop and CSV recording.
 The corresponding solution is
 [`ReferencePoseController`](../../sim/references/control.py).
 Use **Reach a goal: pose behind robot** to test the same pose controller's
@@ -124,13 +125,6 @@ goal active before the step; `completed_waypoints` counts arrivals after it.
 DONE means all targets were reached; TIMEOUT stops without claiming completion.
 To test the common speed limit, change `WHEEL_MAX` in `control.py` and restart.
 Both exercises use ground-truth poses; Lesson 4 introduces sensor-based estimates.
-
-Standalone reference comparisons, from `simulator/`:
-
-```bash
-python -m robotics_sim.exercises.lesson03.control --model reference
-python -m robotics_sim.exercises.lesson03.waypoint --model reference
-```
 
 ## Scene and robot commands
 
