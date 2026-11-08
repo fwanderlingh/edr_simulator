@@ -12,7 +12,7 @@ from ._control_runtime import PoseController, wrap
 
 
 GOAL = (1.0, 0.5, math.pi / 2)  # x [m], y [m], heading [rad]
-GAIN = 0.8                  # 1/s; forward speed from position error
+GAIN_POS = 0.8              # k_rho [1/s]; forward speed from position error
 GAIN_BEARING = 2.0          # 1/s; turn toward the goal
 GAIN_HEADING = 1.5          # 1/s; align the final heading
 EPS_POS = 0.03              # m
@@ -27,7 +27,7 @@ class StudentPoseController(PoseController):
         """Return (w_left, w_right) in rad/s for self.goal (x, y, heading).
 
         The robot supplies pose (x, y, yaw), wheel radius r and track width L.
-        Read self.gain, self.gain_bearing, self.gain_heading, self.eps_pos,
+        Read self.gain_pos, self.gain_bearing, self.gain_heading, self.eps_pos,
         self.eps_angle, self.angle_in and self.angle_out. Initially phase is TURN.
 
         self.done is an inherited, read-only @property: Python evaluates

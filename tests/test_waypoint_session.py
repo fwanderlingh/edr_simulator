@@ -117,7 +117,7 @@ def test_student_computes_wheel_references_without_automatic_inverse(monkeypatch
 @pytest.mark.parametrize("model", ["student", "reference"])
 @pytest.mark.parametrize("task", ["drive_goal", "drive_waypoints"])
 def test_exercise_settings_reach_both_controller_models(monkeypatch, model, task):
-    monkeypatch.setattr(control, "GAIN", .25)
+    monkeypatch.setattr(control, "GAIN_POS", .25)
     monkeypatch.setattr(control, "EPS_POS", .05)
     monkeypatch.setattr(control, "GAIN_BEARING", 3.0)
     monkeypatch.setattr(control, "GAIN_HEADING", 1.2)
@@ -129,7 +129,7 @@ def test_exercise_settings_reach_both_controller_models(monkeypatch, model, task
     try:
         ctrl = session.controller
         for configured in ([ctrl, ctrl.pose_controller] if task == "drive_waypoints" else [ctrl]):
-            assert (configured.gain, configured.eps_pos) == (.25, .05)
+            assert (configured.gain_pos, configured.eps_pos) == (.25, .05)
             assert (configured.gain_bearing, configured.gain_heading, configured.eps_angle) == (3.0, 1.2, .02)
             assert (configured.angle_in, configured.angle_out, configured.wheel_max) == (.04, .5, 2.0)
         assert session.sim.steps == 0

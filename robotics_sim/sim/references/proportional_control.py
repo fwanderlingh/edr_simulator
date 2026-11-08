@@ -10,7 +10,7 @@ class ReferenceProportionalController(ProportionalController):
         gx, gy, _ = self.goal
         ex, ey = gx - pose.x, gy - pose.y
         rho = math.hypot(ex, ey)  # Distance sqrt(ex² + ey²), in metres.
-        v = self.gain * rho if rho > self.eps_pos else 0.0
+        v = self.gain_pos * rho if rho > self.eps_pos else 0.0
         omega = 0.0
         # Convert (v, omega) using the complete inverse-kinematics equations.
         w_left = (v - L * omega / 2) / r

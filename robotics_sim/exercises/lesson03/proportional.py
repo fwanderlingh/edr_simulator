@@ -10,7 +10,7 @@ from ._proportional_runtime import ProportionalController
 
 
 GOAL = (1.0, 0.0, 0.0)       # x [m], y [m], heading [rad]; goal straight ahead
-GAIN = 0.4                   # 1/s
+GAIN_POS = 0.4               # k_rho [1/s]
 EPS_POS = 0.03               # m
 
 
@@ -18,11 +18,11 @@ class StudentProportionalController(ProportionalController):
     def wheel_command(self, pose, r, L):
         """Return (w_left, w_right) in rad/s for the goal straight ahead.
 
-        Available data: self.goal (x,y,θ), self.gain, self.eps_pos and pose (x,y,θ).
+        Available data: self.goal (x,y,θ), self.gain_pos, self.eps_pos and pose (x,y,θ).
         The robot supplies r (wheel radius, m) and L (track width, m).
 
         1. Compute ex, ey and the full position error rho = math.hypot(ex, ey).
-        2. Use gain * rho as forward speed, or zero within position tolerance.
+        2. Use self.gain_pos * rho as forward speed, or zero within position tolerance.
         3. Set omega = 0.0 and calculate both wheel references with the complete
            inverse-kinematics equations using r and L; do not simplify to v/r.
         4. Return the two values; the supplied loop applies them to the robot.

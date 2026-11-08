@@ -50,7 +50,9 @@ w_right = (v + L * omega / 2) / r
 The method `wheel_command(self, pose, r, L)` receives the robot's wheel radius
 `r` and track width `L` in metres. Keep the complete equations even when
 `omega` is zero. The available controller parameters are `self.goal`,
-`self.gain` and `self.eps_pos`.
+`self.gain_pos` and `self.eps_pos`.
+`GAIN_POS` (available as `self.gain_pos`) is the position-error gain `k_rho`
+from the notes, shared in name with the following pose-control exercise.
 The exercise intentionally asks for wheel references rather than a body command.
 
 Choose **student** in **CONTROLLER MODEL**, save and click **Reload exercise** after editing.
@@ -58,8 +60,8 @@ The scene, wheel-command application, common actuator limit, arrival detection
 and CSV recording are supplied. The activity remains inspectable before an
 unfinished method is first called with Start/Step. Use a 20-second duration and
 compare the wheel speeds, position error and `DONE`/`TIMEOUT` outcome. The defaults are
-`GAIN=0.4`, `EPS_POS=0.03 m` and a supplied wheel limit of 5 rad/s.
-The exercise file exposes `GOAL`, `GAIN` and `EPS_POS` at the top;
+`GAIN_POS=0.4`, `EPS_POS=0.03 m` and a supplied wheel limit of 5 rad/s.
+The exercise file exposes `GOAL`, `GAIN_POS` and `EPS_POS` at the top;
 both models use these parameters. Simulator plumbing is kept in
 `_proportional_runtime.py`, outside the method to complete.
 After your attempt, choose **reference** to compare with
@@ -88,7 +90,7 @@ ALIGN for TURN, compute the bearing error with
 Choose `(v, omega)` using the updated phase, then calculate both complete
 inverse-kinematics equations. No waypoint index is needed in this exercise.
 
-The editable settings at the top of `control.py` are `GOAL`, `GAIN`,
+The editable settings at the top of `control.py` are `GOAL`, `GAIN_POS`,
 `GAIN_BEARING`, `GAIN_HEADING`, `EPS_POS`, `EPS_ANGLE`, `ANGLE_IN`, `ANGLE_OUT`
 and `WHEEL_MAX` (rad/s). Both models use these settings. Controller validation
 and wheel limits are supplied in `_control_runtime.py`; the UI session owns

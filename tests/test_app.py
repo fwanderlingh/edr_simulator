@@ -588,7 +588,7 @@ def test_reload_button_loads_saved_fixes_and_recovers_from_invalid_source(tmp_pa
         return dedent('''\
             from ._control_runtime import PoseController
             GOAL = (1, .5, 0)
-            GAIN = .8
+            GAIN_POS = .8
             GAIN_BEARING = 2.0
             GAIN_HEADING = 1.5
             EPS_POS = .03

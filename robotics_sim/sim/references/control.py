@@ -16,18 +16,18 @@ class ReferencePoseController(PoseController):
         elif self.phase == "ALIGN":
             self.phase = "TURN"
         if self.phase == "ALIGN":
-            error = wrap(gt - pose.yaw)
-            if abs(error) <= self.eps_angle:
+            align_error = wrap(gt - pose.yaw)
+            if abs(align_error) <= self.eps_angle:
                 self.phase = "DONE"
                 return 0.0, 0.0
-            v, omega = 0.0, self.gain_heading * error
+            v, omega = 0.0, self.gain_heading * align_error
         else:
             alpha = wrap(math.atan2(gy - pose.y, gx - pose.x) - pose.yaw)
             if self.phase == "TURN" and abs(alpha) <= self.angle_in:
                 self.phase = "DRIVE"
             elif self.phase == "DRIVE" and abs(alpha) > self.angle_out:
                 self.phase = "TURN"
-            v = self.gain * rho if self.phase == "DRIVE" else 0.0
+            v = self.gain_pos * rho if self.phase == "DRIVE" else 0.0
             omega = self.gain_bearing * alpha
         w_left = (v - L * omega / 2) / r
         w_right = (v + L * omega / 2) / r

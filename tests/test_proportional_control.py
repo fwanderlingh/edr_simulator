@@ -15,20 +15,20 @@ from robotics_sim.robots.differential_drive import ReferenceDifferentialDrive
 from robotics_sim.session import ACTIVITY_FILES, ActivitySession, TASKS
 
 
-@pytest.mark.parametrize("gain", [0.4, 0.2])
-def test_reference_reaches_front_goal_and_exports_results(gain, tmp_path, monkeypatch):
-    monkeypatch.setattr(activity, "GAIN", gain)
+@pytest.mark.parametrize("gain_pos", [0.4, 0.2])
+def test_reference_reaches_front_goal_and_exports_results(gain_pos, tmp_path, monkeypatch):
+    monkeypatch.setattr(activity, "GAIN_POS", gain_pos)
     session = ActivitySession("3", "drive_proportional", duration=20, dt=1 / 120)
     try:
         assert "drive_proportional" in TASKS["3"]
         assert ACTIVITY_FILES["drive_proportional"][1].endswith("lesson03/proportional.py")
         assert isinstance(session.controller, ReferenceProportionalController)
         assert session.state == "Ready" and session.robot.wheel_velocities == (0, 0)
-        assert session.controller.gain == gain
+        assert session.controller.gain_pos == gain_pos
         checks = ExerciseChecks(session)
         assert not all(passed for _, passed in checks.evaluate())
         session.step(single=True)
-        assert session.robot.wheel_velocities == pytest.approx((gain / .12, gain / .12))
+        assert session.robot.wheel_velocities == pytest.approx((gain_pos / .12, gain_pos / .12))
         session.start()
         while session.state == "Running":
             session.step()
@@ -92,7 +92,7 @@ def test_student_values_are_applied_as_wheel_references(monkeypatch, r, L):
 def test_common_wheel_limit_and_timeout_stop_the_robot():
     session = ActivitySession("3", "drive_proportional", duration=.02, dt=.01)
     try:
-        session.controller.gain = 4
+        session.controller.gain_pos = 4
         session.step(single=True)
         assert session.robot.wheel_velocities == pytest.approx((5, 5))
         assert session.controller.scale == pytest.approx(.15)
@@ -112,7 +112,7 @@ def test_reference_uses_both_position_error_components(pose):
     controller = ReferenceProportionalController()
     gx, gy, _ = controller.goal
     rho = math.hypot(gx - pose.x, gy - pose.y)
-    speed = controller.gain * rho if rho > controller.eps_pos else 0.0
+    speed = controller.gain_pos * rho if rho > controller.eps_pos else 0.0
     assert controller.wheel_command(pose, .12, .42) == pytest.approx((speed / .12, speed / .12))
     if rho > controller.eps_pos:
         assert speed > 0  # A small x error alone must not trigger the stop.
