@@ -18,39 +18,67 @@ Set-StrictMode -Version Latest
 $simulatorRoot = $PSScriptRoot
 $toolsDirectory = Join-Path $simulatorRoot '.tools'
 $runtimeDirectory = Join-Path $simulatorRoot '.conda'
-$mambaExecutable = Join-Path $toolsDirectory 'Library/bin/micromamba.exe'
+# 2.6+ uses a deep channel/platform cache hierarchy that can exceed Windows
+# path limits. Keep this versioned so existing installs also receive the fix.
+$mambaRelease = '2.5.0-2'
+$mambaExecutable = Join-Path $toolsDirectory "Library/bin/micromamba-$mambaRelease.exe"
 $env:MAMBA_ROOT_PREFIX = Join-Path $simulatorRoot '.mamba'
+# Bypass incomplete hierarchical caches left by the previous launcher. Also
+# isolate downloads/cleanup from any global Conda package cache configuration.
+$env:CONDA_PKGS_DIRS = Join-Path $env:MAMBA_ROOT_PREFIX 'pkgs-flat'
 $env:PYTHONNOUSERSITE = '1'
 $env:CONDA_PREFIX = $runtimeDirectory
 $env:PATH = "$runtimeDirectory;$(Join-Path $runtimeDirectory 'Library/bin');$(Join-Path $runtimeDirectory 'Scripts');$env:PATH"
 $pythonExecutable = Join-Path $runtimeDirectory 'python.exe'
 
-try {
+function Initialize-EnvironmentManager {
     if (-not (Test-Path -LiteralPath $mambaExecutable)) {
         Write-Host 'First-time setup: downloading the local environment manager.'
         Write-Host 'An internet connection is required for setup. Nothing is installed globally.'
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $mambaExecutable) | Out-Null
         $partialDownload = "$mambaExecutable.download"
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/mamba-org/micromamba-releases/releases/latest/download/micromamba-win-64.exe' -OutFile $partialDownload
+        Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/mamba-org/micromamba-releases/releases/download/$mambaRelease/micromamba-win-64.exe" -OutFile $partialDownload
+        $expectedHash = 'BAF6D56A31A63A75F0C77BDCE27FEFEA57B1BDC8AA25B50A1BE45696C0E737E7'
+        if ((Get-FileHash -LiteralPath $partialDownload -Algorithm SHA256).Hash -ne $expectedHash) {
+            throw 'The environment manager download failed its integrity check. Rerun this launcher to download it again.'
+        }
         Move-Item -LiteralPath $partialDownload -Destination $mambaExecutable -Force
     }
+}
 
-    $runtimeReady = $false
-    if (Test-Path -LiteralPath $pythonExecutable) {
-        & $pythonExecutable -c 'import sys, numpy, pybullet, tkinter; from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg; assert sys.version_info[:2] == (3, 12)'
-        $runtimeReady = $LASTEXITCODE -eq 0
+function Test-Runtime {
+    if (-not (Test-Path -LiteralPath $pythonExecutable)) { return $false }
+    & $pythonExecutable -c 'import sys, numpy, pybullet, tkinter; from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg; assert sys.version_info[:2] == (3, 12)' | Out-Host
+    return $LASTEXITCODE -eq 0
+}
+
+function Clear-PackageCache {
+    & $mambaExecutable clean --all --yes --no-rc | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning 'Setup succeeded, but the downloaded package cache could not be cleaned. You can still run the simulator.'
     }
+}
+
+try {
+    $runtimeReady = Test-Runtime
     if (-not $runtimeReady) {
+        Initialize-EnvironmentManager
         Write-Host 'Setting up Python 3.12, the physics engine and plotting tools. This may take a few minutes.'
         $environmentFile = Join-Path $simulatorRoot 'environment-win-64.lock'
         if (-not (Test-Path -LiteralPath $environmentFile)) {
             $environmentFile = Join-Path $simulatorRoot 'environment.yml'
         }
         $environmentCommand = if (Test-Path -LiteralPath $pythonExecutable) { 'install' } else { 'create' }
-        & $mambaExecutable $environmentCommand --yes --no-rc --prefix $runtimeDirectory --file $environmentFile
-        if ($LASTEXITCODE -ne 0) { throw 'Environment setup failed. Check your connection and rerun this launcher.' }
-        & $mambaExecutable clean --all --yes --no-rc | Out-Null
+        # A failed extraction can leave package records present but files missing.
+        # Reinstall those packages when repairing an unusable existing runtime.
+        $repairArguments = if ($environmentCommand -eq 'install') { @('--force-reinstall') } else { @() }
+        & $mambaExecutable $environmentCommand --yes --no-rc --prefix $runtimeDirectory --file $environmentFile @repairArguments
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Environment setup failed. Read the libmamba error above. For cache/path errors, close other launchers and retry from a short writable path (for example C:\robotica). For download errors, check your connection. See README.md: Windows setup errors.'
+        }
+        if (-not (Test-Runtime)) { throw 'The Python runtime is incomplete. Rerun this launcher to retry setup.' }
+        Clear-PackageCache
     }
     if ($SetupOnly) {
         Write-Host 'Setup complete. Double-click start-simulator.cmd to open the laboratory.'
@@ -62,9 +90,10 @@ try {
         if ($Test) {
             & $pythonExecutable -c 'import importlib.util, sys; sys.exit(importlib.util.find_spec(\"pytest\") is None)'
             if ($LASTEXITCODE -ne 0) {
+                Initialize-EnvironmentManager
                 & $mambaExecutable install --yes --no-rc --prefix $runtimeDirectory 'pytest>=8,<9'
                 if ($LASTEXITCODE -ne 0) { throw 'Could not install pytest.' }
-                & $mambaExecutable clean --all --yes --no-rc | Out-Null
+                Clear-PackageCache
             }
             & $pythonExecutable -m pytest tests
         } else {

@@ -57,6 +57,28 @@ let each computer create its own environment.
 For Module 1, choose **Lesson 2 - Frames and transformations** and
 then **Module 1: Planar transforms**.
 
+### Windows setup errors
+
+If setup reports `Invalid package cache` followed by `remove_all: The directory
+is not empty` under `.mamba\pkgs\https\...`, the local package cache is incomplete.
+Windows path limits can cause this with recent micromamba versions; the final
+launcher message about the connection does not identify the actual cause.
+
+Close all simulator/installer windows, replace `start-simulator.ps1` with the
+updated version from the course distribution, and double-click
+`start-simulator.cmd` again with an internet connection. The updated launcher
+uses micromamba **2.5.0** (release `2.5.0-2`) and a separate, shorter
+`.mamba\pkgs-flat` cache, bypassing the damaged cache. Exercise files and an
+already working `.conda` runtime are preserved; working installations do not
+need another download.
+
+If setup still fails, use a short writable folder such as `C:\robotica` if
+available (avoid deeply nested or cloud-synced folders). Copy the source and
+your exercise files there, leaving `.conda`, `.mamba`, and `.tools` behind,
+then rerun the launcher to create a fresh runtime. Do not copy an existing
+`.conda` runtime to a different path. If the error persists, send the instructor
+the complete output, including the first libmamba error above the final message.
+
 ### Exercises you complete
 
 Lesson 1 provides ready-to-run motion previews, including the square; no code
