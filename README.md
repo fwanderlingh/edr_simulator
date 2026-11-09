@@ -47,7 +47,10 @@ bash start-simulator.sh
 **Windows 10/11, 64-bit:** double-click `start-simulator.cmd`.
 
 No separately installed Python, Conda, compiler, administrator access, or
-environment activation is required. Ubuntu needs a desktop session for the GUI;
+environment activation is required. On Windows, the `bootstrap/win-64` folder
+supplies private Visual C++ runtime DLLs for the environment manager; no separate
+VC Redistributable installation is required. Keep this folder with the launcher.
+Ubuntu needs a desktop session for the GUI;
 use headless mode on servers. For a class without internet, first run
 `bash start-simulator.sh --setup-only` on Ubuntu or
 `& './start-simulator.cmd' -SetupOnly` in PowerShell on each Windows machine.
@@ -58,6 +61,12 @@ For Module 1, choose **Lesson 2 - Frames and transformations** and
 then **Module 1: Planar transforms**.
 
 ### Windows setup errors
+
+If Windows reports missing `MSVCP140.dll`, `VCRUNTIME140.dll`, or
+`VCRUNTIME140_1.dll`, update both `start-simulator.ps1` and the complete
+`bootstrap` folder from the course distribution, then run `start-simulator.cmd`.
+The launcher verifies and copies the supplied DLLs beside micromamba under
+`.tools`; it does not install or change any system libraries.
 
 If setup reports `Invalid package cache` followed by `remove_all: The directory
 is not empty` under `.mamba\pkgs\https\...`, the local package cache is incomplete.

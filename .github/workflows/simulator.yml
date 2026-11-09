@@ -23,3 +23,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./start-simulator.cmd -Test
+      - name: Verify private Windows bootstrap libraries
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./tests/test_windows_bootstrap.ps1

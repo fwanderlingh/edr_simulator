@@ -31,7 +31,52 @@ $env:CONDA_PREFIX = $runtimeDirectory
 $env:PATH = "$runtimeDirectory;$(Join-Path $runtimeDirectory 'Library/bin');$(Join-Path $runtimeDirectory 'Scripts');$env:PATH"
 $pythonExecutable = Join-Path $runtimeDirectory 'python.exe'
 
+function Get-LocalSha256 {
+    param([string]$Path)
+    # Use .NET directly: Get-FileHash is unavailable in some student shells.
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $stream = [IO.File]::OpenRead($Path)
+        try {
+            return [BitConverter]::ToString($sha256.ComputeHash($stream)).Replace('-', '')
+        } finally {
+            $stream.Dispose()
+        }
+    } finally {
+        $sha256.Dispose()
+    }
+}
+
+function Initialize-WindowsLibraries {
+    # The Windows micromamba build dynamically links the VC runtime. Deploy
+    # private copies before its first invocation, including on existing installs.
+    $bootstrapDirectory = Join-Path $simulatorRoot 'bootstrap/win-64'
+    $libraryHashes = @{
+        'msvcp140.dll' = '7C26614E1D733892C2DEAC7E245CE115504B1D80592DD0A01B08E3E5A55F89CA'
+        'vcruntime140.dll' = 'D1F4225DF2CD877DBF130D5668A021DCE3F94118455FF5EC952061C30AFC9CE7'
+        'vcruntime140_1.dll' = 'A7146C08F89FE5B04541AB507CDB59FF7B44534D4BA3C668A426C6450A03434E'
+    }
+    foreach ($name in $libraryHashes.Keys) {
+        $source = Join-Path $bootstrapDirectory $name
+        if (-not (Test-Path -LiteralPath $source)) {
+            throw "Missing bootstrap library: $source. Copy the complete bootstrap folder from the updated simulator distribution."
+        }
+        if ((Get-LocalSha256 $source) -ne $libraryHashes[$name]) {
+            throw "Bootstrap library failed its integrity check: $source. Replace the bootstrap folder from the simulator distribution."
+        }
+    }
+    $managerDirectory = Split-Path -Parent $mambaExecutable
+    New-Item -ItemType Directory -Force -Path $managerDirectory | Out-Null
+    foreach ($name in $libraryHashes.Keys) {
+        $destination = Join-Path $managerDirectory $name
+        if ((Test-Path -LiteralPath $destination) -and
+            (Get-LocalSha256 $destination) -eq $libraryHashes[$name]) { continue }
+        Copy-Item -LiteralPath (Join-Path $bootstrapDirectory $name) -Destination $destination -Force
+    }
+}
+
 function Initialize-EnvironmentManager {
+    Initialize-WindowsLibraries
     if (-not (Test-Path -LiteralPath $mambaExecutable)) {
         Write-Host 'First-time setup: downloading the local environment manager.'
         Write-Host 'An internet connection is required for setup. Nothing is installed globally.'
@@ -40,7 +85,7 @@ function Initialize-EnvironmentManager {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/mamba-org/micromamba-releases/releases/download/$mambaRelease/micromamba-win-64.exe" -OutFile $partialDownload
         $expectedHash = 'BAF6D56A31A63A75F0C77BDCE27FEFEA57B1BDC8AA25B50A1BE45696C0E737E7'
-        if ((Get-FileHash -LiteralPath $partialDownload -Algorithm SHA256).Hash -ne $expectedHash) {
+        if ((Get-LocalSha256 $partialDownload) -ne $expectedHash) {
             throw 'The environment manager download failed its integrity check. Rerun this launcher to download it again.'
         }
         Move-Item -LiteralPath $partialDownload -Destination $mambaExecutable -Force

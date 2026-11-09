@@ -43,9 +43,37 @@ class StudentPoseController(PoseController):
         separately. The simulator applies your returned speeds unchanged;
         the wheel-speed check fails if your saturation is missing or incorrect.
         """
+        if self.phase == "DONE":
+            return 0.0, 0.0
+        gx, gy, gt = self.goal
+        rho = math.hypot(gx - pose.x, gy - pose.y)
+        if rho <= self.eps_pos:
+            self.phase = "ALIGN"
+        elif self.phase == "ALIGN":
+            self.phase = "TURN"
+        if self.phase == "ALIGN":
+            align_error = wrap(gt - pose.yaw)
+            if (align_error) <= self.eps_angle:
+                self.phase = "DONE"
+                return 0.0, 0.0
+            v, omega = 0.0, self.gain_heading * align_error
+        else:
+            goal_angle = math.atan2(gy - pose.y, gx -pose.x)
+            alpha = wrap(goal_angle - pose.yaw)
+            if self.phase == "TURN" and abs(alpha <= self.angle_in):
+                self.phase = "DRIVE"
+            elif self.phase == "DRIVE" and abs(alpha > self.angle_out):
+                self.phase = "TURN"
+            if self.phase == "DRIVE":
+                v = self.gain_pos * rho
+            else:
+                v = 0.0;
+            omega = self.gain_bearing * alpha
+                
+        w_left = (v - L * omega/2) / r     
+        w_right = (v + L * omega/2) / r        
         
-        # TODO: errors -> phase -> (v, omega) -> wheel references -> common saturation.
-        raise NotImplementedError(
-            "Complete StudentPoseController.wheel_command in "
-            "robotics_sim/exercises/lesson03/control.py."
-        )
+        
+        w_appl_L = w_left
+        w_appl_R = w_right
+        return w_appl_L, w_appl_R
