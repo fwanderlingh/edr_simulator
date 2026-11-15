@@ -50,7 +50,7 @@ class StudentWaypointController(WaypointController):
         4. Otherwise return the current pose controller's wheel references.
         """
         # TODO: current pose controller -> arrival -> next waypoint or DONE.
+        # TODO: implement the behavior described above.
         raise NotImplementedError(
-            "Complete StudentWaypointController.wheel_command in "
-            "robotics_sim/exercises/lesson03/waypoint.py."
+            "Complete StudentWaypointController.wheel_command in exercises/lesson03/waypoint.py"
         )

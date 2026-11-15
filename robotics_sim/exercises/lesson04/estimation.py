@@ -3,6 +3,7 @@
 Choose Lesson 4 > Compare encoder and IMU, select the student estimator,
 then save your implementation and click Reload exercise.
 Complete the two Student.update methods after the guided exercise in the notes.
+Reference: robotics_sim/sim/references/estimation.py.
 """
 
 from ._runtime import InertialState, OdometryState
@@ -21,7 +22,10 @@ class StudentOdometry(OdometryState):
         Use constant-arc or midpoint integration, as in Lesson 3.
         """
         # TODO: wheel increments -> ds, da -> pose; never use ground truth here.
-        raise NotImplementedError("Complete StudentOdometry.update in lesson04/estimation.py")
+        # TODO: implement the behavior described above.
+        raise NotImplementedError(
+            "Complete StudentOdometry.update in exercises/lesson04/estimation.py"
+        )
 
 
 class StudentInertial(InertialState):
@@ -32,4 +36,7 @@ class StudentInertial(InertialState):
         for the explicitly orientation-assisted comparison. All states start at 0.
         """
         # TODO: yaw -> acceleration in world -> position and velocity integration.
-        raise NotImplementedError("Complete StudentInertial.update in lesson04/estimation.py")
+        # TODO: implement the behavior described above.
+        raise NotImplementedError(
+            "Complete StudentInertial.update in exercises/lesson04/estimation.py"
+        )

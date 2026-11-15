@@ -8,6 +8,7 @@ from robotics_sim import Pose, World
 from robotics_sim.session import ActivitySession
 from robotics_sim.exercises.lesson04.sensors.encoder import EncoderSensor
 from robotics_sim.exercises.lesson04.sensors.lidar import LidarSensor
+from robotics_sim.sim.references.lidar import ReferenceLidar
 
 
 def test_encoder_increments_quantization_and_cached_reads():
@@ -25,10 +26,11 @@ def test_encoder_increments_quantization_and_cached_reads():
     assert measured == pytest.approx((2, -1), abs=2 * noisy.resolution)
 
 
-def test_lidar_known_distance_miss_and_rotated_mount():
+@pytest.mark.parametrize("sensor_class", [LidarSensor, ReferenceLidar])
+def test_lidar_known_distance_miss_and_rotated_mount(sensor_class):
     with World(gui=False) as world:
         world.add_box(Pose(x=2, z=0.5), size=(0.2, 1, 1))
-        lidar = LidarSensor(world, angles=[0, math.pi / 2])
+        lidar = sensor_class(world, angles=[0, math.pi / 2])
         assert lidar.sample(Pose()) == pytest.approx((1.9, 4))
         assert list(lidar.hits) == [True, False]
         assert lidar.sample(Pose(yaw=-math.pi / 2)) == pytest.approx((4, 1.9))

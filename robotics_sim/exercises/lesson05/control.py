@@ -18,4 +18,7 @@ class StudentArmController:
         velocities so neither exceeds max_speed in absolute value.
         """
         # TODO: error -> desired endpoint velocity -> damped inverse -> limit.
-        raise NotImplementedError("Complete StudentArmController.velocity in lesson05/control.py")
+        # TODO: implement the behavior described above.
+        raise NotImplementedError(
+            "Complete StudentArmController.velocity in exercises/lesson05/control.py"
+        )

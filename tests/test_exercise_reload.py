@@ -138,3 +138,34 @@ try:
 finally:
     session.close()
 ''')
+
+
+def test_lesson4_reload_refreshes_reference_files_and_their_consumers(tmp_path):
+    run_in_copy(tmp_path, r'''
+from robotics_sim.exercise_reload import reload_lesson
+from robotics_sim.exercises.lesson04 import gui
+from robotics_sim.exercises.lesson04.sensors import suite
+from robotics_sim.sim.references import avoidance, estimation, lidar, rangefinder, sensors
+from robotics_sim.session import ActivitySession
+
+previous = lidar.ReferenceLidar, rangefinder.ReferenceRangeStop
+reload_lesson("4")
+assert lidar.ReferenceLidar is not previous[0]
+assert rangefinder.ReferenceRangeStop is not previous[1]
+assert suite.ReferenceLidar is lidar.ReferenceLidar
+assert gui.ReferenceRangeStop is rangefinder.ReferenceRangeStop
+assert gui.ReferenceSectors is avoidance.ReferenceSectors
+assert gui.ReferenceObstacleSupervisor is avoidance.ReferenceObstacleSupervisor
+assert gui.ReferenceOdometry is estimation.ReferenceOdometry
+assert sensors.ReferenceRangeStop is rangefinder.ReferenceRangeStop
+assert sensors.ReferenceObstacleSupervisor is avoidance.ReferenceObstacleSupervisor
+
+session = ActivitySession("4", "sensor_front_stop")
+try:
+    assert type(session.sensors.lidar) is lidar.ReferenceLidar
+    assert type(session.laboratory.controller) is rangefinder.ReferenceRangeStop
+    session.step(single=True)
+    assert session.sim.steps == 1
+finally:
+    session.close()
+''')

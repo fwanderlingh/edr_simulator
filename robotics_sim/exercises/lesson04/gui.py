@@ -15,9 +15,9 @@ from ._runtime import rangefinder_parameters, supervisor_parameters
 from .rangefinder import StudentRangeStop
 from .avoidance import StudentObstacleSupervisor, StudentSectors
 from .estimation import StudentInertial, StudentOdometry
-from robotics_sim.sim.references.sensors import (
-    ReferenceInertial, ReferenceObstacleSupervisor, ReferenceOdometry, ReferenceRangeStop, ReferenceSectors,
-)
+from robotics_sim.sim.references.avoidance import ReferenceObstacleSupervisor, ReferenceSectors
+from robotics_sim.sim.references.estimation import ReferenceInertial, ReferenceOdometry
+from robotics_sim.sim.references.rangefinder import ReferenceRangeStop
 from .sensors.suite import SensorSuite
 
 

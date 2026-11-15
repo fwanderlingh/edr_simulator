@@ -3,6 +3,7 @@
 Choose Lesson 4 > Reach a goal and avoid an obstacle, select the student
 supervisor, then save your implementation and click Reload exercise.
 The student sector summary and supervisor command are deliberately unfinished.
+Reference: robotics_sim/sim/references/avoidance.py.
 """
 
 import math
@@ -31,7 +32,10 @@ class StudentSectors(SectorSummary):
         Assume valid data with all three sectors covered.
         Front: |bearing|<=30 degrees. Misses observe to max_range.
         """
-        raise NotImplementedError("Complete StudentSectors.summarize in lesson04/avoidance.py")
+        # TODO: implement the behavior described above.
+        raise NotImplementedError(
+            "Complete StudentSectors.summarize in exercises/lesson04/avoidance.py"
+        )
 
 
 class StudentObstacleSupervisor(ObstacleSupervisor):
@@ -50,4 +54,7 @@ class StudentObstacleSupervisor(ObstacleSupervisor):
         The supplied adapter converts/saturates body commands for the wheels;
         it does not call or replace your decision method.
         """
-        raise NotImplementedError("Complete StudentObstacleSupervisor.command in lesson04/avoidance.py")
+        # TODO: implement the behavior described above.
+        raise NotImplementedError(
+            "Complete StudentObstacleSupervisor.command in exercises/lesson04/avoidance.py"
+        )

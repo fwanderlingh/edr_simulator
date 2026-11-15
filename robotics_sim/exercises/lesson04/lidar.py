@@ -3,6 +3,7 @@
 Implement directions(), select student sensor mode, then click Reload exercise after saving.
 The sensor backend handles ray casting and range conversion.
 Angles are radians, x is forward, y is left, z is up.
+Reference: robotics_sim/sim/references/lidar.py.
 """
 
 from .sensors.lidar import LidarSensor

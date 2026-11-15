@@ -4,7 +4,7 @@ import math
 
 from .encoder import EncoderSensor
 from .imu import ImuSensor
-from .lidar import LidarSensor
+from robotics_sim.sim.references.lidar import ReferenceLidar
 from ..lidar import StudentLidar
 
 
@@ -19,7 +19,7 @@ class SensorSuite:
             lidar_model = "student" if mode == "student" else "reference"
         if lidar_model not in ("student", "reference"):
             raise ValueError("Choose reference or student lidar directions.")
-        self.lidar = (StudentLidar if lidar_model == "student" else LidarSensor)(
+        self.lidar = (StudentLidar if lidar_model == "student" else ReferenceLidar)(
             robot.world, noisy=noisy, angles=[0] if rangefinder else None)
         self.period_steps = max(1, math.ceil(0.1 / dt))
         self.time = 0.0

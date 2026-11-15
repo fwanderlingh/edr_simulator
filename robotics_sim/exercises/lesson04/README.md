@@ -113,4 +113,18 @@ uses the scan available before the physics step whose resulting pose is logged.
 Compare the same scene and duration with **reference** after your own attempt.
 Use exported data to explain where a nominal command was blocked, when a turn
 was authorized and whether the goal tolerance was reached. The implementations
-for comparison are in [references/sensors.py](../../sim/references/sensors.py).
+for comparison mirror the exercise filenames:
+
+| Exercise | Reference implementation |
+| --- | --- |
+| `lidar.py` | [references/lidar.py](../../sim/references/lidar.py): `ReferenceLidar.directions` |
+| `rangefinder.py` | [references/rangefinder.py](../../sim/references/rangefinder.py): `ReferenceRangeStop.command` |
+| `avoidance.py` | [references/avoidance.py](../../sim/references/avoidance.py): `ReferenceSectors.summarize`, `ReferenceObstacleSupervisor.command` |
+| `estimation.py` (additional activity) | [references/estimation.py](../../sim/references/estimation.py): `ReferenceOdometry.update`, `ReferenceInertial.update` |
+
+The simulator's **reference** mode uses these implementations. Their method
+signatures match the student methods. The LiDAR solution explicitly rotates ray
+directions with `R_w_b @ u_s`, following the notation of EDR.02 and EDR.04.
+Directions use only rotation; the homogeneous transformations of observed points
+use the additional coordinate 1. See the [instructor guide](../../sim/references/README.md)
+for the correspondence between the code and the notes.

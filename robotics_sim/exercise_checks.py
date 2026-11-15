@@ -10,7 +10,8 @@ import numpy as np
 
 from .exercises.lesson02 import activity as frames_activity
 from .exercises.lesson02 import module2
-from .sim.references.sensors import ReferenceInertial, ReferenceOdometry, ReferenceSectors
+from .sim.references.avoidance import ReferenceSectors
+from .sim.references.estimation import ReferenceInertial, ReferenceOdometry
 from .robots.differential_drive import ReferenceDifferentialDrive
 
 

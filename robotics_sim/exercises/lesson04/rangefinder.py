@@ -3,6 +3,7 @@
 Complete command(), save and click Reload exercise. Choose Lesson 4 >
 Reach a goal: front rangefinder stop > student. Pose comes from the simulator;
 the sensor measures the environment, not the robot position.
+Reference: robotics_sim/sim/references/rangefinder.py.
 """
 
 from ._runtime import ObstacleSupervisor
@@ -28,4 +29,7 @@ class StudentRangeStop(ObstacleSupervisor):
         One ray supports a front stop in the supplied straight scene; it does
         not provide side observations for choosing an avoidance manoeuvre.
         """
-        raise NotImplementedError("Complete StudentRangeStop.command in lesson04/rangefinder.py")
+        # TODO: implement the behavior described above.
+        raise NotImplementedError(
+            "Complete StudentRangeStop.command in exercises/lesson04/rangefinder.py"
+        )

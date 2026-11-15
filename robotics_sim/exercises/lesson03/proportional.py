@@ -34,7 +34,7 @@ class StudentProportionalController(ProportionalController):
            check fails if your saturation is missing or incorrect.
         """
         # TODO: position error -> forward speed -> wheel references -> common saturation.
+        # TODO: implement the behavior described above.
         raise NotImplementedError(
-            "Complete StudentProportionalController.wheel_command in "
-            "robotics_sim/exercises/lesson03/proportional.py."
+            "Complete StudentProportionalController.wheel_command in exercises/lesson03/proportional.py"
         )
