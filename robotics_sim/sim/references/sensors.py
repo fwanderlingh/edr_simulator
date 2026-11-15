@@ -1,6 +1,6 @@
 """Instructor comparison models for Lesson 4 estimation and supervision."""
 
-from math import cos, hypot, isfinite, pi, sin
+from math import cos, hypot, pi, sin
 
 import math
 
@@ -43,31 +43,18 @@ class ReferenceInertial(InertialState):
 
 class ReferenceSectors(SectorSummary):
     def summarize(self, angles, ranges, hits, max_range):
-        if (not isfinite(max_range) or max_range <= 0 or not len(angles)
-                or len(angles) != len(ranges) or len(ranges) != len(hits)):
-            return None
+        # The lesson assumes valid measurements and coverage of all sectors.
         sectors = {"front": [], "left": [], "right": []}
         for angle, distance, hit in zip(angles, ranges, hits):
-            if (not isfinite(angle) or abs(angle) > pi / 2 + 1e-10
-                    or not isfinite(distance) or not 0 <= distance <= max_range):
-                return None
             key = "front" if abs(angle) <= pi / 6 + 1e-10 else ("left" if angle > 0 else "right")
             sectors[key].append(min(distance, max_range) if hit else max_range)
-        if any(not values for values in sectors.values()):
-            return None
         return {key: min(values) for key, values in sectors.items()}
 
 
 class ReferenceRangeStop(ObstacleSupervisor):
     """Front distance interlock around the existing Lesson 3 controller."""
 
-    def command(self, pose, goal, distance, hit, max_range, age):
-        if (not all(isfinite(x) for x in (distance, max_range, age))
-                or max_range <= 0 or not 0 <= distance <= max_range
-                or age < 0 or age > self.max_scan_age):
-            self.phase = "STALE"
-            self.reset_goal_controller()
-            return 0.0, 0.0
+    def command(self, pose, goal, distance, hit, max_range):
         front = distance if hit else max_range
         if hypot(goal[0] - pose.x, goal[1] - pose.y) <= self.eps_pos:
             self.phase = "DONE"
@@ -77,7 +64,7 @@ class ReferenceRangeStop(ObstacleSupervisor):
         if front < self.enter or self.phase == "STOP" and front < self.exit:
             self.phase = "STOP"
             return 0.0, 0.0
-        if self.phase in ("STOP", "STALE"):
+        if self.phase == "STOP":
             self.reset_goal_controller()
         self.phase = "GO"
         return self.goal_command(pose, goal)
@@ -86,14 +73,7 @@ class ReferenceRangeStop(ObstacleSupervisor):
 class ReferenceObstacleSupervisor(ObstacleSupervisor):
     """A small detour exercise for one isolated box, not a complete planner."""
 
-    def command(self, pose, goal, sectors, age):
-        if sectors is None or not isfinite(age) or age < 0 or age > self.max_scan_age:
-            self.phase = "STALE"
-            self.reset_goal_controller()
-            return 0.0, 0.0
-        if self.phase == "STALE":
-            # New valid data permit reevaluation; never reuse a stale turn.
-            self.phase = "GO"
+    def command(self, pose, goal, sectors):
         dx, dy = goal[0] - pose.x, goal[1] - pose.y
         rho = hypot(dx, dy)
         if rho <= self.eps_pos:

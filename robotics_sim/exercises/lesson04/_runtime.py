@@ -54,14 +54,14 @@ class ObstacleSupervisor:
     """Initial state, parameters and nominal-controller adapter, without the solution."""
 
     def __init__(self, *, pose_controller=None, radius=0.12, width=0.42,
-                 enter=0.65, exit=0.8, max_scan_age=0.25,
+                 enter=0.65, exit=0.8,
                  turn_angle=math.pi / 2, turn_tolerance=0.04,
                  turn_gain=1.5, bypass_distance=1.0, bypass_speed=0.25,
                  stage="avoid"):
         if pose_controller is None:
             from robotics_sim.sim.references.control import ReferencePoseController
             pose_controller = ReferencePoseController()
-        positive = (radius, width, enter, exit, max_scan_age, turn_angle,
+        positive = (radius, width, enter, exit, turn_angle,
                     turn_tolerance, turn_gain, bypass_distance, bypass_speed)
         if (not all(math.isfinite(x) and x > 0 for x in positive)
                 or exit <= enter or stage not in ("sectors", "stop", "avoid")):
@@ -69,7 +69,7 @@ class ObstacleSupervisor:
         self.nominal = PoseCommandAdapter(pose_controller, radius, width)
         self.eps_pos = pose_controller.eps_pos
         self.wheel_max = pose_controller.wheel_max
-        self.enter, self.exit, self.max_scan_age = enter, exit, max_scan_age
+        self.enter, self.exit = enter, exit
         self.turn_angle, self.turn_tolerance, self.turn_gain = turn_angle, turn_tolerance, turn_gain
         self.bypass_distance, self.bypass_speed = bypass_distance, bypass_speed
         self.stage = stage
@@ -91,12 +91,11 @@ def supervisor_parameters():
     from . import avoidance
     return {name: getattr(avoidance, constant) for name, constant in (
         ("enter", "ENTER_DISTANCE"), ("exit", "EXIT_DISTANCE"),
-        ("max_scan_age", "MAX_SCAN_AGE"), ("turn_angle", "TURN_ANGLE"),
+        ("turn_angle", "TURN_ANGLE"),
         ("turn_tolerance", "TURN_TOLERANCE"), ("turn_gain", "TURN_GAIN"),
         ("bypass_distance", "BYPASS_DISTANCE"), ("bypass_speed", "BYPASS_SPEED"))}
 
 
 def rangefinder_parameters():
     from . import rangefinder
-    return dict(enter=rangefinder.ENTER_DISTANCE, exit=rangefinder.EXIT_DISTANCE,
-                max_scan_age=rangefinder.MAX_SCAN_AGE)
+    return dict(enter=rangefinder.ENTER_DISTANCE, exit=rangefinder.EXIT_DISTANCE)

@@ -60,20 +60,25 @@ def test_curved_estimation_with_truth_assisted_orientation(tmp_path):
         session.close()
 
 
-def test_sector_misses_and_invalid_scan():
+def test_sector_misses_and_hits():
     summary = ReferenceSectors()
     angles = [-math.pi / 2, 0, math.pi / 2]
     assert summary.summarize(angles, [4, 0.5, 4], [False, True, False], 4) == {
         "front": 0.5, "left": 4, "right": 4,
     }
-    assert summary.summarize(angles, [4, float("nan"), 4], [False] * 3, 4) is None
-    assert summary.summarize(angles, [4, 4], [False] * 3, 4) is None
+    assert summary.summarize(angles, [4, 4, 4], [False] * 3, 4) == {
+        "front": 4, "left": 4, "right": 4,
+    }
+    assert summary.summarize(angles, [0.7, 4, 0.9], [True, False, True], 4) == {
+        "front": 4, "left": 0.9, "right": 0.7,
+    }
 
 
-def test_supervisor_stale_data_stop_before_resuming():
+def test_supervisor_stops_then_turns_toward_the_clearer_side():
     controller = ReferenceObstacleSupervisor()
-    sectors = {"front": 4, "left": 4, "right": 4}
-    assert controller.command(Pose(), (3, 0), sectors, 0.3) == (0, 0)
-    assert controller.phase == "STALE"
-    v, _ = controller.command(Pose(), (3, 0), sectors, 0.0)
-    assert v > 0
+    sectors = {"front": 0.5, "left": 4, "right": 0.7}
+    assert controller.command(Pose(), (3, 0), sectors) == (0, 0)
+    assert controller.phase == "STOP"
+    v, omega = controller.command(Pose(), (3, 0), sectors)
+    assert v == 0 and omega > 0
+    assert controller.phase == "TURN"

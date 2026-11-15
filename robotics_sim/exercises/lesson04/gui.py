@@ -53,7 +53,6 @@ class SensorActivity:
         self.done = False
         self.last_time = 0.0
         self.used_sectors = None
-        self.used_age = 0.0
         self.wheel_scale = 1.0
         self.traces = {"encoder": [(0, 0, 0.025)], "imu": [(0, 0, 0.03)]}
         if task == "sensor_estimation_blocked":
@@ -95,13 +94,12 @@ class SensorActivity:
                             0.4 if self.task == "sensor_estimation_curve" else 0.0)
             return
         lidar = self.sensors.lidar
-        self.used_age = time - self.sensors.time
         if self.front_only:
             distance, hit = float(lidar.scan()[0]), bool(lidar.hits[0])
             self.used_sectors = {"front": distance if hit else lidar.max_range,
                                  "left": None, "right": None}
             command = tuple(self.controller.command(robot.pose(), self.target,
-                                                     distance, hit, lidar.max_range, self.used_age))
+                                                     distance, hit, lidar.max_range))
         else:
             self.used_sectors = self.summary.summarize(lidar.angles, lidar.scan(),
                                                        lidar.hits, lidar.max_range)
@@ -111,12 +109,12 @@ class SensorActivity:
             command = (0.0, 0.3)
         elif not self.front_only and self.stage == "stop":
             # Reuse the first exercise on the front sector; no detour code is needed.
-            front = self.used_sectors["front"] if self.used_sectors is not None else float("nan")
+            front = self.used_sectors["front"]
             command = tuple(self.controller.command(robot.pose(), self.target,
-                                                     front, True, lidar.max_range, self.used_age))
+                                                     front, True, lidar.max_range))
         elif not self.front_only:
             command = tuple(self.controller.command(robot.pose(), self.target,
-                                                     self.used_sectors, self.used_age))
+                                                     self.used_sectors))
         if len(command) != 2 or not all(math.isfinite(v) for v in command):
             raise ValueError("Supervisor.command must return finite (v, omega).")
         wl, wr = robot.motor_model.inverse(*command)
@@ -153,7 +151,7 @@ class SensorActivity:
     def extra_columns(self):
         if self.has_goal:
             return ("target_x_m", "target_y_m", "goal_error_m", "phase", "front_m",
-                    "left_m", "right_m", "scan_age_s", "stage", "nominal_phase", "wheel_scale",
+                    "left_m", "right_m", "stage", "nominal_phase", "wheel_scale",
                     "left_rad_s", "right_rad_s", "outcome")
         return ("enc_x_m", "enc_y_m", "enc_yaw_rad", "enc_speed_m_s", "enc_yaw_rate_rad_s",
                 "imu_x_m", "imu_y_m", "imu_yaw_rad", "imu_vx_m_s", "imu_vy_m_s",
@@ -167,7 +165,7 @@ class SensorActivity:
             ranges = tuple(self.used_sectors[key] if self.used_sectors and self.used_sectors[key] is not None else ""
                            for key in ("front", "left", "right"))
             return (*self.target, math.hypot(self.target[0] - pose.x, self.target[1] - pose.y),
-                    self.controller.phase, *ranges, self.used_age,
+                    self.controller.phase, *ranges,
                     self.stage, self.pose_controller.phase, self.wheel_scale,
                     *self.robot.wheel_velocities, self.outcome)
         return (self.odom.x, self.odom.y, self.odom.yaw, self.odom.speed, self.odom.yaw_rate,

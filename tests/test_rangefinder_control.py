@@ -57,17 +57,14 @@ def test_front_stop_uses_only_one_ray_and_known_pose(monkeypatch, tmp_path, mode
         session.close()
 
 
-def test_rangefinder_hysteresis_valid_miss_and_stale_data():
+def test_rangefinder_hysteresis_and_miss():
     controller = ReferenceRangeStop(stage="stop")
     pose, goal = Pose(), (3, 0)
-    assert controller.command(pose, goal, .5, True, 4, 0) == (0, 0)
+    assert controller.command(pose, goal, .5, True, 4) == (0, 0)
     assert controller.phase == "STOP"
-    assert controller.command(pose, goal, .7, True, 4, 0) == (0, 0)
-    assert controller.command(pose, goal, .9, True, 4, 0)[0] > 0
-    assert controller.command(pose, goal, 4, False, 4, 0)[0] > 0
-    assert controller.command(pose, goal, 4, False, 4, .3) == (0, 0)
-    assert controller.phase == "STALE"
-    assert controller.command(pose, goal, float("nan"), True, 4, 0) == (0, 0)
+    assert controller.command(pose, goal, .7, True, 4) == (0, 0)
+    assert controller.command(pose, goal, .9, True, 4)[0] > 0
+    assert controller.command(pose, goal, 4, False, 4)[0] > 0
 
 
 def test_rangefinder_student_todo_is_reported_on_first_step(monkeypatch):

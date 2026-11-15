@@ -9,6 +9,8 @@ class ReferenceWaypointController(WaypointController):
     pose_controller_class = ReferencePoseController
 
     def wheel_command(self, pose, r, L):
+        # Only for logging: self.scale is the pose controller's scale, not the waypoint controller's.
+        # It is used in the CSV file to check saturation in the waypoint mode.
         self.scale = 1.0
         if self.done:
             return 0.0, 0.0

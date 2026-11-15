@@ -16,7 +16,6 @@ AVOIDANCE_STAGE = "avoid"  # "sectors", "stop" (reuse rangefinder.py), or "avoid
 LIDAR_MODEL = "reference"  # "reference" or "student"
 ENTER_DISTANCE = 0.65      # m; interrupt the nominal command
 EXIT_DISTANCE = 0.8        # m; authorize restarting, greater than ENTER_DISTANCE
-MAX_SCAN_AGE = 0.25        # s
 TURN_ANGLE = math.pi / 2   # rad; isolated-box scene
 TURN_TOLERANCE = 0.04      # rad
 TURN_GAIN = 1.5            # 1/s
@@ -27,19 +26,20 @@ BYPASS_SPEED = 0.25        # m/s
 
 class StudentSectors(SectorSummary):
     def summarize(self, angles, ranges, hits, max_range):
-        """Return dict(front,left,right) of minima, or None for invalid/missing data.
+        """Return dict(front,left,right) of minima.
 
-        Front: |bearing|<=30 degrees. Misses are valid observations to max_range.
+        Assume valid data with all three sectors covered.
+        Front: |bearing|<=30 degrees. Misses observe to max_range.
         """
         raise NotImplementedError("Complete StudentSectors.summarize in lesson04/avoidance.py")
 
 
 class StudentObstacleSupervisor(ObstacleSupervisor):
-    def command(self, pose, goal, sectors, age):
-        """Return (v,omega), updating self.phase; stale data must stop the robot.
+    def command(self, pose, goal, sectors):
+        """Return (v,omega), updating self.phase; assume valid sector readings.
 
         self.goal_command(pose, goal) calls the completed Lesson 3 pose controller.
-        Use self.eps_pos, self.enter/exit, self.max_scan_age, self.turn_angle,
+        Use self.eps_pos, self.enter/exit, self.turn_angle,
         self.turn_tolerance/gain and self.bypass_distance/speed.
         self.phase starts at GO; save turn_yaw and pass_start for the detour.
         reset_goal_controller() restarts the nominal controller after interruption.

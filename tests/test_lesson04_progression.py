@@ -93,9 +93,9 @@ def test_nominal_motion_calls_student_lesson3_and_keeps_its_phase(monkeypatch):
         lab = session.laboratory
         assert type(lab.pose_controller) is control.StudentPoseController
         sectors = {"front": 4, "left": 4, "right": 4}
-        command = lab.controller.command(Pose(), (3, 0), sectors, 0)
+        command = lab.controller.command(Pose(), (3, 0), sectors)
         assert command == pytest.approx((.18, .12 / .42))
-        lab.controller.command(Pose(), (3, 0), sectors, 0)
+        lab.controller.command(Pose(), (3, 0), sectors)
         assert len(calls) == 2 and calls[0][0] is calls[1][0] is lab.pose_controller
         assert calls[0][3] == .37 and lab.wheel_max == .75
         assert lab.pose_controller.phase == "DRIVE"
