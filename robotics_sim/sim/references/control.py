@@ -38,5 +38,9 @@ class ReferencePoseController(PoseController):
         w_right = (v + L * omega / 2) / r
         # Scale both wheels together to preserve the commanded curvature.
         peak = max(abs(w_left), abs(w_right))
-        self.scale = min(1.0, self.wheel_max / peak) if peak else 1.0
-        return self.scale * w_left, self.scale * w_right
+        beta = min(1.0, self.wheel_max / peak)
+        wL_applied = beta * w_left;
+        wR_applied = beta * w_right;
+        # Record the scale factor for CSV logging and for the next call to wheel_command.
+        self.scale = beta
+        return wL_applied, wR_applied
