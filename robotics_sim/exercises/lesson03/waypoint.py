@@ -30,20 +30,22 @@ class StudentWaypointController(WaypointController):
         Gains, tolerances and wheel limit come from control.py.
         Saturation is implemented in control.py: return the pose controller's
         already limited wheel speeds without applying another saturation.
-        Initially self.index = 0 and self.phase = "TURN".
+        Initially self.index = 0, self.phase = "TURN" and self.done = False.
 
-        Here self.done is an inherited, read-only @property that evaluates
-        self.index == len(self.goals), not self.phase == "DONE". Read it
-        without parentheses; advance self.index rather than assigning to done.
-        self.pose_controller.done instead checks that controller's phase:
-        it means the current pose is complete; self.done means all poses are.
+        Here self.done is a writable boolean flag. Your method must check
+        self.index == len(self.goals) after each arrival and set self.done = True
+        when all goals are complete. The simulator reads that flag; it does not
+        infer completion from the waypoint index or the displayed phase.
+        self.pose_controller.done remains the pose controller's read-only property:
+        it means the current pose is complete; self.done means the whole sequence is.
 
         1. If self.done, return two zeros.
         2. Call self.pose_controller.wheel_command(pose, r, L).
            Copy that controller's phase into self.phase for the live readout.
            Copy its scale into self.scale for the wheel_scale CSV column.
         3. If that controller is done (both pose tolerances met), increment
-           self.index. If self.done, set self.phase to DONE. Otherwise call
+           self.index. Check self.index == len(self.goals): if true, set
+           self.done = True and self.phase = "DONE". Otherwise call
            self.pose_controller.set_goal(self.goals[self.index]) and set
            self.phase to TURN. Return two zeros for this arrival sample.
            Record self.scale = 1.0 whenever returning two zeros.

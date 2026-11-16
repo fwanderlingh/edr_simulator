@@ -116,12 +116,13 @@ Next, complete [`StudentWaypointController.wheel_command`](waypoint.py) and
 choose **Follow two waypoints**. `GOALS` is editable at the top of `waypoint.py`;
 the gains, tolerances and wheel limit are reused from `control.py`.
 
-For the waypoint controller, the inherited `self.done` property instead checks
-`self.index == len(self.goals)`: the whole sequence is complete. By contrast,
-`self.pose_controller.done` checks the pose controller's phase and means
-only that pose is complete. Advance `self.index` after each arrival; do not
-assign to `self.done`. The sequence's `self.phase` displays the current phase
-and does not determine this completion check.
+For the waypoint controller, `self.done` is a writable boolean flag, initially
+`False`. Your sequencing method decides when to finish: after each arrival,
+increment `self.index` and explicitly check `self.index == len(self.goals)`.
+When this is true, set `self.done = True` and `self.phase = "DONE"`, then return
+two zeros. The simulator reads the flag; it does not infer completion from the
+index or the displayed phase. By contrast, `self.pose_controller.done` remains
+the pose controller's read-only property and means only that pose is complete.
 
 The supplied adapter creates one `StudentPoseController` in `self.pose_controller`
 with `self.goals[0]` as its initial target. Call its `wheel_command(pose, r, L)`
@@ -129,8 +130,9 @@ and copy its phase into `self.phase` and its scale into `self.scale` for the CSV
 Return its already saturated wheel speeds without applying another saturation.
 Reuse the same object throughout the sequence.
 Advance `self.index` only when that pose controller reports `done`, so both
-position and heading must be reached at every waypoint. If the sequence is complete,
-set `self.phase = "DONE"`. Otherwise call
+position and heading must be reached at every waypoint. If
+`self.index == len(self.goals)`, set `self.done = True` and `self.phase = "DONE"`.
+Otherwise call
 `self.pose_controller.set_goal(self.goals[self.index])` and set `self.phase = "TURN"`.
 The supplied `set_goal(next_goal)` method changes the target and resets the pose
 controller to TURN. Call it only when advancing to the next waypoint: calling it

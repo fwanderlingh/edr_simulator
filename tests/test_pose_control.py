@@ -62,6 +62,54 @@ def test_waypoint_arrival_waits_for_heading_and_stops_for_one_sample():
     assert controller.wheel_command(Pose(), .12, .42) == (0, 0)
 
 
+def test_waypoint_completion_is_a_flag_set_by_the_sequencing_method():
+    controller = StudentWaypointController()
+    assert controller.done is False
+    controller.index = len(controller.goals)
+    controller.phase = "DONE"
+    assert controller.done is False
+    controller.done = True
+    assert controller.done is True
+
+
+@pytest.mark.parametrize("signal", ["index", "phase"])
+def test_runtime_does_not_infer_waypoint_completion(monkeypatch, signal):
+    def missing_completion_flag(self, pose, r, L):
+        if signal == "index":
+            self.index = len(self.goals)
+        else:
+            self.phase = "DONE"
+        return 0.0, 0.0
+
+    monkeypatch.setattr(StudentWaypointController, "wheel_command", missing_completion_flag)
+    session = ActivitySession("3", "drive_waypoints", kinematics="student")
+    try:
+        session.step(single=True)
+        assert session.controller.done is False
+        assert session.outcome == "RUNNING"
+    finally:
+        session.close()
+
+
+def test_runtime_observes_the_completion_flag_without_rewriting_the_index(monkeypatch):
+    def reports_completion(self, pose, r, L):
+        # A deliberately wrong student decision must remain visible in the data.
+        self.done = True
+        self.phase = "DONE"
+        return 0.0, 0.0
+
+    monkeypatch.setattr(StudentWaypointController, "wheel_command", reports_completion)
+    session = ActivitySession("3", "drive_waypoints", kinematics="student")
+    try:
+        session.step(single=True)
+        assert session.outcome == "DONE"
+        assert session.controller.index == 0
+        assert session.arrivals == []
+        assert session.robot.wheel_velocities == (0, 0)
+    finally:
+        session.close()
+
+
 def test_student_waypoint_sequencing_reuses_the_student_pose_exercise(monkeypatch):
     # Supply only the sequencer first: an unfinished pose exercise must surface.
     def unfinished(self, pose, r, L):

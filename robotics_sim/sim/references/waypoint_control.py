@@ -19,7 +19,9 @@ class ReferenceWaypointController(WaypointController):
         self.scale = self.pose_controller.scale
         if self.pose_controller.done:
             self.index += 1
-            if self.done:
+            # The exercise decides when the sequence is complete.
+            if self.index == len(self.goals):
+                self.done = True
                 self.phase = "DONE"
             else:
                 self.pose_controller.set_goal(self.goals[self.index])

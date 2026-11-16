@@ -40,10 +40,6 @@ class WheelController:
         self.nominal = (0.0, 0.0)
         self.scale = 1.0
 
-    @property
-    def done(self):
-        return self.index == len(self.goals)
-
     def wheel_command(self, pose, r, L):
         raise NotImplementedError("Choose the student or reference controller.")
 
@@ -57,8 +53,6 @@ class WheelController:
                 robot.pose(), robot.motor_model.wheel_radius, robot.motor_model.track_width))
         if len(references) != 2 or not all(math.isfinite(x) for x in references):
             raise ValueError("wheel_command must return two finite wheel speeds in rad/s.")
-        if self.done:
-            self.index = len(self.goals)
         self.nominal = robot.motor_model.forward(*references)
         robot.set_wheel_velocities(*references)
 
@@ -88,12 +82,20 @@ class PoseController(WheelController):
     def done(self):
         return self.phase == "DONE"
 
+    def update(self, robot, time, dt):
+        super().update(robot, time, dt)
+        # The pose method decides completion; mirror its result for arrival logging.
+        if self.done:
+            self.index = 1
+
 
 class WaypointController(WheelController):
     """Prepare one reusable pose controller; students implement the sequencing."""
 
     def __init__(self, *args, **options):
         super().__init__(*args, **options)
+        # The sequencing method must explicitly set this flag after the last goal.
+        self.done = False
         parameters = {name: getattr(self, name) for name in (
             "gain_pos", "gain_bearing", "gain_heading", "eps_pos", "eps_angle",
             "angle_in", "angle_out", "wheel_max")}

@@ -20,6 +20,10 @@ class ProportionalController(WheelController):
     def goal(self):
         return self.goals[0]
 
+    @property
+    def done(self):
+        return self.index == len(self.goals)
+
     def wheel_command(self, pose, r, L):
         raise NotImplementedError("Choose the student or reference proportional controller.")
 
