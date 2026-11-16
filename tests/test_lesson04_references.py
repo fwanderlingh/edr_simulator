@@ -32,6 +32,7 @@ def test_reference_method_matches_student_signature(student, reference, method):
 
 def test_reference_lidar_known_rotations_and_unit_directions():
     sensor = ReferenceLidar(None, angles=[-math.pi / 2, 0, math.pi / 2])
+    assert isinstance(sensor.directions(0), np.ndarray)
     assert np.asarray(sensor.directions(math.pi / 2)) == pytest.approx(np.array([
         [1, 0, 0], [0, 1, 0], [-1, 0, 0],
     ]))

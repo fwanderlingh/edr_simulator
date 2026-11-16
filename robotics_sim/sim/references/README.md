@@ -24,6 +24,8 @@ In `lidar.py`, `yaw` è l'angolo theta degli appunti, `R_w_b` è la rotazione da
 base al mondo, `u_s` è la direzione del raggio nel sensore e `u_w` la stessa
 direzione nel mondo. Il sensore è allineato alla base, quindi `R_b_s` è l'identità.
 Il prodotto `R_w_b @ u_s` implementa esplicitamente il cambio di riferimento.
+La soluzione costruisce le righe con un ciclo e restituisce `np.array(directions)`:
+il risultato è un array NumPy con una riga per raggio, come nel sensore di base.
 
 I punti sono indicati con `P` negli appunti, e con `P_bar` si indicano qui le
 loro coordinate omogenee, con ultima componente 1. Il metodo `directions` deve

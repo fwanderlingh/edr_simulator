@@ -13,6 +13,7 @@ class LidarSensor:
         self.max_range = max_range
 
     def directions(self, yaw):
+        """Return an N x 3 NumPy array of world-space unit directions."""
         return np.array([(math.cos(yaw + a), math.sin(yaw + a), 0) for a in self.angles])
 
     def sample(self, pose):

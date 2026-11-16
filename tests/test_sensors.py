@@ -31,6 +31,7 @@ def test_lidar_known_distance_miss_and_rotated_mount(sensor_class):
     with World(gui=False) as world:
         world.add_box(Pose(x=2, z=0.5), size=(0.2, 1, 1))
         lidar = sensor_class(world, angles=[0, math.pi / 2])
+        assert isinstance(lidar.directions(0), np.ndarray)
         assert lidar.sample(Pose()) == pytest.approx((1.9, 4))
         assert list(lidar.hits) == [True, False]
         assert lidar.sample(Pose(yaw=-math.pi / 2)) == pytest.approx((4, 1.9))

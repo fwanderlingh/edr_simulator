@@ -74,11 +74,29 @@ def test_sector_misses_and_hits():
     }
 
 
-def test_supervisor_stops_then_turns_toward_the_clearer_side():
+def test_sector_boundaries_and_minimum_of_multiple_returns():
+    summary = ReferenceSectors()
+    angles = [-math.pi / 2, -math.pi / 6, 0, math.pi / 6, math.pi / 2]
+    ranges = [0.9, 0.4, 0.7, 0.3, 1.1]
+    assert summary.summarize(angles, ranges, [True] * 5, 4) == {
+        "front": 0.3, "left": 1.1, "right": 0.9,
+    }
+
+
+@pytest.mark.parametrize("left,right,turn_direction", [(4, 0.7, 1), (0.7, 4, -1), (4, 4, 1)])
+def test_supervisor_stops_then_turns_toward_the_clearer_side(left, right, turn_direction):
     controller = ReferenceObstacleSupervisor()
-    sectors = {"front": 0.5, "left": 4, "right": 0.7}
+    sectors = {"front": 0.5, "left": left, "right": right}
     assert controller.command(Pose(), (3, 0), sectors) == (0, 0)
     assert controller.phase == "STOP"
     v, omega = controller.command(Pose(), (3, 0), sectors)
-    assert v == 0 and omega > 0
+    assert v == 0 and omega * turn_direction > 0
     assert controller.phase == "TURN"
+
+
+def test_supervisor_remains_stopped_when_neither_side_has_enough_space():
+    controller = ReferenceObstacleSupervisor()
+    sectors = {"front": 0.5, "left": 0.6, "right": 0.7}
+    assert controller.command(Pose(), (3, 0), sectors) == (0, 0)
+    assert controller.command(Pose(), (3, 0), sectors) == (0, 0)
+    assert controller.phase == "STOP"

@@ -14,7 +14,7 @@ from robotics_sim.exercises.lesson04.sensors.lidar import LidarSensor
 
 class ReferenceLidar(LidarSensor):
     def directions(self, yaw):
-        """Implement StudentLidar.directions(yaw), returning one world ray per angle.
+        """Return a NumPy array with one world-space unit ray per row.
 
         yaw is theta in the notes. A direction uses u_w = R_w_b @ u_s.
         Its extra homogeneous coordinate would be 0, so translation contributes
@@ -30,4 +30,4 @@ class ReferenceLidar(LidarSensor):
             u_s = np.array([math.cos(beta_i), math.sin(beta_i)])
             u_w = R_w_b @ u_s
             directions.append((u_w[0], u_w[1], 0.0))
-        return directions
+        return np.array(directions)

@@ -61,6 +61,8 @@ Choose **Scan obstacles with 2D lidar**. The robot rotates with 37 rays spanning
 hit geometry; gray rays are misses. Complete `StudentLidar.directions`
 in [lidar.py](lidar.py), using the robot yaw to rotate each sensor bearing into
 a world-space unit vector. The public exercise method is initially unfinished.
+Collect one `(ux, uy, 0.0)` row per ray and return `np.array(directions)`,
+matching the NumPy array returned by the supplied sensor class.
 Select **Sensor mode: student** to test those directions with ideal ranges;
 compare the centre ray, endpoints and scan orientation with the reference.
 The sampler performs ray casting; exercise code needs no PyBullet calls.

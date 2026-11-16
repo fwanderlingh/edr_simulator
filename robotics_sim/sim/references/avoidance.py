@@ -15,34 +15,71 @@ def wrap(angle):
 
 class ReferenceSectors(SectorSummary):
     def summarize(self, angles, ranges, hits, max_range):
-        # The lesson assumes valid measurements and coverage of all sectors.
-        sectors = {"front": [], "left": [], "right": []}
-        for angle, distance, hit in zip(angles, ranges, hits):
-            key = "front" if abs(angle) <= pi / 6 + 1e-10 else ("left" if angle > 0 else "right")
-            sectors[key].append(min(distance, max_range) if hit else max_range)
-        return {key: min(values) for key, values in sectors.items()}
+        # Start with no obstacle detected within the sensor range.
+        front_distance = max_range
+        left_distance = max_range
+        right_distance = max_range
+
+        front_angle_limit = pi / 6  # 30 degrees, expressed in radians.
+        angle_tolerance = 1e-10    # Include boundary rays despite rounding.
+
+        # Examine one ray at a time, using the same index in each array.
+        for i in range(len(angles)):
+            angle = angles[i]
+            if hits[i]:
+                distance = ranges[i]
+            else:
+                distance = max_range
+
+            # Assign the ray to a sector and update that sector's minimum.
+            if abs(angle) <= front_angle_limit + angle_tolerance:
+                if distance < front_distance:
+                    front_distance = distance
+            elif angle > 0:
+                if distance < left_distance:
+                    left_distance = distance
+            else: # angle < 0
+                if distance < right_distance:
+                    right_distance = distance
+
+        result = {}
+        result["front"] = front_distance
+        result["left"] = left_distance
+        result["right"] = right_distance
+        return result
 
 
 class ReferenceObstacleSupervisor(ObstacleSupervisor):
     """A small detour exercise for one isolated box, not a complete planner."""
 
     def command(self, pose, goal, sectors):
-        dx, dy = goal[0] - pose.x, goal[1] - pose.y
+        dx = goal[0] - pose.x
+        dy = goal[1] - pose.y
         rho = hypot(dx, dy)
         if rho <= self.eps_pos:
             self.phase = "DONE"
-            return 0.0, 0.0
         if self.phase == "DONE":
             return 0.0, 0.0
+
+        front_distance = sectors["front"]
+        left_distance = sectors["left"]
+        right_distance = sectors["right"]
+
         # GO: use the nominal controller until the front becomes obstructed.
-        if self.phase == "GO" and sectors["front"] < self.enter:
+        if self.phase == "GO" and front_distance < self.enter:
             self.phase = "STOP"
             return 0.0, 0.0
         if self.phase == "STOP":
             # The stop-only activity uses ReferenceRangeStop from rangefinder.py.
             # This method implements the avoid stage, just as students are asked.
-            side = 1 if sectors["left"] >= sectors["right"] else -1
-            if max(sectors["left"], sectors["right"]) < self.exit:
+            if left_distance >= right_distance:
+                side = 1
+                side_distance = left_distance
+            else:
+                side = -1
+                side_distance = right_distance
+
+            if side_distance < self.exit:
                 return 0.0, 0.0
             self.turn_yaw = pose.yaw + side * self.turn_angle
             self.phase = "TURN"
@@ -50,19 +87,28 @@ class ReferenceObstacleSupervisor(ObstacleSupervisor):
             # Keep the chosen target yaw until the rotation is complete.
             error = wrap(self.turn_yaw - pose.yaw)
             if abs(error) > self.turn_tolerance:
-                return 0.0, self.turn_gain * error
-            if sectors["front"] < self.exit:
+                omega = self.turn_gain * error
+                return 0.0, omega
+            if front_distance < self.exit:
                 self.phase = "STOP"
                 return 0.0, 0.0
-            self.pass_start = pose.x, pose.y
+            self.pass_start = (pose.x, pose.y)
             self.phase = "PASS"
         if self.phase == "PASS":
             # Measure progress from the start of the bypass, while checking front.
-            if sectors["front"] < self.enter:
+            if front_distance < self.enter:
                 self.phase = "STOP"
                 return 0.0, 0.0
-            if hypot(pose.x - self.pass_start[0], pose.y - self.pass_start[1]) < self.bypass_distance:
-                return self.bypass_speed, self.turn_gain * wrap(self.turn_yaw - pose.yaw)
+
+            dx = pose.x - self.pass_start[0]
+            dy = pose.y - self.pass_start[1]
+            distance_from_start = hypot(dx, dy)
+            if distance_from_start < self.bypass_distance:
+                error = wrap(self.turn_yaw - pose.yaw)
+                v = self.bypass_speed
+                omega = self.turn_gain * error
+                return v, omega
+
             self.phase = "GO"
             self.reset_goal_controller()
         return self.goal_command(pose, goal)
