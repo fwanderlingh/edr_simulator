@@ -634,6 +634,7 @@ def test_saved_lidar_student_mode_is_not_reset_by_the_default_front_stop(tmp_pat
             assert app.session.task == "sensor_lidar" and app.session.state == "Ready"
             assert app.sensor_mode.get() == app.session.sensor_mode == "student"
             assert isinstance(app.session.sensors.lidar, lidar.StudentLidar)
+            assert "Central ray (world): (1.000, 0.000, 0.000)" in app.values.get()
             assert not app._notice
         finally:
             app.close()
@@ -910,6 +911,7 @@ def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
     from robotics_sim.app import SimulatorApp, enable_high_dpi
     from robotics_sim.session import LESSONS, TASKS
     from robotics_sim.exercises.lesson03.waypoint import StudentWaypointController
+    from robotics_sim.exercises.lesson04 import avoidance
 
     enable_high_dpi()
     root = tk.Tk()
@@ -955,10 +957,11 @@ def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
         assert "front rangefinder" in app.values.get()
         assert app.session.sensors.time > 0
         assert str(app.model_heading.cget("text")) == "STOP CONTROLLER MODEL"
-        choose("4", "sensor_avoidance")
-        app.single_step()
-        assert "Goal error" in app.values.get()
-        assert str(app.model_heading.cget("text")) == "SUPERVISOR MODEL"
+        with patch.object(avoidance, "AVOIDANCE_STAGE", "avoid"):
+            choose("4", "sensor_avoidance")
+            app.single_step()
+            assert "Goal error" in app.values.get()
+            assert str(app.model_heading.cget("text")) == "SUPERVISOR MODEL"
 
         choose("5", "arm_control")
         finish()

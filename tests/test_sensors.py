@@ -33,8 +33,10 @@ def test_lidar_known_distance_miss_and_rotated_mount(sensor_class):
         lidar = sensor_class(world, angles=[0, math.pi / 2])
         assert isinstance(lidar.directions(0), np.ndarray)
         assert lidar.sample(Pose()) == pytest.approx((1.9, 4))
+        assert lidar.ray_directions == pytest.approx(np.array([[1, 0, 0], [0, 1, 0]]))
         assert list(lidar.hits) == [True, False]
         assert lidar.sample(Pose(yaw=-math.pi / 2)) == pytest.approx((4, 1.9))
+        assert lidar.ray_directions == pytest.approx(np.array([[0, -1, 0], [1, 0, 0]]))
 
 
 def test_sampling_pause_completion_and_sensor_csv(tmp_path):

@@ -765,6 +765,10 @@ class SimulatorApp:
             if self.session.task in ("sensor_front_stop", "sensor_lidar", "sensor_avoidance"):
                 self.values.set(self.values.get() +
                     f"\nSample: {sensors.time:.2f} s | Front: {distance} | {self.session.sensor_mode}")
+                if self.session.task in ("sensor_lidar", "sensor_avoidance"):
+                    direction = sensors.lidar.ray_directions[middle]
+                    self.values.set(self.values.get() +
+                        f"\nCentral ray (world): ({direction[0]:.3f}, {direction[1]:.3f}, {direction[2]:.3f})")
             else:
                 left, right = sensors.encoder.read()
                 gyro, ax, ay = sensors.imu.read()

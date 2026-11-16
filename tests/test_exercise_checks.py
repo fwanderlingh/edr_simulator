@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from robotics_sim.exercise_checks import ExerciseChecks
+from robotics_sim.exercises.lesson04 import avoidance
 from robotics_sim.session import ActivitySession, TASKS
 
 
@@ -51,7 +52,8 @@ def test_wheel_checks_reject_mutually_consistent_wrong_formulas(monkeypatch):
         session.close()
 
 
-def test_avoidance_timeout_is_not_a_pass():
+def test_avoidance_timeout_is_not_a_pass(monkeypatch):
+    monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "avoid")
     session = ActivitySession("4", "sensor_avoidance", duration=.01, dt=.01)
     try:
         session.step(single=True)

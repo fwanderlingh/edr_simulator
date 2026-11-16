@@ -24,6 +24,7 @@ class LidarSensor:
             raise ValueError("Lidar directions must be a finite N x 3 array.")
         if not np.allclose(np.linalg.norm(directions, axis=1), 1):
             raise ValueError("Lidar directions must be unit vectors.")
+        self.ray_directions = directions.copy()
         endpoints = self.origin + directions * self.max_range
         results = self.world.raycast([self.origin.tolist()] * len(endpoints), endpoints.tolist())
         self.hits = np.array([body >= 0 for body, _ in results])

@@ -9,6 +9,7 @@ import pytest
 from robotics_sim.exercise_checks import ExerciseChecks
 from robotics_sim.session import ActivitySession, LEGACY_TASKS, TASKS
 from robotics_sim.exercises.lesson04.estimation import StudentOdometry
+from robotics_sim.exercises.lesson04 import avoidance
 from robotics_sim.exercises.lesson05.kinematics import StudentPlanarArm
 
 
@@ -60,7 +61,8 @@ def test_blocked_encoder_exercise_reveals_disagreement():
         session.close()
 
 
-def test_avoidance_is_available_in_catalog_and_reaches_goal(tmp_path):
+def test_avoidance_is_available_in_catalog_and_reaches_goal(tmp_path, monkeypatch):
+    monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "avoid")
     session = ActivitySession("4", "sensor_avoidance", duration=35, exercise_model="reference")
     try:
         checks = ExerciseChecks(session)

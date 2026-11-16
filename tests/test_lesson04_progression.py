@@ -76,6 +76,7 @@ def test_stop_stage_records_stop_without_claiming_goal_arrival(monkeypatch):
 
 
 def test_nominal_motion_calls_student_lesson3_and_keeps_its_phase(monkeypatch):
+    monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "avoid")
     calls = []
 
     def completed_pose_exercise(self, pose, r, L):
