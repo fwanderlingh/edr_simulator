@@ -275,8 +275,19 @@ three steps: **Reach a goal: front rangefinder stop**, **Scan obstacles with 2D
 lidar**, and **Reach a goal and avoid an obstacle**. Complete the front stop,
 ray directions, sector summary, and detour supervisor in that order. The LiDAR
 stop stage reuses the first controller on the front-sector minimum. All goal
-control uses the simulator pose and the Lesson 3 pose controller. Sensor mode
+control uses a full `(x, y, yaw)` goal and the same Lesson 3 pose controller,
+including final-heading alignment. Sensor mode
 selects ideal or noisy distance measurements independently of the control model.
+Choose **EXPERIMENT STAGE** in the sidebar to inspect sectors, test stopping,
+or run the complete detour. **LIDAR DIRECTIONS** independently selects the
+reference or completed student geometry. The stage explanation states which
+controller is active and whether motion is supplied for observation.
+
+Changing a stage, model or sensor mode automatically reloads saved exercise
+code and resets the activity. Use **Reload exercise** after editing code while
+keeping the same selections. Live measurements show sector minima, stop/release
+thresholds, the active control phase and the applied body command. The window
+title and implementation panel identify the simulator folder in use.
 
 ### Lesson 5: planar arm
 
@@ -448,6 +459,9 @@ contains all supported keys with default values:
 | `kinematics` | Lesson 3 wheel-kinematics or waypoint-controller model: `reference` or `student` |
 | `exercise_model` | Estimator, supervisor and arm exercise model: `reference` or `student` |
 | `sensor_mode` | Lesson 4 mode: `ideal`, `noisy`, or `student` |
+| `avoidance_stage` | Obstacle experiment: `sectors`, `stop`, or `avoid` (default) |
+| `estimation_stage` | Estimation experiment: `encoder`, `imu`, or `both` (default) |
+| `lidar_model` | Obstacle experiment ray directions: `reference` or `student` |
 | `show_frames` | Display coordinate-frame annotations |
 | `label_size` | Text size, 8–36 points |
 | `label_color`, `label_background`, `label_background_color` | Text color, background enabled, and background color |

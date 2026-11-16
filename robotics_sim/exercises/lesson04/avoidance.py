@@ -9,11 +9,12 @@ Reference: robotics_sim/sim/references/avoidance.py.
 import math
 
 from ._runtime import ObstacleSupervisor, SectorSummary
+from ..lesson03._control_runtime import wrap
 
 
+# Defaults for programmatic sessions. In the desktop, use EXPERIMENT STAGE
+# and LIDAR DIRECTIONS; changing a mode reloads saved exercise code.
 AVOIDANCE_STAGE = "avoid"  # "sectors", "stop" (reuse rangefinder.py), or "avoid"
-# Use "student" here after implementing the ray directions in lidar.py.
-# This choice is independent of ideal/noisy measurement mode.
 LIDAR_MODEL = "reference"  # "reference" or "student"
 # Scene settings for all LiDAR stages, shared by student and reference modes.
 OBSTACLE_POSITION = (1.5, 0.0)   # (x, y) of the box centre in world metres
@@ -47,14 +48,15 @@ class StudentObstacleSupervisor(ObstacleSupervisor):
         """Return (v,omega), updating self.phase; assume valid sector readings.
 
         self.goal_command(pose, goal) calls the completed Lesson 3 pose controller.
-        Use self.eps_pos, self.enter/exit, self.turn_angle,
+        Goal is (x, y, yaw). Use self.eps_pos/eps_angle, self.enter/exit, self.turn_angle,
         self.turn_tolerance/gain and self.bypass_distance/speed.
         self.phase starts at GO; save turn_yaw and pass_start for the detour.
         reset_goal_controller() restarts the nominal controller after interruption.
 
         The stop stage reuses StudentRangeStop from rangefinder.py on the front
         sector. This method is called only in avoid, to add the detour.
-        Return DONE and zero motion only inside self.eps_pos; timeouts are external.
+        Set self.phase = 'DONE' and return zero only within both pose tolerances.
+        Keep the Lesson 3 final-heading alignment; timeouts are external.
         The supplied adapter converts/saturates body commands for the wheels;
         it does not call or replace your decision method.
         """

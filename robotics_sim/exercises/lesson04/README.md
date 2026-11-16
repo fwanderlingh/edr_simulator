@@ -13,13 +13,14 @@ sectors used by the exercises.
 
 Choose **Reach a goal: front rangefinder stop** and complete
 `StudentRangeStop.command` in [rangefinder.py](rangefinder.py). The goal is
-`(3, 0) m`; an isolated box at `(1.5, 0) m` blocks the straight path.
+the pose `(3 m, 0 m, 0 rad)`; an isolated box at `(1.5, 0) m` blocks the straight path.
 
 The method receives `pose`, `goal`, `distance`, `hit`, and `max_range`,
 and returns `(v, omega)` in m/s and rad/s. A miss observes
 to `max_range`; it does not identify an obstacle at that distance. Use the
 front distance to interrupt nominal motion and retain STOP until the release
-threshold is met. Inside the goal tolerance, set DONE and return zero.
+threshold is met. The goal is always `(x, y, yaw)`, as in Lesson 3. Set DONE
+and return zero only when both position and final-heading tolerances are met.
 
 The editable settings are `ENTER_DISTANCE = 0.65 m` and `EXIT_DISTANCE = 0.8 m`.
 Distances are measured from the centre of the robot,
@@ -41,7 +42,8 @@ readings, rather than from these known scene coordinates.
 
 For authorized motion, call `self.goal_command(pose, goal)`. This reuses the
 completed `StudentPoseController` from Lesson 3 through a supplied wheel/body
-adapter. The same instance, gains, position tolerance and `WHEEL_MAX` are used.
+adapter. The same instance, gains, pose tolerances and `WHEEL_MAX` are used,
+including the final-heading ALIGN phase. The goal heading is passed unchanged.
 Call `self.reset_goal_controller()` when restarting after an interruption.
 The runtime owns sampling, command conversion and common wheel saturation;
 the student method owns the decision and `self.phase`.
@@ -67,8 +69,9 @@ Select **Sensor mode: student** to test those directions with ideal ranges;
 compare the centre ray, endpoints and scan orientation with the reference.
 The sampler performs ray casting; exercise code needs no PyBullet calls.
 
-Next choose **Reach a goal and avoid an obstacle**. Set `AVOIDANCE_STAGE`
-at the top of [avoidance.py](avoidance.py), saving and reloading at each step:
+Next choose **Reach a goal and avoid an obstacle**. Select **student** in
+**LIDAR DIRECTIONS** to reuse the directions just implemented. Choose
+**EXPERIMENT STAGE** in the GUI:
 
 1. `sectors`: implement `StudentSectors.summarize`. Compute minima for front,
    left and right; front includes bearings within 30 degrees of the forward
@@ -82,20 +85,34 @@ at the top of [avoidance.py](avoidance.py), saving and reloading at each step:
 3. `avoid` (default): implement `StudentObstacleSupervisor.command` to add a
    detour around the isolated box. Use side observations to choose a turn,
    retain the turn direction and bypass progress, then return to nominal
-   goal control. Set DONE only inside the position tolerance. Arrival gives
+   goal control. Set DONE only inside both pose tolerances. Arrival gives
    **DONE**; expiration of the duration gives **TIMEOUT**.
 
 Use **student** under **SUPERVISOR MODEL** for stop/avoid. Each student method
 raises an explicit error until implemented. The supplied runtime provides
 state and the Lesson 3 adapter, without supplying the student's decision.
-The task requires position only, so arrival precedes final-heading alignment.
+Use the heading entry in the target controls to specify the final orientation,
+in degrees in the GUI and radians in exercise code. Position arrival alone does
+not complete the task: the shared Lesson 3 controller must finish alignment.
 Reloading Lesson 4 also reloads saved Lesson 3 controller changes.
 
 `avoidance.py` exposes `ENTER_DISTANCE`, `EXIT_DISTANCE`,
 `TURN_ANGLE`, `TURN_TOLERANCE`, `TURN_GAIN`, `BYPASS_DISTANCE`, and `BYPASS_SPEED`.
 Both models use these settings. `LIDAR_MODEL` selects `reference` (default) or
-the completed `student` directions independently of ideal/noisy **Sensor mode**.
+the completed `student` directions in programmatic sessions. In the desktop,
+**LIDAR DIRECTIONS** selects these independently of ideal/noisy **Sensor mode**.
 This lets you reuse your geometry with noisy range measurements.
+
+Each stage displays its purpose and the components it executes. Live measurements
+distinguish the central ray range from the three sector minima, show the current
+phase and command, and explain scan rotation, stopping and detour progress.
+The default GUI stage is **avoid**, which runs the complete reference supervisor.
+
+Changing a stage, model, LiDAR implementation or sensor mode automatically
+reloads saved code and resets the experiment. **Reload exercise** remains useful
+after saving changes while keeping the same modes. Both stage and model choices
+are remembered between launches. Estimation activities expose the same stage
+selector for **encoder**, **imu** and **both**.
 
 Compare front-only stopping with LiDAR stopping before implementing avoidance.
 Then predict and check each detour phase using the sector readings.
@@ -125,7 +142,7 @@ and acquisitions to a companion `_sensors.csv` file. Existing files are
 overwritten. Sensor columns are `time_s`, `range_i_m`, `true_range_i_m`, and
 `hit_i` in bearing order. The front-stop activity has one ray and leaves
 unobserved left/right sector fields empty. Control records include goal error,
-phase, nominal-controller phase and wheel scaling. A control sample
+phase, nominal-controller phase, target heading, heading error and wheel scaling. A control sample
 uses the scan available before the physics step whose resulting pose is logged.
 
 Compare the same scene and duration with **reference** after your own attempt.

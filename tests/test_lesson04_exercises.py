@@ -87,9 +87,9 @@ def test_sector_boundaries_and_minimum_of_multiple_returns():
 def test_supervisor_stops_then_turns_toward_the_clearer_side(left, right, turn_direction):
     controller = ReferenceObstacleSupervisor()
     sectors = {"front": 0.5, "left": left, "right": right}
-    assert controller.command(Pose(), (3, 0), sectors) == (0, 0)
+    assert controller.command(Pose(), (3, 0, 0), sectors) == (0, 0)
     assert controller.phase == "STOP"
-    v, omega = controller.command(Pose(), (3, 0), sectors)
+    v, omega = controller.command(Pose(), (3, 0, 0), sectors)
     assert v == 0 and omega * turn_direction > 0
     assert controller.phase == "TURN"
 
@@ -97,6 +97,6 @@ def test_supervisor_stops_then_turns_toward_the_clearer_side(left, right, turn_d
 def test_supervisor_remains_stopped_when_neither_side_has_enough_space():
     controller = ReferenceObstacleSupervisor()
     sectors = {"front": 0.5, "left": 0.6, "right": 0.7}
-    assert controller.command(Pose(), (3, 0), sectors) == (0, 0)
-    assert controller.command(Pose(), (3, 0), sectors) == (0, 0)
+    assert controller.command(Pose(), (3, 0, 0), sectors) == (0, 0)
+    assert controller.command(Pose(), (3, 0, 0), sectors) == (0, 0)
     assert controller.phase == "STOP"

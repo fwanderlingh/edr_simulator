@@ -108,23 +108,23 @@ ACTIVITY_FILES = {
 
 for task in SENSOR_EXERCISES:
     DESCRIPTIONS[task] = (
-        "Choose AVOIDANCE_STAGE in avoidance.py: sectors, stop, then avoid. "
+        "Choose the experiment stage in the GUI: sectors, stop or avoid. "
         "The nominal motion reuses lesson03/control.py. Reach the visible goal around one isolated box; "
         "compare DONE and TIMEOUT. The reference is a local detour, not a general path planner."
         if task == "sensor_avoidance" else
-        "Choose ESTIMATION_STAGE in estimation.py: encoder, imu, then both. "
+        "Choose the experiment stage in the GUI: encoder, imu or both. "
         "Implement each estimate separately before comparing both with the actual "
         "robot on the same sensor stream; orange is encoder odometry, purple is the IMU estimate. "
         "Use ideal data first, then noisy data. The blocked-robot task exposes wheel/chassis disagreement.")
     ACTIVITY_FILES[task] = (
-        "Choose AVOIDANCE_STAGE in avoidance.py; implement sectors, stop, then detour. Select student, save and click Reload exercise."
+        "Choose the experiment stage and LiDAR directions in the GUI. Complete summarize, then command. Mode changes reload saved code automatically."
         if task == "sensor_avoidance" else
-        "Choose ESTIMATION_STAGE in estimation.py; implement encoder, IMU, then both. Select student, save and click Reload exercise.",
+        "Choose the experiment stage in the GUI; implement encoder, IMU, then both. Mode changes reload saved code automatically.",
         "robotics_sim/exercises/lesson04/avoidance.py" if task == "sensor_avoidance" else
         "robotics_sim/exercises/lesson04/estimation.py")
 DESCRIPTIONS["sensor_front_stop"] = (
     "Reuse the Lesson 3 controller with the simulator pose. Add a front rangefinder stop: "
-    "validate distance, hit/miss and age, stop before the box and keep STOP until the release "
+    "use distance and hit/miss, stop before the box and keep STOP until the release "
     "threshold is met. One ray provides no side information for an avoidance turn.")
 ACTIVITY_FILES["sensor_front_stop"] = (
     "Complete StudentRangeStop.command in rangefinder.py; select student, save and click Reload exercise.",
@@ -147,7 +147,7 @@ class ActivitySession:
     """Completion freezes the world; only close() releases it."""
 
     def __init__(self, lesson="1", task=None, *, duration=16.0, dt=1 / 240, kinematics="reference", sensor_mode="ideal",
-                 exercise_model="reference", goal=None):
+                 exercise_model="reference", goal=None, sensor_stage=None, lidar_model=None):
         if lesson not in LESSONS:
             raise ValueError("Unknown lesson.")
         task = task or next(iter(TASKS[lesson]))
@@ -161,6 +161,11 @@ class ActivitySession:
             raise ValueError("Sensor mode must be ideal, noisy, or student.")
         if exercise_model not in ("reference", "student"):
             raise ValueError("Exercise model must be reference or student.")
+        if sensor_stage is not None and task not in SENSOR_EXERCISES:
+            raise ValueError("Experiment stages are available for sensor control and estimation activities.")
+        if lidar_model is not None and task != "sensor_avoidance":
+            raise ValueError("Independent LiDAR selection is available in the obstacle activity.")
+        self.sensor_stage, self.lidar_model = sensor_stage, lidar_model
         if goal is not None and (len(goal) != 3 or not all(math.isfinite(v) for v in goal)):
             raise ValueError("Goal must contain finite x, y and heading.")
         self.exercise_model, self.goal = exercise_model, goal
@@ -192,9 +197,10 @@ class ActivitySession:
             self.robot = self.laboratory.robot
             update = lambda robot, time, dt: self.laboratory.step(dt)
         elif self.task in SENSOR_EXERCISES:
-            options = {"target": self.goal[:2]} if self.goal is not None else {}
+            options = {"target": self.goal} if self.goal is not None else {}
             self.laboratory = sensors_gui.SensorActivity(self.world, self.task, model=self.exercise_model,
-                                             mode=self.sensor_mode, dt=self.dt, **options)
+                                             mode=self.sensor_mode, dt=self.dt, stage=self.sensor_stage,
+                                             lidar_model=self.lidar_model, **options)
             self.robot = self.laboratory.robot
             self.sensors = self.laboratory.sensors
             update = self.laboratory.update

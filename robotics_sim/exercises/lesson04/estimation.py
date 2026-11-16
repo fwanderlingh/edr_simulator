@@ -9,7 +9,7 @@ Reference: robotics_sim/sim/references/estimation.py.
 from ._runtime import InertialState, OdometryState
 
 
-# Select the component to implement, then save and click Reload exercise.
+# Default for programmatic sessions; use EXPERIMENT STAGE in the desktop.
 # The other estimate is explicitly the supplied reference for comparison.
 ESTIMATION_STAGE = "both"  # "encoder", "imu", or "both"
 

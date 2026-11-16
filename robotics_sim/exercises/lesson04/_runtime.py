@@ -21,11 +21,10 @@ class SectorSummary:
 
 
 class PoseCommandAdapter:
-    """Reuse Lesson 3 wheel_command unchanged for a position-only goal.
+    """Reuse Lesson 3 wheel_command unchanged for a full (x, y, yaw) goal.
 
-    The supervisor tests position arrival before calling this adapter, so the
-    final-heading ALIGN phase is not part of this task. Reset the pose controller
-    only for a new position or after a detour, never on every control sample.
+    Preserve TURN, DRIVE and final-heading ALIGN. Reset the pose controller
+    only for a new target pose or after an interruption, never on every sample.
     """
 
     def __init__(self, controller, radius=0.12, width=0.42):
@@ -39,7 +38,7 @@ class PoseCommandAdapter:
     def command(self, pose, goal):
         target = tuple(goal)
         if target != self.target:
-            self.controller.set_goal((*target, pose.yaw))
+            self.controller.set_goal(target)
             self.target = target
         left, right = self.controller.wheel_command(pose, self.radius, self.width)
         if not all(math.isfinite(w) for w in (left, right)):
@@ -68,6 +67,7 @@ class ObstacleSupervisor:
             raise ValueError("Require positive finite supervisor parameters, exit > enter and a valid stage.")
         self.nominal = PoseCommandAdapter(pose_controller, radius, width)
         self.eps_pos = pose_controller.eps_pos
+        self.eps_angle = pose_controller.eps_angle
         self.wheel_max = pose_controller.wheel_max
         self.enter, self.exit = enter, exit
         self.turn_angle, self.turn_tolerance, self.turn_gain = turn_angle, turn_tolerance, turn_gain

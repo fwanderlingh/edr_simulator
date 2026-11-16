@@ -62,6 +62,30 @@ def test_sectors_run_without_supervisor_or_previous_controller(monkeypatch):
         session.close()
 
 
+@pytest.mark.parametrize("stage", ["sectors", "stop", "avoid"])
+def test_explicit_experiment_settings_override_script_defaults(monkeypatch, stage):
+    from robotics_sim.sim.references.lidar import ReferenceLidar
+
+    monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "stop" if stage == "sectors" else "sectors")
+    monkeypatch.setattr(avoidance, "LIDAR_MODEL", "reference")
+    monkeypatch.setattr(StudentLidar, "directions", ReferenceLidar.directions)
+    session = ActivitySession("4", "sensor_avoidance", sensor_stage=stage, lidar_model="student")
+    try:
+        lab = session.laboratory
+        assert lab.stage == stage and type(session.sensors.lidar) is StudentLidar
+        assert f"Stage: {stage} | Lidar: student" in lab.readout
+        session.step(single=True)
+        assert "Sectors [m]" in lab.readout
+        if stage == "sectors":
+            assert "supervisor command is inactive" in lab.motion_feedback
+            assert session.robot.command.vx == 0
+            assert session.robot.command.omega == pytest.approx(.3)
+        else:
+            assert session.robot.command.vx > 0
+    finally:
+        session.close()
+
+
 def test_stop_stage_records_stop_without_claiming_goal_arrival(monkeypatch):
     monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "stop")
     session = ActivitySession("4", "sensor_avoidance", duration=8)
@@ -94,9 +118,9 @@ def test_nominal_motion_calls_student_lesson3_and_keeps_its_phase(monkeypatch):
         lab = session.laboratory
         assert type(lab.pose_controller) is control.StudentPoseController
         sectors = {"front": 4, "left": 4, "right": 4}
-        command = lab.controller.command(Pose(), (3, 0), sectors)
+        command = lab.controller.command(Pose(), (3, 0, 0), sectors)
         assert command == pytest.approx((.18, .12 / .42))
-        lab.controller.command(Pose(), (3, 0), sectors)
+        lab.controller.command(Pose(), (3, 0, 0), sectors)
         assert len(calls) == 2 and calls[0][0] is calls[1][0] is lab.pose_controller
         assert calls[0][3] == .37 and lab.wheel_max == .75
         assert lab.pose_controller.phase == "DRIVE"
@@ -113,17 +137,21 @@ def test_adapter_resets_only_on_new_goal_or_after_detour():
     controller = ReferencePoseController()
     adapter = PoseCommandAdapter(controller)
     pose = Pose()
-    adapter.command(pose, (3, 0))
+    adapter.command(pose, (3, 0, 0))
     assert controller.phase == "DRIVE"
     controller.phase = "ALIGN"  # Deliberate state marker to detect an unwanted set_goal.
-    adapter.command(pose, (3, 0))
+    adapter.command(pose, (3, 0, 0))
     assert controller.phase == "DRIVE"  # ALIGN exits naturally when outside tolerance.
     controller.index = 7
-    adapter.command(pose, (3, 0))
+    adapter.command(pose, (3, 0, 0))
     assert controller.index == 7  # set_goal would have reset the index.
     adapter.reset()
-    adapter.command(pose, (3, 0))
+    adapter.command(pose, (3, 0, 0))
     assert controller.index == 0
+    controller.index = 7
+    adapter.command(pose, (3, 0, math.pi / 2))
+    assert controller.goal == (3, 0, math.pi / 2)
+    assert controller.index == 0  # Changing only the target heading is a new pose.
 
 
 def test_midpoint_solution_passes_but_wrong_state_is_still_rejected(monkeypatch):

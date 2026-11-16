@@ -68,7 +68,8 @@ def test_reference_methods_complete_the_student_obstacle_route(monkeypatch):
     monkeypatch.setattr(avoidance.StudentObstacleSupervisor, "command", ReferenceObstacleSupervisor.command)
     monkeypatch.setattr(avoidance, "LIDAR_MODEL", "student")
     monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "avoid")
-    session = ActivitySession("4", "sensor_avoidance", exercise_model="student", duration=35)
+    session = ActivitySession("4", "sensor_avoidance", exercise_model="student", duration=35,
+                              goal=(3, 0, math.pi / 2))
     try:
         session.start()
         while session.state == "Running":
@@ -76,6 +77,7 @@ def test_reference_methods_complete_the_student_obstacle_route(monkeypatch):
         assert type(session.sensors.lidar) is lidar.StudentLidar
         assert session.outcome == "DONE"
         assert math.hypot(3 - session.robot.pose().x, session.robot.pose().y) <= control.EPS_POS
+        assert abs(session.robot.pose().yaw - math.pi / 2) <= control.EPS_ANGLE
         assert session.robot.wheel_velocities == (0, 0)
         assert all(ok for _, ok in ExerciseChecks(session).evaluate())
     finally:

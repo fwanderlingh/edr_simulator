@@ -7,6 +7,7 @@ Measurements are assumed valid; nominal motion reuses Lesson 3.
 from math import hypot
 
 from robotics_sim.exercises.lesson04._runtime import ObstacleSupervisor
+from robotics_sim.exercises.lesson03._control_runtime import wrap
 
 
 class ReferenceRangeStop(ObstacleSupervisor):
@@ -15,9 +16,11 @@ class ReferenceRangeStop(ObstacleSupervisor):
     def command(self, pose, goal, distance, hit, max_range):
         # A miss represents the observed range limit, not a surface at that limit.
         d = distance if hit else max_range
-        rho = hypot(goal[0] - pose.x, goal[1] - pose.y)
+        gx, gy, gt = goal
+        rho = hypot(gx - pose.x, gy - pose.y)
+        heading_error = wrap(gt - pose.yaw)
         # Goal completion has priority and DONE remains terminal.
-        if rho <= self.eps_pos:
+        if rho <= self.eps_pos and abs(heading_error) <= self.eps_angle:
             self.phase = "DONE"
 
         if self.phase == "DONE":

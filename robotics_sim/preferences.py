@@ -24,6 +24,11 @@ def load_preferences(path):
     for key in ("show_frames", "label_background", "maximized"):
         if isinstance(data.get(key), bool):
             result[key] = data[key]
+    for key, choices in {"avoidance_stage": ("sectors", "stop", "avoid"),
+                         "estimation_stage": ("encoder", "imu", "both"),
+                         "lidar_model": ("reference", "student")}.items():
+        if data.get(key) in choices:
+            result[key] = data[key]
     ranges = {"label_size": (8, 36), "label_background_transparency": (0, 100), "duration": (0.001, 86400),
               "camera_yaw": (-1e9, 1e9), "camera_pitch": (-89, -5), "camera_distance": (1.5, 14),
               "width": (900, 20000), "height": (620, 20000), "x": (-20000, 20000), "y": (-20000, 20000),

@@ -234,7 +234,10 @@ def _avoidance(axes, data, snapshot):
     _trajectory(axes[0], data)
     goals = snapshot.get("goals", ())
     if not goals and "target_x_m" in data:
-        goals = ((data["target_x_m"][-1], data["target_y_m"][-1]),)
+        goal = (data["target_x_m"][-1], data["target_y_m"][-1])
+        if "target_yaw_rad" in data:
+            goal += (data["target_yaw_rad"][-1],)
+        goals = (goal,)
     _goals(axes[0], goals)
     _xy_labels(axes[0])
     _series(axes[1], data, [("goal_error_m", "Distance to goal", TEAL)],

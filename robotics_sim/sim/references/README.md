@@ -35,7 +35,10 @@ dall'API è la coordinata fisica z, nulla per i raggi orizzontali; non è una
 coordinata omogenea.
 
 In `rangefinder.py`, `rho` è l'errore di distanza dal goal, `self.eps_pos` la
-tolleranza di posizione e `self.enter`/`self.exit` le soglie dell'isteresi.
+tolleranza di posizione, `self.eps_angle` la tolleranza di orientamento e
+`self.enter`/`self.exit` le soglie dell'isteresi. Il goal è sempre `(x, y, yaw)`;
+si usa `gx, gy, gt = goal`, come nel controllore di EDR.03. DONE richiede entrambe
+le tolleranze e il controllo nominale conserva l'allineamento finale ALIGN.
 Le transizioni seguono la FSM degli appunti: GO, STOP e DONE, con priorità al
 raggiungimento dell'obiettivo. Le misure sono assunte sempre valide e disponibili;
 non sono previsti controlli sull'età del dato.

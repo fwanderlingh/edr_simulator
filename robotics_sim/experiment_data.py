@@ -32,7 +32,7 @@ def capture_experiment(session):
             value = getattr(laboratory, name)
             metadata[key] = value.tolist() if hasattr(value, "tolist") else deepcopy(value)
     goals = (tuple(session.controller.goals) if session.controller is not None else
-             ((*laboratory.target, 0.0),) if laboratory is not None and session.lesson == "4"
+             (tuple(laboratory.target),) if laboratory is not None and session.lesson == "4"
              and laboratory.has_goal else ())
     return deepcopy({
         "lesson": session.lesson, "task": session.task,

@@ -16,7 +16,7 @@ from .exercises.lesson02 import module2
 from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS, task_title
 from .sim.camera import Camera
 from .sim.scene_renderer import SceneRenderer
-from .exercises.lesson04.gui import SENSOR_EXERCISES
+from .exercises.lesson04.gui import SENSOR_EXERCISES, AVOIDANCE_STAGES, ESTIMATION_STAGES
 from .preferences import DEFAULT_PATH, load_preferences, save_preferences
 from .experiment_data import capture_experiment
 from .exercise_checks import ExerciseChecks
@@ -29,6 +29,7 @@ from .ui_theme import configure_theme, ACCENT, PAGE, SURFACE, VIEWPORT
 class SimulatorApp:
     _notice = ""
     _reload_failed = False
+    _last_action = ""
     def __init__(self, root, *, lesson=None, duration=None, dt=1 / 240, csv_path=None, settings_path=DEFAULT_PATH):
         self.root = root
         self.settings_path = settings_path
@@ -68,6 +69,9 @@ class SimulatorApp:
                                        if saved.get("sensor_mode") in ("ideal", "noisy", "student") else "ideal")
         self.exercise_model = tk.StringVar(value=saved.get("exercise_model", "reference")
             if saved.get("exercise_model") in ("reference", "student") else "reference")
+        self.avoidance_stage = tk.StringVar(value=saved.get("avoidance_stage", "avoid"))
+        self.estimation_stage = tk.StringVar(value=saved.get("estimation_stage", "both"))
+        self.lidar_model = tk.StringVar(value=saved.get("lidar_model", "reference"))
         self.goal_x = tk.StringVar(value="1")
         self.goal_y = tk.StringVar(value="1")
         self.goal_yaw = tk.StringVar(value="0")
@@ -79,7 +83,8 @@ class SimulatorApp:
         self.label_background_transparency = saved.get("label_background_transparency", 0)
         self._label_images = OrderedDict()
         self._label_dialog = None
-        root.title("Robotics Laboratory")
+        simulator_folder = Path(__file__).resolve().parents[1]
+        root.title(f"Robotics Laboratory — {simulator_folder.parent.name}/{simulator_folder.name}")
         self._app_icon = tk.PhotoImage(master=root, file=str(
             Path(__file__).resolve().parents[1] / "img" / "rlab_app_icon.png"))
         root.iconphoto(True, self._app_icon)
@@ -175,6 +180,8 @@ class SimulatorApp:
                 "lesson": self.session.lesson, "task": self.session.task, "duration": duration,
                 "kinematics": self.kinematics.get(),
                 "sensor_mode": self.sensor_mode.get(), "exercise_model": self.exercise_model.get(),
+                "avoidance_stage": self.avoidance_stage.get(), "estimation_stage": self.estimation_stage.get(),
+                "lidar_model": self.lidar_model.get(),
                 "show_frames": self.show_frames.get(), "label_size": self.label_size,
                 "label_color": self.label_color, "label_background": self.label_background,
                 "label_background_color": self.label_background_color,
@@ -323,26 +330,44 @@ class SimulatorApp:
                      self.inspector_canvas.configure(scrollregion=self.inspector_canvas.bbox("all")))
         self.inspector_canvas.bind("<Configure>", lambda event:
                                   self.inspector_canvas.itemconfigure(window, width=event.width))
+        self.stage_controls = ttk.Frame(details, style="Card.TFrame")
+        self.stage_controls.grid(row=0, column=0, sticky="ew", pady=(0, 14))
+        ttk.Label(self.stage_controls, text="EXPERIMENT STAGE", style="Section.TLabel").pack(anchor="w", pady=(0, 6))
+        self.stage_selector = ttk.Combobox(self.stage_controls, textvariable=self.avoidance_stage,
+            values=tuple(AVOIDANCE_STAGES), state="readonly", width=16)
+        self.stage_selector.pack(fill="x")
+        self.stage_selector.bind("<<ComboboxSelected>>", self.reload_exercise)
+        self.stage_hint = ttk.Label(self.stage_controls, style="Muted.TLabel", wraplength=245, justify="left")
+        self.stage_hint.pack(anchor="w", pady=(6, 0))
         self.model_controls = ttk.Frame(details, style="Card.TFrame")
-        self.model_controls.grid(row=0, column=0, sticky="ew", pady=(0, 14))
+        self.model_controls.grid(row=1, column=0, sticky="ew", pady=(0, 14))
         self.model_heading = ttk.Label(self.model_controls, text="KINEMATICS MODEL", style="Section.TLabel")
         self.model_heading.pack(anchor="w", pady=(0, 6))
         self.model_selector = ttk.Combobox(self.model_controls, textvariable=self.kinematics,
             values=("reference", "student"), state="readonly", width=16)
         self.model_selector.pack(fill="x")
-        self.model_selector.bind("<<ComboboxSelected>>", self.load_task)
+        self.model_selector.bind("<<ComboboxSelected>>", self.reload_exercise)
+        self.model_hint = ttk.Label(self.model_controls, style="Muted.TLabel", wraplength=245, justify="left")
+        self.model_hint.pack(anchor="w", pady=(6, 0))
+        self.lidar_controls = ttk.Frame(details, style="Card.TFrame")
+        self.lidar_controls.grid(row=2, column=0, sticky="ew", pady=(0, 14))
+        ttk.Label(self.lidar_controls, text="LIDAR DIRECTIONS", style="Section.TLabel").pack(anchor="w", pady=(0, 6))
+        self.lidar_selector = ttk.Combobox(self.lidar_controls, textvariable=self.lidar_model,
+            values=("reference", "student"), state="readonly", width=16)
+        self.lidar_selector.pack(fill="x")
+        self.lidar_selector.bind("<<ComboboxSelected>>", self.reload_exercise)
         self.sensor_controls = ttk.Frame(details, style="Card.TFrame")
-        self.sensor_controls.grid(row=1, column=0, sticky="ew", pady=(0, 14))
+        self.sensor_controls.grid(row=3, column=0, sticky="ew", pady=(0, 14))
         ttk.Label(self.sensor_controls, text="SENSOR MODE", style="Section.TLabel").pack(anchor="w", pady=(0, 6))
         self.sensor_selector = ttk.Combobox(self.sensor_controls, textvariable=self.sensor_mode,
             values=("ideal", "noisy", "student"), state="readonly", width=16)
         self.sensor_selector.pack(fill="x")
-        self.sensor_selector.bind("<<ComboboxSelected>>", self.load_task)
-        sensor_hint = ttk.Label(self.sensor_controls, text="10 Hz nominal · A mode change resets the activity.",
+        self.sensor_selector.bind("<<ComboboxSelected>>", self.reload_exercise)
+        sensor_hint = ttk.Label(self.sensor_controls, text="Changes reload saved code and reset the run.",
                                 style="Muted.TLabel", wraplength=245)
         sensor_hint.pack(anchor="w", pady=(6, 0))
         self.goal_controls = ttk.Frame(details, style="Card.TFrame")
-        self.goal_controls.grid(row=2, column=0, sticky="ew", pady=(0, 14))
+        self.goal_controls.grid(row=4, column=0, sticky="ew", pady=(0, 14))
         self.goal_controls.columnconfigure((0, 1), weight=1)
         ttk.Label(self.goal_controls, text="TARGET", style="Section.TLabel").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
         for column, name, variable in ((0, "x · m", self.goal_x), (1, "y · m", self.goal_y)):
@@ -353,11 +378,11 @@ class SimulatorApp:
         ttk.Label(self.heading_controls, text="Heading · degrees", style="Muted.TLabel").pack(side="left")
         ttk.Entry(self.heading_controls, textvariable=self.goal_yaw, width=7).pack(side="right")
         ttk.Button(self.goal_controls, text="Apply / reset", command=self.load_task).grid(row=4, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        ttk.Label(details, text="LIVE MEASUREMENTS", style="Section.TLabel").grid(row=4, column=0, sticky="w", pady=(0, 8))
+        ttk.Label(details, text="LIVE MEASUREMENTS", style="Section.TLabel").grid(row=6, column=0, sticky="w", pady=(0, 8))
         self.values_label = SelectableText(details, textvariable=self.values, style="Readout.TLabel")
-        self.values_label.grid(row=5, column=0, sticky="ew")
+        self.values_label.grid(row=7, column=0, sticky="ew")
         self.checks_card = ttk.Frame(details, style="Checks.TFrame", padding=10)
-        self.checks_card.grid(row=3, column=0, sticky="ew", pady=(0, 14))
+        self.checks_card.grid(row=5, column=0, sticky="ew", pady=(0, 14))
         self.checks_card.columnconfigure(0, weight=1)
         checks_header = ttk.Frame(self.checks_card, style="Card.TFrame")
         checks_header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
@@ -373,20 +398,20 @@ class SimulatorApp:
             for _, label in self.check_rows:
                 label.configure(wraplength=max(1, event.width - 28))
         self.checks_list.bind("<Configure>", wrap_checks)
-        ttk.Separator(details).grid(row=6, column=0, sticky="ew", pady=16)
-        ttk.Label(details, text="THE EXPERIMENT", style="Section.TLabel").grid(row=7, column=0, sticky="w", pady=(0, 8))
+        ttk.Separator(details).grid(row=8, column=0, sticky="ew", pady=16)
+        ttk.Label(details, text="THE EXPERIMENT", style="Section.TLabel").grid(row=9, column=0, sticky="w", pady=(0, 8))
         description = SelectableText(details, textvariable=self.description)
-        description.grid(row=8, column=0, sticky="ew")
-        ttk.Separator(details).grid(row=9, column=0, sticky="ew", pady=16)
+        description.grid(row=10, column=0, sticky="ew")
+        ttk.Separator(details).grid(row=11, column=0, sticky="ew", pady=16)
         self.implementation_heading = ttk.Label(details, text="YOUR IMPLEMENTATION", style="Section.TLabel")
-        self.implementation_heading.grid(row=10, column=0, sticky="w", pady=(0, 8))
+        self.implementation_heading.grid(row=12, column=0, sticky="w", pady=(0, 8))
         self.edit_hint = ttk.Label(details, wraplength=246, justify="left", style="Muted.TLabel")
-        self.edit_hint.grid(row=11, column=0, sticky="ew", pady=(0, 8))
+        self.edit_hint.grid(row=13, column=0, sticky="ew", pady=(0, 8))
         self.edit_file = ttk.Label(details, wraplength=246, justify="left", style="Code.TLabel")
-        self.edit_file.grid(row=12, column=0, sticky="ew")
+        self.edit_file.grid(row=14, column=0, sticky="ew")
 
         def wrap_details(event):
-            for label in (sensor_hint, self.edit_hint, self.edit_file):
+            for label in (sensor_hint, self.stage_hint, self.model_hint, self.edit_hint, self.edit_file):
                 label.configure(wraplength=max(1, event.width - 28))
         details.bind("<Configure>", wrap_details, add="+")
 
@@ -445,26 +470,32 @@ class SimulatorApp:
                    self.status_label.configure(wraplength=max(300, event.width - 32)))
         self._compact_layout = None
         title_font = self.root.tk.splitlist(self.style.lookup("Title.TLabel", "font"))[0]
+        compact_height = 700 * max(1.0, float(self.root.tk.call("tk", "scaling")) / (96 / 72))
 
         def adapt_layout(event):
             if event.widget is not self.root:
                 return
-            compact = event.height < 700
+            compact = event.height < compact_height
             if compact == self._compact_layout:
                 return
             self._compact_layout = compact
-            panel.configure(padding=(12, 8) if compact else (16, 12))
-            title.configure(font=(title_font, 16 if compact else 21, "bold"))
-            header.grid_configure(pady=(0, 8 if compact else 12))
-            selectors.configure(padding=(12, 6) if compact else (14, 10))
-            selectors.grid_configure(pady=(0, 8 if compact else 12))
-            workspace.grid_configure(pady=(0, 8 if compact else 12))
-            tools.configure(padding=(8, 4) if compact else (12, 6))
-            transport.configure(padding=(12, 8) if compact else (12, 10))
+            panel.configure(padding=(12, 2) if compact else (16, 12))
+            title.configure(font=(title_font, 12 if compact else 21, "bold"))
+            header.grid_configure(pady=(0, 4 if compact else 12))
+            selectors.configure(padding=(12, 3) if compact else (14, 10))
+            selectors.grid_configure(pady=(0, 4 if compact else 12))
+            workspace.grid_configure(pady=(0, 2 if compact else 12))
+            tools.configure(padding=(8, 0) if compact else (12, 6))
+            transport.configure(padding=(12, 4) if compact else (12, 10))
+            self.style.configure("TButton", padding=(8, 2) if compact else (12, 7))
+            self.style.configure("TCombobox", padding=(6, 2) if compact else (8, 6))
+            self.style.configure("TEntry", padding=(6, 2) if compact else (8, 6))
             if compact:
+                mark.grid_remove()
                 subtitle.grid_remove()
                 legend.grid_remove()
             else:
+                mark.grid()
                 subtitle.grid()
                 legend.grid()
         self.root.bind("<Configure>", adapt_layout, add="+")
@@ -521,9 +552,14 @@ class SimulatorApp:
                     math.radians(float(self.goal_yaw.get()))) if editable_target else None
             if task in SENSOR_EXERCISES and self.sensor_mode.get() == "student":
                 self.sensor_mode.set("ideal")
+            sensor_options = {}
+            if task == "sensor_avoidance":
+                sensor_options = {"sensor_stage": self.avoidance_stage.get(), "lidar_model": self.lidar_model.get()}
+            elif task in SENSOR_EXERCISES and task != "sensor_front_stop":
+                sensor_options = {"sensor_stage": self.estimation_stage.get()}
             new_session = ActivitySession(self.lesson_id, task, duration=duration, dt=self.dt,
                                           kinematics=self.kinematics.get(), sensor_mode=self.sensor_mode.get(),
-                                          exercise_model=self.exercise_model.get(), goal=goal)
+                                          exercise_model=self.exercise_model.get(), goal=goal, **sensor_options)
         except Exception as error:
             failed_activity = (self.lesson_id, task)
             if self.session is None:
@@ -563,11 +599,29 @@ class SimulatorApp:
                 "ESTIMATOR MODEL" if task in SENSOR_EXERCISES else "KINEMATICS MODEL"))
         else:
             self.model_controls.grid_remove()
+        if task in SENSOR_EXERCISES and task != "sensor_front_stop":
+            self.stage_controls.grid()
+            self.stage_selector.configure(textvariable=self.avoidance_stage if task == "sensor_avoidance" else self.estimation_stage,
+                                          values=tuple(AVOIDANCE_STAGES if task == "sensor_avoidance" else ESTIMATION_STAGES))
+            self.stage_hint.configure(text=self.session.laboratory.stage_description)
+        else:
+            self.stage_controls.grid_remove()
+        if task == "sensor_avoidance":
+            self.lidar_controls.grid()
+            self.model_hint.configure(text=(
+                "Sector summary only. Scan rotation is supplied."
+                if self.session.laboratory.stage == "sectors" else
+                "Sector summary and rangefinder stop."
+                if self.session.laboratory.stage == "stop" else
+                "Sector summary and obstacle supervisor."))
+        else:
+            self.lidar_controls.grid_remove()
+            self.model_hint.configure(text="Compare the supplied reference with your saved implementation.")
         if editable_target:
             self.goal_controls.grid()
         else:
             self.goal_controls.grid_remove()
-        if task in ("drive_goal", "drive_goal_behind"):
+        if task in ("drive_goal", "drive_goal_behind", "sensor_front_stop", "sensor_avoidance"):
             self.heading_controls.grid()
         else:
             self.heading_controls.grid_remove()
@@ -595,15 +649,22 @@ class SimulatorApp:
         self.description.set(DESCRIPTIONS[task])
         self.implementation_heading.configure(text="SCENE SETUP" if task == "escape_room_preview" else "YOUR IMPLEMENTATION")
         hint, path = ACTIVITY_FILES[task]
+        if task == "sensor_avoidance":
+            hint = self.session.laboratory.implementation_hint
         self.edit_hint.configure(text=hint)
-        files = f"File (relative to simulator/): {path}"
-        if self.lesson_id != "1" and task != "drive_proportional":
+        files = f"Simulator folder: {Path(__file__).resolve().parents[1]}\nFile (relative to this folder): {path}"
+        if task == "sensor_avoidance":
+            files += "\nLiDAR directions: robotics_sim/exercises/lesson04/lidar.py"
+            if self.session.laboratory.stage == "stop":
+                files += "\nStop controller: robotics_sim/exercises/lesson04/rangefinder.py"
+        elif self.lesson_id != "1" and task not in ("drive_proportional", "sensor_front_stop"):
             scene_path = f"robotics_sim/exercises/lesson{int(self.lesson_id):02d}/" + (
                 "gui.py" if self.session.laboratory is not None else "activity.py")
             if scene_path != path:
                 files += f"\nScene and robot commands: {scene_path}"
         self.edit_file.configure(text=files)
         self._notice = ""
+        self._last_action = ""
         self._reload_failed = False
         self._reload_target = None
         self._accumulator = 0
@@ -614,7 +675,7 @@ class SimulatorApp:
 
         self._queue_save()
 
-    def reload_exercise(self):
+    def reload_exercise(self, event=None):
         """Load saved code, then recreate the current activity and its controllers."""
         self.session.pause()
         self.session.sim.stop()
@@ -635,7 +696,11 @@ class SimulatorApp:
         self.lesson.set(LESSONS[lesson])
         self.tasks.configure(values=list(TASKS[lesson].values()))
         self.task.set(TASKS[lesson][task])
+        previous_session = self.session
         self.load_task(preserve_target=True)
+        if self.session is not previous_session:
+            self._last_action = "Saved code reloaded; activity reset to t=0. Press Start to run."
+            self._update_status()
 
     def toggle_running(self):
         if self.session.state == "Running":
@@ -763,8 +828,9 @@ class SimulatorApp:
             middle = len(sensors.lidar.ranges) // 2
             distance = f"{sensors.lidar.ranges[middle]:.3f} m" if sensors.lidar.hits[middle] else "no return (4 m)"
             if self.session.task in ("sensor_front_stop", "sensor_lidar", "sensor_avoidance"):
+                range_label = "Front" if self.session.task == "sensor_front_stop" else "Central range"
                 self.values.set(self.values.get() +
-                    f"\nSample: {sensors.time:.2f} s | Front: {distance} | {self.session.sensor_mode}")
+                    f"\nSample: {sensors.time:.2f} s | {range_label}: {distance} | {self.session.sensor_mode}")
                 if self.session.task in ("sensor_lidar", "sensor_avoidance"):
                     direction = sensors.lidar.ray_directions[middle]
                     self.values.set(self.values.get() +
@@ -803,7 +869,7 @@ class SimulatorApp:
                 "Completed": "Completed - the scene remains open. Reset to repeat or choose another task."}
         if state == "Completed" and self.session.outcome is not None:
             text[state] = f"{self.session.outcome} — the scene remains open. Reset to repeat or choose another task."
-        self.status.set(self._notice or text[state])
+        self.status.set(self._notice or (self._last_action if state == "Ready" and self._last_action else text[state]))
         self.start_button.configure(text="Pause ⏸︎" if state == "Running" else "Resume" if state == "Paused" else "Start ▶",
                                     state="disabled" if self._reload_failed or state == "Completed" else "normal")
         self.step_button.configure(state="disabled" if self._reload_failed or state in ("Running", "Completed") else "normal")
@@ -1060,7 +1126,8 @@ class SimulatorApp:
                 self._draw_goal((gx, gy, 0.025), f"Goal {index + 1}", color, heading=heading)
         if laboratory is not None and self.session.lesson == "4":
             if laboratory.has_goal:
-                self._draw_goal((*laboratory.target, 0.025), "Goal", "#dd8b24")
+                gx, gy, gt = laboratory.target
+                self._draw_goal((gx, gy, 0.025), "Goal", "#dd8b24", heading=gt)
             else:
                 for key, color in (("encoder", "#c88925"), ("imu", "#8558ae")):
                     points = laboratory.traces[key]

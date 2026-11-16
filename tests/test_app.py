@@ -22,7 +22,6 @@ def test_lesson4_stages_use_the_same_ui_with_explicit_model_labels(tmp_path, mon
     from robotics_sim.sim.references.control import ReferencePoseController
     from robotics_sim.sim.references.sensors import ReferenceRangeStop, ReferenceSectors, ReferenceObstacleSupervisor
 
-    monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "sectors")
     monkeypatch.setattr(avoidance.StudentSectors, "summarize", ReferenceSectors.summarize)
     root = tk.Tk()
     root.withdraw()  # This checks actual Tk state without opening an interactive window.
@@ -30,14 +29,18 @@ def test_lesson4_stages_use_the_same_ui_with_explicit_model_labels(tmp_path, mon
                        settings_path=tmp_path / "stages.json")
     try:
         app.task.set(TASKS["4"]["sensor_avoidance"])
+        app.avoidance_stage.set("sectors")
         app.exercise_model.set("student")
         app.load_task()
         app.single_step()
         assert app.model_heading.cget("text") == "SECTOR MODEL"
         assert "Stage: sectors" in app.values.get()
+        assert "supervisor command is inactive" in app.stage_hint.cget("text")
+        assert "Supplied scan rotation" in app.values.get()
+        assert "Sectors [m]" in app.values.get()
         assert app.session.sim.steps == 1
 
-        monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "stop")
+        app.avoidance_stage.set("stop")
         monkeypatch.setattr(rangefinder.StudentRangeStop, "command", ReferenceRangeStop.command)
         monkeypatch.setattr(avoidance.StudentObstacleSupervisor, "command", ReferenceObstacleSupervisor.command)
         monkeypatch.setattr(control.StudentPoseController, "wheel_command", ReferencePoseController.wheel_command)
@@ -51,6 +54,8 @@ def test_lesson4_stages_use_the_same_ui_with_explicit_model_labels(tmp_path, mon
         app.single_step()
         assert app.model_heading.cget("text") == "STOP CONTROLLER MODEL"
         assert "front rangefinder" in app.values.get()
+        assert not app.stage_controls.grid_info()
+        assert not app.lidar_controls.grid_info()
         assert "Encoder" not in app.values.get() and "Gyro" not in app.values.get()
     finally:
         app.close()
@@ -104,6 +109,103 @@ def desktop_process(test):
             env=environment, capture_output=True, text=True, timeout=45)
         assert result.returncode == 0, result.stdout + result.stderr
     return isolated
+
+
+@desktop_process
+def test_modes_reload_saved_code_and_keep_the_selected_stage_visible(tmp_path):
+    import tkinter as tk
+    from unittest.mock import patch
+    import robotics_sim.app as application
+    from robotics_sim.exercises.lesson04 import avoidance, lidar
+    from robotics_sim.preferences import load_preferences
+    from robotics_sim.session import TASKS
+
+    saved_avoidance = tmp_path / "avoidance.py"
+    source = Path(avoidance.__file__).read_text(encoding="utf-8")
+    source += ("\nfrom robotics_sim.sim.references.avoidance import ReferenceSectors\n"
+               "StudentSectors.summarize = ReferenceSectors.summarize\n")
+    saved_avoidance.write_text(source + "RELOAD_MARKER = 1\n", encoding="utf-8")
+    saved_lidar = tmp_path / "lidar.py"
+    saved_lidar.write_text(Path(lidar.__file__).read_text(encoding="utf-8") +
+                          "\nfrom robotics_sim.sim.references.lidar import ReferenceLidar\n"
+                          "StudentLidar.directions = ReferenceLidar.directions\n", encoding="utf-8")
+
+    root = tk.Tk()
+    root.withdraw()
+    settings = tmp_path / "modes.json"
+    with patch.object(avoidance, "__file__", str(saved_avoidance)), \
+         patch.object(lidar, "__file__", str(saved_lidar)), \
+         patch.object(application, "reload_lesson", wraps=application.reload_lesson) as reload:
+        app = application.SimulatorApp(root, lesson="4", duration=30, dt=.05, settings_path=settings)
+        try:
+            app.task.set(TASKS["4"]["sensor_avoidance"])
+            app.load_task()
+            assert app.stage_selector.get() == app.session.laboratory.stage == "avoid"
+            assert app.model_selector.get() == "reference"
+            app.single_step()
+            assert app.session.robot.command.vx > 0
+            assert "Simulator folder:" in app.edit_file.cget("text")
+
+            previous_session = app.session
+            app.stage_selector.set("sectors")
+            app.stage_selector.event_generate("<<ComboboxSelected>>")
+            root.update()
+            assert reload.call_count == 1 and avoidance.RELOAD_MARKER == 1
+            assert previous_session.state == "Closed"
+            assert app.session.sim.time == 0 and app.session.laboratory.stage == "sectors"
+            assert "Saved code reloaded" in app.status.get()
+            assert "supervisor command is inactive" in app.stage_hint.cget("text")
+
+            app.goal_x.set("2.4")
+            app.goal_y.set("1.2")
+            app.goal_yaw.set("90")
+            app.model_selector.set("student")
+            app.model_selector.event_generate("<<ComboboxSelected>>")
+            root.update()
+            assert reload.call_count == 2
+            assert type(app.session.laboratory.summary) is avoidance.StudentSectors
+            assert app.session.laboratory.target == pytest.approx((2.4, 1.2, 1.5707963267948966))
+            assert app.heading_controls.grid_info()
+            app.single_step()
+            assert app.session.robot.command.vx == 0
+            assert app.session.robot.command.omega == pytest.approx(.3)
+            assert "Sectors [m]" in app.values.get()
+
+            saved_avoidance.write_text(source + "RELOAD_MARKER = 2\n", encoding="utf-8")
+            app.sensor_selector.set("noisy")
+            app.sensor_selector.event_generate("<<ComboboxSelected>>")
+            root.update()
+            assert reload.call_count == 3 and avoidance.RELOAD_MARKER == 2
+            assert app.session.sensors.lidar.noisy and app.session.sim.time == 0
+
+            app.lidar_selector.set("student")
+            app.lidar_selector.event_generate("<<ComboboxSelected>>")
+            root.update()
+            assert reload.call_count == 4
+            assert type(app.session.sensors.lidar) is lidar.StudentLidar
+            assert "Stage: sectors | Lidar: student" in app.values.get()
+
+            saved_avoidance.write_text(source + "\ndef broken(\n", encoding="utf-8")
+            app.sensor_selector.set("ideal")
+            app.sensor_selector.event_generate("<<ComboboxSelected>>")
+            root.update()
+            assert app._reload_failed and "SyntaxError" in app.status.get()
+            previous_time = app.session.sim.time
+            app.single_step()
+            assert app.session.sim.time == previous_time
+
+            saved_avoidance.write_text(source + "RELOAD_MARKER = 3\n", encoding="utf-8")
+            app.model_selector.set("reference")
+            app.model_selector.event_generate("<<ComboboxSelected>>")
+            root.update()
+            assert not app._reload_failed and avoidance.RELOAD_MARKER == 3
+            assert app.session.laboratory.stage == "sectors" and app.session.sim.time == 0
+            assert not app.session.sensors.lidar.noisy
+            app._save_settings()
+            saved = load_preferences(settings)
+            assert saved["avoidance_stage"] == "sectors" and saved["lidar_model"] == "student"
+        finally:
+            app.close()
 
 
 def wait_for_ui(root, condition, *, timeout=5, description="UI condition"):
@@ -332,7 +434,7 @@ def test_desktop_completion_pause_switch_reset_and_labels(tmp_path):
             while app.session.state != "Completed":
                 app.single_step()
             assert app.session.sensors.time == pytest.approx(0.04)
-            assert "front" in app.values.get().lower()
+            assert ("Central range:" if task == "sensor_lidar" else "front") in app.values.get()
             assert "Encoder L/R" not in app.values.get()
             assert "Gyro z" not in app.values.get()
             assert app.canvas.find_withtag("scene")

@@ -53,10 +53,12 @@ class ReferenceObstacleSupervisor(ObstacleSupervisor):
     """A small detour exercise for one isolated box, not a complete planner."""
 
     def command(self, pose, goal, sectors):
-        dx = goal[0] - pose.x
-        dy = goal[1] - pose.y
+        gx, gy, gt = goal
+        dx = gx - pose.x
+        dy = gy - pose.y
         rho = hypot(dx, dy)
-        if rho <= self.eps_pos:
+        heading_error = wrap(gt - pose.yaw)
+        if rho <= self.eps_pos and abs(heading_error) <= self.eps_angle:
             self.phase = "DONE"
         if self.phase == "DONE":
             return 0.0, 0.0

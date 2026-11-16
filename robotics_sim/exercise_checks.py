@@ -172,6 +172,8 @@ class ExerciseChecks:
                 ("Supervisor reached DONE", lab.outcome == "DONE"),
                 (f"Goal distance ≤ {lab.controller.eps_pos:g} m", ran and math.hypot(
                     lab.target[0] - session.robot.pose().x, lab.target[1] - session.robot.pose().y) <= lab.controller.eps_pos),
+                (f"Goal heading error ≤ {lab.controller.eps_angle:g} rad", ran and abs(
+                    (lab.target[2] - session.robot.pose().yaw + math.pi) % (2 * math.pi) - math.pi) <= lab.controller.eps_angle),
                 sector_check, wheel_check,
             )
         lidar = sensors.lidar
