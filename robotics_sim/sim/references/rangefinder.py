@@ -14,18 +14,18 @@ class ReferenceRangeStop(ObstacleSupervisor):
 
     def command(self, pose, goal, distance, hit, max_range):
         # A miss represents the observed range limit, not a surface at that limit.
-        front = distance if hit else max_range
+        d = distance if hit else max_range
         rho = hypot(goal[0] - pose.x, goal[1] - pose.y)
         # Goal completion has priority and DONE remains terminal.
         if rho <= self.eps_pos:
             self.phase = "DONE"
-            return 0.0, 0.0
+
         if self.phase == "DONE":
             return 0.0, 0.0
         # First select the state, then calculate its command (EDR.04 FSM).
-        if self.phase == "GO" and front < self.enter:
+        if self.phase == "GO" and d < self.enter:
             self.phase = "STOP"
-        elif self.phase == "STOP" and front >= self.exit:
+        elif self.phase == "STOP" and d >= self.exit:
             self.reset_goal_controller()
             self.phase = "GO"
 

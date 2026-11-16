@@ -169,3 +169,29 @@ try:
 finally:
     session.close()
 ''')
+
+
+def test_lesson4_reload_reads_obstacle_settings_from_the_student_files(tmp_path):
+    run_in_copy(tmp_path, r'''
+from pathlib import Path
+from robotics_sim.exercise_reload import reload_lesson
+from robotics_sim.exercises.lesson04 import avoidance, rangefinder
+from robotics_sim.session import ActivitySession
+
+for module, position, size in (
+    (rangefinder, (2.0, 0.0), (0.6, 0.6, 1.0)),
+    (avoidance, (3.0, 0.0), (0.4, 3.0, 1.0)),
+):
+    path = Path(module.__file__)
+    settings = f"\nOBSTACLE_POSITION = {position!r}\nOBSTACLE_SIZE = {size!r}\n"
+    path.write_text(path.read_text(encoding="utf-8") + settings, encoding="utf-8")
+reload_lesson("4")
+for task, expected in (("sensor_front_stop", 1.7), ("sensor_avoidance", 2.8)):
+    session = ActivitySession("4", task)
+    try:
+        lidar = session.sensors.lidar
+        centre = len(lidar.angles) // 2
+        assert abs(lidar.scan()[centre] - expected) < 1e-6
+    finally:
+        session.close()
+''')

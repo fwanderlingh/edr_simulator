@@ -11,6 +11,10 @@ from ._runtime import ObstacleSupervisor
 
 ENTER_DISTANCE = 0.65  # m, measured from the sensor/robot centre
 EXIT_DISTANCE = 0.8    # m, greater than ENTER_DISTANCE (hysteresis)
+# Scene settings, shared by student and reference modes. Reload after editing.
+OBSTACLE_POSITION = (1.5, 0.0)   # (x, y) of the box centre in world metres
+OBSTACLE_SIZE = (0.4, 0.6, 1.0)  # full lengths along (x, y, z), in metres
+# The box rests on the floor. Decide motion from sensor readings, not these values.
 # Nominal gains, position tolerance and WHEEL_MAX come from lesson03/control.py.
 
 

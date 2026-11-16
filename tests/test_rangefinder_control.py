@@ -106,3 +106,43 @@ def test_front_stop_reads_editable_thresholds(monkeypatch):
         assert session.laboratory.controller.enter == .9
     finally:
         session.close()
+
+
+@pytest.mark.parametrize("model", ["student", "reference"])
+@pytest.mark.parametrize("task,stage,expected_distance", [
+    ("sensor_front_stop", "avoid", 1.7),
+    ("sensor_avoidance", "sectors", 2.8),
+    ("sensor_avoidance", "stop", 2.8),
+    ("sensor_avoidance", "avoid", 2.8),
+])
+def test_scene_reads_the_active_exercise_position_and_size(monkeypatch, model, task, stage,
+                                                          expected_distance):
+    monkeypatch.setattr(rangefinder, "OBSTACLE_POSITION", (2.0, 0.0))
+    monkeypatch.setattr(rangefinder, "OBSTACLE_SIZE", (0.6, 0.6, 1.0))
+    monkeypatch.setattr(avoidance, "OBSTACLE_POSITION", (3.0, 0.0))
+    monkeypatch.setattr(avoidance, "OBSTACLE_SIZE", (0.4, 3.0, 1.0))
+    monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", stage)
+    session = ActivitySession("4", task, exercise_model=model)
+    try:
+        lidar = session.sensors.lidar
+        centre = len(lidar.angles) // 2
+        assert lidar.hits[centre]
+        assert lidar.scan()[centre] == pytest.approx(expected_distance)
+    finally:
+        session.close()
+
+
+@pytest.mark.parametrize("task", ["sensor_front_stop", "sensor_avoidance"])
+def test_moving_the_box_sideways_changes_the_actual_sensor_returns(monkeypatch, task):
+    exercise = rangefinder if task == "sensor_front_stop" else avoidance
+    monkeypatch.setattr(exercise, "OBSTACLE_POSITION", (1.5, 0.5))
+    session = ActivitySession("4", task)
+    try:
+        lidar = session.sensors.lidar
+        centre = len(lidar.angles) // 2
+        assert not lidar.hits[centre]
+        assert lidar.scan()[centre] == lidar.max_range
+        if task == "sensor_avoidance":
+            assert any(lidar.hits)  # Other rays observe the off-centre box.
+    finally:
+        session.close()

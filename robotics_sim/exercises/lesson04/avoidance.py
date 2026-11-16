@@ -15,6 +15,10 @@ AVOIDANCE_STAGE = "avoid"  # "sectors", "stop" (reuse rangefinder.py), or "avoid
 # Use "student" here after implementing the ray directions in lidar.py.
 # This choice is independent of ideal/noisy measurement mode.
 LIDAR_MODEL = "reference"  # "reference" or "student"
+# Scene settings for all LiDAR stages, shared by student and reference modes.
+OBSTACLE_POSITION = (1.5, 0.0)   # (x, y) of the box centre in world metres
+OBSTACLE_SIZE = (0.4, 0.6, 1.0)  # full lengths along (x, y, z), in metres
+# The box rests on the floor. Decide motion from sensor readings, not these values.
 ENTER_DISTANCE = 0.65      # m; interrupt the nominal command
 EXIT_DISTANCE = 0.8        # m; authorize restarting, greater than ENTER_DISTANCE
 TURN_ANGLE = math.pi / 2   # rad; isolated-box scene

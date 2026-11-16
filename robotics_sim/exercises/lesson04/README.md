@@ -26,6 +26,19 @@ Distances are measured from the centre of the robot,
 so the stopping margin must include its footprint and motion between samples.
 One ray supports this aligned scene; it does not observe lateral clearance.
 
+Configure the box at the top of `rangefinder.py`, then save and click
+**Reload exercise**:
+
+```python
+OBSTACLE_POSITION = (1.5, 0.0)   # centre (x, y) in world metres
+OBSTACLE_SIZE = (0.4, 0.6, 1.0)  # full lengths (x, y, z), in metres
+```
+
+The box rests on the floor. Both student and reference modes use these scene
+settings. To test an off-centre obstacle, change the second position coordinate,
+for example to `(1.5, 0.5)`. The controller must still decide motion from sensor
+readings, rather than from these known scene coordinates.
+
 For authorized motion, call `self.goal_command(pose, goal)`. This reuses the
 completed `StudentPoseController` from Lesson 3 through a supplied wheel/body
 adapter. The same instance, gains, position tolerance and `WHEEL_MAX` are used.
@@ -85,7 +98,10 @@ This lets you reuse your geometry with noisy range measurements.
 Compare front-only stopping with LiDAR stopping before implementing avoidance.
 Then predict and check each detour phase using the sector readings.
 Repeat identical conditions with noise. As an extension, edit the scene
-in [gui.py](gui.py) to replace the box with a wide wall and explain the result.
+using `OBSTACLE_POSITION` and `OBSTACLE_SIZE` at the top of
+[avoidance.py](avoidance.py). These settings apply to all three stages and both
+controller models. To test a wide wall, try `OBSTACLE_SIZE = (0.4, 3.0, 1.0)`
+and explain the result. Click **Reload exercise** after saving.
 This local detour is designed for the supplied box and does not guarantee
 arrival in arbitrary environments.
 

@@ -10,7 +10,7 @@ from robotics_sim import DifferentialDriveRobot, Pose
 from robotics_sim.exercises.lesson03 import control as pose_exercise
 from robotics_sim.exercises.lesson03._control_runtime import controller_parameters
 from robotics_sim.sim.references.control import ReferencePoseController
-from . import avoidance, estimation
+from . import avoidance, estimation, rangefinder
 from ._runtime import rangefinder_parameters, supervisor_parameters
 from .rangefinder import StudentRangeStop
 from .avoidance import StudentObstacleSupervisor, StudentSectors
@@ -58,7 +58,11 @@ class SensorActivity:
         if task == "sensor_estimation_blocked":
             world.add_box(Pose(x=1.3, z=0.5), size=(0.2, 3, 1))
         elif self.has_goal:
-            world.add_box(Pose(x=1.5, z=0.5), size=(0.4, 0.6, 1))
+            scene = rangefinder if self.front_only else avoidance
+            obstacle_x, obstacle_y = scene.OBSTACLE_POSITION
+            obstacle_size = scene.OBSTACLE_SIZE
+            world.add_box(Pose(x=obstacle_x, y=obstacle_y, z=obstacle_size[2] / 2),
+                          size=obstacle_size)
         self.sensors = SensorSuite(self.robot, mode, dt,
                                    rangefinder=self.front_only,
                                    motion_sensors=not self.has_goal,
