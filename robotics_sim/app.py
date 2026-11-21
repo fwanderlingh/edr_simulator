@@ -16,7 +16,7 @@ from .exercises.lesson02 import module2
 from .session import ACTIVITY_FILES, ActivitySession, DESCRIPTIONS, LESSONS, TASKS, task_title
 from .sim.camera import Camera
 from .sim.scene_renderer import SceneRenderer
-from .exercises.lesson04.gui import SENSOR_EXERCISES, AVOIDANCE_STAGES, ESTIMATION_STAGES
+from .exercises.lesson04.gui import SENSOR_EXERCISES, ESTIMATION_STAGES
 from .preferences import DEFAULT_PATH, load_preferences, save_preferences
 from .experiment_data import capture_experiment
 from .exercise_checks import ExerciseChecks
@@ -66,12 +66,12 @@ class SimulatorApp:
         self.kinematics = tk.StringVar(value=saved.get("kinematics", "reference")
                                      if saved.get("kinematics") in ("reference", "student") else "reference")
         self.sensor_mode = tk.StringVar(value=saved.get("sensor_mode", "ideal")
-                                       if saved.get("sensor_mode") in ("ideal", "noisy", "student") else "ideal")
+                                       if saved.get("sensor_mode") in ("ideal", "noisy") else "ideal")
         self.exercise_model = tk.StringVar(value=saved.get("exercise_model", "reference")
             if saved.get("exercise_model") in ("reference", "student") else "reference")
-        self.avoidance_stage = tk.StringVar(value=saved.get("avoidance_stage", "avoid"))
+        self.avoidance_stage = tk.StringVar(value=saved.get("avoidance_stage", "sectors")
+                                          if saved.get("avoidance_stage") in ("sectors", "avoid") else "sectors")
         self.estimation_stage = tk.StringVar(value=saved.get("estimation_stage", "both"))
-        self.lidar_model = tk.StringVar(value=saved.get("lidar_model", "reference"))
         self.goal_x = tk.StringVar(value="1")
         self.goal_y = tk.StringVar(value="1")
         self.goal_yaw = tk.StringVar(value="0")
@@ -181,7 +181,6 @@ class SimulatorApp:
                 "kinematics": self.kinematics.get(),
                 "sensor_mode": self.sensor_mode.get(), "exercise_model": self.exercise_model.get(),
                 "avoidance_stage": self.avoidance_stage.get(), "estimation_stage": self.estimation_stage.get(),
-                "lidar_model": self.lidar_model.get(),
                 "show_frames": self.show_frames.get(), "label_size": self.label_size,
                 "label_color": self.label_color, "label_background": self.label_background,
                 "label_background_color": self.label_background_color,
@@ -334,7 +333,7 @@ class SimulatorApp:
         self.stage_controls.grid(row=0, column=0, sticky="ew", pady=(0, 14))
         ttk.Label(self.stage_controls, text="EXPERIMENT STAGE", style="Section.TLabel").pack(anchor="w", pady=(0, 6))
         self.stage_selector = ttk.Combobox(self.stage_controls, textvariable=self.avoidance_stage,
-            values=tuple(AVOIDANCE_STAGES), state="readonly", width=16)
+            values=("sectors", "avoid"), state="readonly", width=16)
         self.stage_selector.pack(fill="x")
         self.stage_selector.bind("<<ComboboxSelected>>", self.reload_exercise)
         self.stage_hint = ttk.Label(self.stage_controls, style="Muted.TLabel", wraplength=245, justify="left")
@@ -349,18 +348,11 @@ class SimulatorApp:
         self.model_selector.bind("<<ComboboxSelected>>", self.reload_exercise)
         self.model_hint = ttk.Label(self.model_controls, style="Muted.TLabel", wraplength=245, justify="left")
         self.model_hint.pack(anchor="w", pady=(6, 0))
-        self.lidar_controls = ttk.Frame(details, style="Card.TFrame")
-        self.lidar_controls.grid(row=2, column=0, sticky="ew", pady=(0, 14))
-        ttk.Label(self.lidar_controls, text="LIDAR DIRECTIONS", style="Section.TLabel").pack(anchor="w", pady=(0, 6))
-        self.lidar_selector = ttk.Combobox(self.lidar_controls, textvariable=self.lidar_model,
-            values=("reference", "student"), state="readonly", width=16)
-        self.lidar_selector.pack(fill="x")
-        self.lidar_selector.bind("<<ComboboxSelected>>", self.reload_exercise)
         self.sensor_controls = ttk.Frame(details, style="Card.TFrame")
         self.sensor_controls.grid(row=3, column=0, sticky="ew", pady=(0, 14))
         ttk.Label(self.sensor_controls, text="SENSOR MODE", style="Section.TLabel").pack(anchor="w", pady=(0, 6))
         self.sensor_selector = ttk.Combobox(self.sensor_controls, textvariable=self.sensor_mode,
-            values=("ideal", "noisy", "student"), state="readonly", width=16)
+            values=("ideal", "noisy"), state="readonly", width=16)
         self.sensor_selector.pack(fill="x")
         self.sensor_selector.bind("<<ComboboxSelected>>", self.reload_exercise)
         sensor_hint = ttk.Label(self.sensor_controls, text="Changes reload saved code and reset the run.",
@@ -550,11 +542,11 @@ class SimulatorApp:
         try:
             goal = (float(self.goal_x.get()), float(self.goal_y.get()),
                     math.radians(float(self.goal_yaw.get()))) if editable_target else None
-            if task in SENSOR_EXERCISES and self.sensor_mode.get() == "student":
+            if self.sensor_mode.get() == "student":
                 self.sensor_mode.set("ideal")
             sensor_options = {}
             if task == "sensor_avoidance":
-                sensor_options = {"sensor_stage": self.avoidance_stage.get(), "lidar_model": self.lidar_model.get()}
+                sensor_options = {"sensor_stage": self.avoidance_stage.get(), "lidar_model": "reference"}
             elif task in SENSOR_EXERCISES and task != "sensor_front_stop":
                 sensor_options = {"sensor_stage": self.estimation_stage.get()}
             new_session = ActivitySession(self.lesson_id, task, duration=duration, dt=self.dt,
@@ -602,20 +594,18 @@ class SimulatorApp:
         if task in SENSOR_EXERCISES and task != "sensor_front_stop":
             self.stage_controls.grid()
             self.stage_selector.configure(textvariable=self.avoidance_stage if task == "sensor_avoidance" else self.estimation_stage,
-                                          values=tuple(AVOIDANCE_STAGES if task == "sensor_avoidance" else ESTIMATION_STAGES))
+                                          values=("sectors", "avoid") if task == "sensor_avoidance" else tuple(ESTIMATION_STAGES))
             self.stage_hint.configure(text=self.session.laboratory.stage_description)
         else:
             self.stage_controls.grid_remove()
         if task == "sensor_avoidance":
-            self.lidar_controls.grid()
             self.model_hint.configure(text=(
-                "Sector summary only. Scan rotation is supplied."
+                "Exercise 1: summarize the supplied scan."
                 if self.session.laboratory.stage == "sectors" else
                 "Sector summary and rangefinder stop."
                 if self.session.laboratory.stage == "stop" else
-                "Sector summary and obstacle supervisor."))
+                "Exercise 2: reuse your sectors and Lesson 3 goal controller."))
         else:
-            self.lidar_controls.grid_remove()
             self.model_hint.configure(text="Compare the supplied reference with your saved implementation.")
         if editable_target:
             self.goal_controls.grid()
@@ -625,8 +615,7 @@ class SimulatorApp:
             self.heading_controls.grid()
         else:
             self.heading_controls.grid_remove()
-        self.sensor_selector.configure(values=("ideal", "noisy") if task in SENSOR_EXERCISES
-                                       else ("ideal", "noisy", "student"))
+        self.sensor_selector.configure(values=("ideal", "noisy"))
         self.inspector_canvas.yview_moveto(0)
         if self.lesson_id == "4":
             self.sensor_controls.grid()
@@ -647,17 +636,19 @@ class SimulatorApp:
         self._preview_camera_active = bool(preview_camera)
         self._camera_home_target = self.camera.target
         self.description.set(DESCRIPTIONS[task])
-        self.implementation_heading.configure(text="SCENE SETUP" if task == "escape_room_preview" else "YOUR IMPLEMENTATION")
+        self.implementation_heading.configure(text="SCENE SETUP" if task == "escape_room_preview" else
+                                               "OBSERVATION GUIDE" if task == "sensor_lidar" else "YOUR IMPLEMENTATION")
         hint, path = ACTIVITY_FILES[task]
         if task == "sensor_avoidance":
             hint = self.session.laboratory.implementation_hint
         self.edit_hint.configure(text=hint)
         files = f"Simulator folder: {Path(__file__).resolve().parents[1]}\nFile (relative to this folder): {path}"
         if task == "sensor_avoidance":
-            files += "\nLiDAR directions: robotics_sim/exercises/lesson04/lidar.py"
             if self.session.laboratory.stage == "stop":
                 files += "\nStop controller: robotics_sim/exercises/lesson04/rangefinder.py"
-        elif self.lesson_id != "1" and task not in ("drive_proportional", "sensor_front_stop"):
+            elif self.session.laboratory.stage == "avoid":
+                files += "\nGoal controller: robotics_sim/exercises/lesson03/control.py"
+        elif self.lesson_id != "1" and task not in ("drive_proportional", "sensor_front_stop", "sensor_lidar"):
             scene_path = f"robotics_sim/exercises/lesson{int(self.lesson_id):02d}/" + (
                 "gui.py" if self.session.laboratory is not None else "activity.py")
             if scene_path != path:
@@ -832,9 +823,16 @@ class SimulatorApp:
                 self.values.set(self.values.get() +
                     f"\nSample: {sensors.time:.2f} s | {range_label}: {distance} | {self.session.sensor_mode}")
                 if self.session.task in ("sensor_lidar", "sensor_avoidance"):
-                    direction = sensors.lidar.ray_directions[middle]
+                    rays = []
+                    for label, angle in (("right (-90 deg)", -math.pi / 2),
+                                         ("front (0 deg)", 0), ("left (+90 deg)", math.pi / 2)):
+                        index = min(range(len(sensors.lidar.angles)),
+                                    key=lambda i: abs(sensors.lidar.angles[i] - angle))
+                        reading = (f"{sensors.lidar.ranges[index]:.3f}" if sensors.lidar.hits[index]
+                                   else f"miss ({sensors.lidar.max_range:g})")
+                        rays.append(f"{label}={reading}")
                     self.values.set(self.values.get() +
-                        f"\nCentral ray (world): ({direction[0]:.3f}, {direction[1]:.3f}, {direction[2]:.3f})")
+                        "\nRays [m]: " + " | ".join(rays))
             else:
                 left, right = sensors.encoder.read()
                 gyro, ax, ay = sensors.imu.read()
@@ -1111,6 +1109,12 @@ class SimulatorApp:
         ground_paths = ()
         if self.session.task == "square":
             ground_paths = (([(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)], "#b5660b"),)
+        elif self.session.task in ("sensor_front_stop", "sensor_avoidance"):
+            pose = self.session.robot.pose()
+            radius = laboratory.controller.enter
+            circle = [(pose.x + radius * math.cos(angle), pose.y + radius * math.sin(angle), 0.002)
+                      for angle in np.linspace(0, 2 * math.pi, 97)]
+            ground_paths = ((circle, "#94aebc", 0.015),)
         self.renderer.draw(self.session.world, self.camera, width, height, ground_paths=ground_paths,
                            shadow_paths=tuple((chain, 0.02) for chain in chains))
         self.canvas.delete("overlay")
@@ -1128,6 +1132,9 @@ class SimulatorApp:
             if laboratory.has_goal:
                 gx, gy, gt = laboratory.target
                 self._draw_goal((gx, gy, 0.025), "Goal", "#dd8b24", heading=gt)
+                if laboratory.controller.phase == "DETOUR":
+                    mx, my, mt = laboratory.active_target
+                    self._draw_goal((mx, my, 0.025), "Intermediate goal", "#8558ae", heading=mt)
             else:
                 for key, color in (("encoder", "#c88925"), ("imu", "#8558ae")):
                     points = laboratory.traces[key]

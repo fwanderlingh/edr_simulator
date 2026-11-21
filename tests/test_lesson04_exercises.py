@@ -91,7 +91,9 @@ def test_supervisor_stops_then_turns_toward_the_clearer_side(left, right, turn_d
     assert controller.phase == "STOP"
     v, omega = controller.command(Pose(), (3, 0, 0), sectors)
     assert v == 0 and omega * turn_direction > 0
-    assert controller.phase == "TURN"
+    assert controller.phase == "DETOUR"
+    assert controller.nominal.controller.phase == "TURN"
+    assert controller.detour_goal == pytest.approx((0, turn_direction, turn_direction * math.pi / 2))
 
 
 def test_supervisor_remains_stopped_when_neither_side_has_enough_space():
@@ -100,3 +102,51 @@ def test_supervisor_remains_stopped_when_neither_side_has_enough_space():
     assert controller.command(Pose(), (3, 0, 0), sectors) == (0, 0)
     assert controller.command(Pose(), (3, 0, 0), sectors) == (0, 0)
     assert controller.phase == "STOP"
+
+
+def test_detour_keeps_one_world_goal_and_reuses_the_same_pose_controller():
+    from unittest.mock import patch
+
+    controller = ReferenceObstacleSupervisor()
+    nominal = controller.nominal.controller
+    goal = (6, 0, 0)
+    start = Pose(x=2, y=-1, yaw=math.pi / 2)
+    clear = {"front": 4, "left": 4, "right": 4}
+    blocked = {"front": .5, "left": 4, "right": .7}
+    with patch.object(nominal, "set_goal", wraps=nominal.set_goal) as select:
+        controller.command(start, goal, clear)
+        controller.command(start, goal, blocked)
+        controller.command(start, goal, blocked)
+        intermediate = controller.detour_goal
+        assert intermediate == pytest.approx((1, -1, -math.pi))
+        # Changed measurements and pose must not make the intermediate target move.
+        controller.command(Pose(x=1.8, y=-1, yaw=2.8), goal, {"front": 4, "left": .7, "right": 4})
+        assert controller.detour_goal is intermediate
+        assert controller.nominal.controller is nominal
+        assert select.call_count == 2  # Final target, then intermediate target.
+        # Position alone is insufficient: the same controller finishes alignment.
+        controller.command(Pose(x=1, y=-1, yaw=2.9), goal, clear)
+        assert controller.phase == "DETOUR" and nominal.phase == "ALIGN"
+        controller.command(Pose(x=1, y=-1, yaw=-math.pi), goal, clear)
+        assert controller.phase == "GO" and controller.detour_goal is None
+        assert nominal.goal == goal and select.call_count == 3
+        assert [call.args[0] for call in select.call_args_list] == [goal, intermediate, goal]
+
+
+def test_detour_allows_rotation_and_gates_advance_with_hysteresis():
+    controller = ReferenceObstacleSupervisor()
+    goal = (3, 0, 0)
+    sectors = {"front": .5, "left": 4, "right": 4}
+    controller.command(Pose(), goal, sectors)
+    v, omega = controller.command(Pose(), goal, sectors)
+    assert v == 0 and omega > 0  # The front obstacle must not prevent the detour turn.
+    intermediate = controller.detour_goal
+    pose = Pose(yaw=math.pi / 2)
+    for distance, allowed in ((.7, False), (.8, True), (.7, True), (.5, False), (.7, False), (.8, True)):
+        sectors["front"] = distance
+        command = controller.command(pose, goal, sectors)
+        assert controller.advance_allowed is allowed
+        assert (command[0] > 0) is allowed
+        if not allowed:
+            assert command == (0, 0)
+        assert controller.phase == "DETOUR" and controller.detour_goal is intermediate

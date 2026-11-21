@@ -4,7 +4,7 @@ These methods use the same signatures and supplied state as the student methods.
 Measurements are valid and all sectors are covered, as assumed in EDR.04.
 """
 
-from math import hypot, pi
+from math import cos, hypot, pi, sin
 
 from robotics_sim.exercises.lesson04._runtime import ObstacleSupervisor, SectorSummary
 
@@ -83,34 +83,31 @@ class ReferenceObstacleSupervisor(ObstacleSupervisor):
 
             if side_distance < self.exit:
                 return 0.0, 0.0
-            self.turn_yaw = pose.yaw + side * self.turn_angle
-            self.phase = "TURN"
-        if self.phase == "TURN":
-            # Keep the chosen target yaw until the rotation is complete.
-            error = wrap(self.turn_yaw - pose.yaw)
-            if abs(error) > self.turn_tolerance:
-                omega = self.turn_gain * error
-                return 0.0, omega
-            if front_distance < self.exit:
-                self.phase = "STOP"
-                return 0.0, 0.0
-            self.pass_start = (pose.x, pose.y)
-            self.phase = "PASS"
-        if self.phase == "PASS":
-            # Measure progress from the start of the bypass, while checking front.
+            # One fixed pose, expressed in the world, for the existing controller.
+            heading = wrap(pose.yaw + side * self.turn_angle)
+            self.detour_goal = (pose.x + self.bypass_distance * cos(heading),
+                                pose.y + self.bypass_distance * sin(heading), heading)
+            self.advance_allowed = False
+            self.phase = "DETOUR"
+        if self.phase == "DETOUR":
+            # Reuse TURN/DRIVE/ALIGN and both arrival tolerances from Lesson 3.
+            command = self.goal_command(pose, self.detour_goal)
+            if self.goal_controller_done:
+                self.detour_goal = None
+                self.phase = "GO"
+                if front_distance < self.enter:
+                    self.phase = "STOP"
+                    return 0.0, 0.0
+                # The different target automatically restarts the pose controller.
+                return self.goal_command(pose, goal)
+
+            # Hysteresis gates forward motion. Allow the initial turn even while
+            # the original obstacle remains in front; the side was checked above.
             if front_distance < self.enter:
-                self.phase = "STOP"
+                self.advance_allowed = False
+            elif front_distance >= self.exit:
+                self.advance_allowed = True
+            if command[0] > 0 and not self.advance_allowed:
                 return 0.0, 0.0
-
-            dx = pose.x - self.pass_start[0]
-            dy = pose.y - self.pass_start[1]
-            distance_from_start = hypot(dx, dy)
-            if distance_from_start < self.bypass_distance:
-                error = wrap(self.turn_yaw - pose.yaw)
-                v = self.bypass_speed
-                omega = self.turn_gain * error
-                return v, omega
-
-            self.phase = "GO"
-            self.reset_goal_controller()
+            return command
         return self.goal_command(pose, goal)

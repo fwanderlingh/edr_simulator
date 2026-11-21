@@ -259,18 +259,21 @@ class BoxScene:
     def ground_paths(self, camera, paths):
         """Project flat guide strips above the grid and below solid bodies.
 
+        Paths contain (points, color), optionally followed by width in metres.
         These paths lie on the floor, like the grid; they are not general
         elevated 3D lines. Clip their polygons before projecting them.
         """
         faces = []
-        for path_index, (points, color) in enumerate(paths):
+        for path_index, path in enumerate(paths):
+            points, color = path[:2]
+            width = path[2] if len(path) > 2 else 0.025
             for segment, (start, end) in enumerate(zip(points, points[1:])):
                 start, end = np.asarray(start[:2]), np.asarray(end[:2])
                 delta = end - start
                 length = np.linalg.norm(delta)
                 if length == 0:
                     continue
-                half_width = 0.0125 * np.array([-delta[1], delta[0]]) / length
+                half_width = width / 2 * np.array([-delta[1], delta[0]]) / length
                 corners = np.array([start - half_width, end - half_width,
                                     end + half_width, start + half_width])
                 vertices = np.column_stack((corners, np.full(4, 0.002), np.ones(4)))

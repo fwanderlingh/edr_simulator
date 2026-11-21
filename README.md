@@ -108,7 +108,6 @@ exercise, the app shows
 | 3 | `robotics_sim/exercises/lesson03/proportional.py` | `StudentProportionalController.wheel_command` (first proportional controller) |
 | 3 | `robotics_sim/exercises/lesson03/control.py` | `StudentPoseController.wheel_command` (reach one pose) |
 | 3 | `robotics_sim/exercises/lesson03/waypoint.py` | `StudentWaypointController.wheel_command` (sequence the pose controller) |
-| 4 | `robotics_sim/exercises/lesson04/lidar.py` | `StudentLidar.directions` (select **student**) |
 | 4 | `robotics_sim/exercises/lesson04/rangefinder.py` | `StudentRangeStop.command` (front stop and hysteresis) |
 | 4 | `robotics_sim/exercises/lesson04/avoidance.py` | `StudentSectors.summarize`, `StudentObstacleSupervisor.command` |
 | 5 | `robotics_sim/exercises/lesson05/kinematics.py` | `StudentPlanarArm.forward`, `inverse`, `jacobian` |
@@ -271,17 +270,16 @@ rangefinder/LiDAR supervision of the same goal controller.
 ### Lesson 4: sensors and obstacle control
 
 [Lesson 4 exercise details](robotics_sim/exercises/lesson04/README.md) cover
-three steps: **Reach a goal: front rangefinder stop**, **Scan obstacles with 2D
-lidar**, and **Reach a goal and avoid an obstacle**. Complete the front stop,
-ray directions, sector summary, and detour supervisor in that order. The LiDAR
-stop stage reuses the first controller on the front-sector minimum. All goal
-control uses a full `(x, y, yaw)` goal and the same Lesson 3 pose controller,
-including final-heading alignment. Sensor mode
-selects ideal or noisy distance measurements independently of the control model.
-Choose **EXPERIMENT STAGE** in the sidebar to inspect sectors, test stopping,
-or run the complete detour. **LIDAR DIRECTIONS** independently selects the
-reference or completed student geometry. The stage explanation states which
-controller is active and whether motion is supplied for observation.
+**Reach a goal: front rangefinder stop**, followed by Part II: observe the
+supplied sensor in **Scan obstacles with 2D lidar**, then implement two methods
+in **Reach a goal and avoid an obstacle**. Exercise 1 is `StudentSectors.summarize`
+under **EXPERIMENT STAGE: sectors** (the default). Exercise 2 is
+`StudentObstacleSupervisor.command` under **avoid**, using those sectors to select a fixed intermediate pose and
+the completed Lesson 3 controller for both the intermediate and final goals. All goal control uses a full
+`(x, y, yaw)` goal, including final-heading alignment. The LiDAR is already
+functional; **Sensor mode** selects ideal or noisy measurements. The stage
+explanation states which controller is active and whether motion is supplied
+for observation.
 
 Changing a stage, model or sensor mode automatically reloads saved exercise
 code and resets the activity. Use **Reload exercise** after editing code while
@@ -458,10 +456,9 @@ contains all supported keys with default values:
 | `lesson`, `task`, `duration` | Last selected activity and length in seconds |
 | `kinematics` | Lesson 3 wheel-kinematics or waypoint-controller model: `reference` or `student` |
 | `exercise_model` | Estimator, supervisor and arm exercise model: `reference` or `student` |
-| `sensor_mode` | Lesson 4 mode: `ideal`, `noisy`, or `student` |
-| `avoidance_stage` | Obstacle experiment: `sectors`, `stop`, or `avoid` (default) |
+| `sensor_mode` | Lesson 4 measurements: `ideal` or `noisy` |
+| `avoidance_stage` | Exercise: `sectors` (default) or `avoid` |
 | `estimation_stage` | Estimation experiment: `encoder`, `imu`, or `both` (default) |
-| `lidar_model` | Obstacle experiment ray directions: `reference` or `student` |
 | `show_frames` | Display coordinate-frame annotations |
 | `label_size` | Text size, 8–36 points |
 | `label_color`, `label_background`, `label_background_color` | Text color, background enabled, and background color |

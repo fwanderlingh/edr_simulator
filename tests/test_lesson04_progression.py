@@ -52,6 +52,7 @@ def test_sectors_run_without_supervisor_or_previous_controller(monkeypatch):
     monkeypatch.setattr(avoidance.StudentSectors, "summarize", ReferenceSectors.summarize)
     monkeypatch.setattr(avoidance.StudentObstacleSupervisor, "command", unfinished)
     monkeypatch.setattr(control.StudentPoseController, "wheel_command", unfinished)
+    monkeypatch.setattr(StudentLidar, "directions", unfinished)
     session = ActivitySession("4", "sensor_avoidance", duration=.3, exercise_model="student")
     try:
         finish(session)
@@ -73,7 +74,7 @@ def test_explicit_experiment_settings_override_script_defaults(monkeypatch, stag
     try:
         lab = session.laboratory
         assert lab.stage == stage and type(session.sensors.lidar) is StudentLidar
-        assert f"Stage: {stage} | Lidar: student" in lab.readout
+        assert f"Stage: {stage}" in lab.readout
         session.step(single=True)
         assert "Sectors [m]" in lab.readout
         if stage == "sectors":
@@ -101,6 +102,7 @@ def test_stop_stage_records_stop_without_claiming_goal_arrival(monkeypatch):
 
 def test_nominal_motion_calls_student_lesson3_and_keeps_its_phase(monkeypatch):
     monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "avoid")
+    monkeypatch.setattr(StudentLidar, "directions", unfinished)
     calls = []
 
     def completed_pose_exercise(self, pose, r, L):

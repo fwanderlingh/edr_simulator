@@ -61,9 +61,10 @@ def test_blocked_encoder_exercise_reveals_disagreement():
         session.close()
 
 
-def test_avoidance_is_available_in_catalog_and_reaches_goal(tmp_path, monkeypatch):
+@pytest.mark.parametrize("mode", ["ideal", "noisy"])
+def test_avoidance_is_available_in_catalog_and_reaches_goal(tmp_path, monkeypatch, mode):
     monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "avoid")
-    session = ActivitySession("4", "sensor_avoidance", duration=35, exercise_model="reference")
+    session = ActivitySession("4", "sensor_avoidance", duration=35, exercise_model="reference", sensor_mode=mode)
     try:
         checks = ExerciseChecks(session)
         assert not all(passed for _, passed in checks.evaluate())
@@ -78,6 +79,19 @@ def test_avoidance_is_available_in_catalog_and_reaches_goal(tmp_path, monkeypatc
         assert float(data[-1]["goal_error_m"]) <= 0.05
         assert data[-1]["outcome"] == "DONE"
         assert data[-1]["phase"] == "DONE"
+        detour = [row for row in data if row["phase"] == "DETOUR"]
+        assert detour
+        previous = None
+        for row in data:
+            active = (row["active_target_x_m"], row["active_target_y_m"], row["active_target_yaw_rad"])
+            if row["phase"] == "DETOUR":
+                assert previous is None or active == previous
+                previous = active
+            else:
+                previous = None  # A later obstacle can require another fixed goal.
+        assert {row["nominal_phase"] for row in detour} >= {"TURN", "DRIVE"}
+        assert all(row["target_x_m"] == "3.0" and row["target_y_m"] == "0.0" for row in data)
+        assert float(data[-1]["active_target_x_m"]) == 3
         assert all(max(abs(float(row["left_rad_s"])), abs(float(row["right_rad_s"])))
                    <= 5 + 1e-12 for row in data)
         assert float(data[-1]["left_rad_s"]) == float(data[-1]["right_rad_s"]) == 0

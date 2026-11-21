@@ -76,7 +76,7 @@ DESCRIPTIONS = {
     "drive_waypoints": "Reach (1 m, 0.5 m, pi/2 rad), then (1 m, 1.5 m, 0 rad). Complete position and orientation at each waypoint before advancing. The controller selector switches between the reference model and your implementation; DONE and TIMEOUT are distinct outcomes.",
     "drive_goal_behind": "Reach (-1 m, 0 m, 0 rad), starting with a goal behind the robot. Predict the initial turn, then observe TURN, DRIVE and ALIGN. Use student to run wheel_command from control.py after completing the guided exercise.",
     "sensor_encoders": "Compare wheel angular increments with speed times sample interval. The forward rangefinder measures distance to the wall; encoder shafts keep turning if blocked.",
-    "sensor_lidar": "A rotating robot scans a 180-degree field of view. Green rays hit obstacles; gray rays have no return within 4 m. Student mode uses your ray-direction formula.",
+    "sensor_lidar": "Observe a supplied LiDAR while the robot rotates. The scan has 37 bearings from -90 to +90 degrees, relative to the robot, and a 4 m range. Green rays are hits; gray rays are misses. Compare right, front and left readings before implementing the sector summary.",
     "sensor_imu": "Observe yaw rate and body-frame acceleration during smoothly changing motion. Compare ideal and noisy readings; this planar IMU excludes gravity.",
 }
 
@@ -102,14 +102,14 @@ ACTIVITY_FILES = {
     "drive_waypoints": ("Complete StudentWaypointController.wheel_command after control.py; advance only after both tolerances are met.", "robotics_sim/exercises/lesson03/waypoint.py"),
     "drive_goal_behind": ("Complete StudentPoseController.wheel_command; test a target behind the robot without commanding lateral motion.", "robotics_sim/exercises/lesson03/control.py"),
     "sensor_encoders": ("Optional: inspect or customize the encoder model; click Reload exercise after saving.", "robotics_sim/exercises/lesson04/sensors/encoder.py"),
-    "sensor_lidar": ("Edit StudentLidar.directions; select student sensor mode and click Reload exercise after saving.", "robotics_sim/exercises/lesson04/lidar.py"),
+    "sensor_lidar": ("No implementation required. Predict hit/miss and distance changes as the robot rotates; use Pause, Step and Export CSV to check your predictions.", "robotics_sim/exercises/lesson04/README.md"),
     "sensor_imu": ("Optional: inspect or customize the IMU model; click Reload exercise after saving.", "robotics_sim/exercises/lesson04/sensors/imu.py"),
 }
 
 for task in SENSOR_EXERCISES:
     DESCRIPTIONS[task] = (
-        "Choose the experiment stage in the GUI: sectors, stop or avoid. "
-        "The nominal motion reuses lesson03/control.py. Reach the visible goal around one isolated box; "
+        "Exercise 1: sectors summarizes a supplied LiDAR scan. Exercise 2: choose a fixed intermediate pose from those sectors. "
+        "The same Lesson 3 controller reaches intermediate and final goals. Reach the visible goal around one isolated box; "
         "compare DONE and TIMEOUT. The reference is a local detour, not a general path planner."
         if task == "sensor_avoidance" else
         "Choose the experiment stage in the GUI: encoder, imu or both. "
@@ -117,7 +117,7 @@ for task in SENSOR_EXERCISES:
         "robot on the same sensor stream; orange is encoder odometry, purple is the IMU estimate. "
         "Use ideal data first, then noisy data. The blocked-robot task exposes wheel/chassis disagreement.")
     ACTIVITY_FILES[task] = (
-        "Choose the experiment stage and LiDAR directions in the GUI. Complete summarize, then command. Mode changes reload saved code automatically."
+        "Complete summarize in sectors, then command in avoid. Select an intermediate goal and reuse the Lesson 3 controller for both goals."
         if task == "sensor_avoidance" else
         "Choose the experiment stage in the GUI; implement encoder, IMU, then both. Mode changes reload saved code automatically.",
         "robotics_sim/exercises/lesson04/avoidance.py" if task == "sensor_avoidance" else

@@ -1,7 +1,7 @@
-"""Student exercise: transform each lidar bearing into a world-space unit ray.
+"""Legacy ray-direction exercise, retained for programmatic experiments.
 
-Implement directions(), select student sensor mode, then click Reload exercise after saving.
-The sensor backend handles ray casting and range conversion.
+The Lesson 4 desktop activities use the supplied LiDAR. The course exercises
+implement sector summaries and supervision in avoidance.py.
 Angles are radians, x is forward, y is left, z is up.
 Return a NumPy array with one (ux, uy, uz) row for each ray.
 Reference: robotics_sim/sim/references/lidar.py.

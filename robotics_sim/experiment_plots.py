@@ -239,9 +239,20 @@ def _avoidance(axes, data, snapshot):
             goal += (data["target_yaw_rad"][-1],)
         goals = (goal,)
     _goals(axes[0], goals)
+    if "active_target_x_m" in data:
+        intermediate = (np.isfinite(data["active_target_x_m"]) &
+                        ((~np.isclose(data["active_target_x_m"], data["target_x_m"])) |
+                         (~np.isclose(data["active_target_y_m"], data["target_y_m"]))))
+        points = np.unique(np.column_stack((data["active_target_x_m"][intermediate],
+                                           data["active_target_y_m"][intermediate])), axis=0)
+        if len(points):
+            axes[0].scatter(points[:, 0], points[:, 1], marker="D", color=PURPLE,
+                            s=45, label="Intermediate goals", zorder=5)
     _xy_labels(axes[0])
     _series(axes[1], data, [("goal_error_m", "Distance to goal", TEAL)],
             title="Progress toward the goal", ylabel="Distance [m]")
+    if "active_goal_error_m" in data:
+        _line(axes[1], data["time_s"], data["active_goal_error_m"], "Distance to active goal", PURPLE, style="--")
     _series(axes[2], data, [("front_m", "Front", TEAL), ("left_m", "Left", ORANGE),
                            ("right_m", "Right", PURPLE)],
             title="Sector distances used by the supervisor", ylabel="Range [m]", step=True)

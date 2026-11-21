@@ -56,39 +56,38 @@ The robot should stop before the box and remain there. The experiment ends
 with **COMPLETED**, which records the end of this observation rather than
 arrival at the goal. Repeat with noisy distances and compare phase changes.
 
-## Part II: observe directions, then choose a detour
+## Part II: understand the LiDAR, summarize sectors, then supervise motion
 
 Choose **Scan obstacles with 2D lidar**. The robot rotates with 37 rays spanning
 -90 to +90 degrees at 5-degree intervals and a maximum range of 4 m. Green rays
-hit geometry; gray rays are misses. Complete `StudentLidar.directions`
-in [lidar.py](lidar.py), using the robot yaw to rotate each sensor bearing into
-a world-space unit vector. The public exercise method is initially unfinished.
-Collect one `(ux, uy, 0.0)` row per ray and return `np.array(directions)`,
-matching the NumPy array returned by the supplied sensor class.
-Select **Sensor mode: student** to test those directions with ideal ranges;
-compare the centre ray, endpoints and scan orientation with the reference.
-The sampler performs ray casting; exercise code needs no PyBullet calls.
+hit geometry; gray rays are misses. The LiDAR is supplied and requires no
+implementation. A time-of-flight LiDAR measures the round-trip travel time of
+reflected light to obtain distance. Its scan reports a bearing, range and hit/miss
+for each observed direction. In this mounting the bearings are relative to the
+robot: zero is forward, positive is left and negative is right.
+Use **Sensor mode: ideal**, **Pause** and **Step** to predict and inspect changes
+as an obstacle enters the field of view. Live measurements show individual rays
+at -90, 0 and +90 degrees. A miss reports 4 m with `hit=False`; it is not an
+obstacle at 4 m. The scan does not observe behind the robot or guarantee clearance
+between rays or for the whole footprint.
 
-Next choose **Reach a goal and avoid an obstacle**. Select **student** in
-**LIDAR DIRECTIONS** to reuse the directions just implemented. Choose
+Next choose **Reach a goal and avoid an obstacle**. Complete two exercises in
+[avoidance.py](avoidance.py), using
 **EXPERIMENT STAGE** in the GUI:
 
-1. `sectors`: implement `StudentSectors.summarize`. Compute minima for front,
+1. `sectors` (default): implement `StudentSectors.summarize`. Compute minima for front,
    left and right; front includes bearings within 30 degrees of the forward
    axis. Assume coherent arrays and at least one ray in each sector. A miss
    observes to maximum range. The robot rotates for inspection; neither the
    supervisor nor the goal controller is called. Select **SECTOR MODEL**.
-2. `stop`: reuse the completed `StudentRangeStop.command` on the front-sector
-   minimum. Only the input observation changes from Part I. The sector summary
-   and Lesson 3 controller must be complete; the detour method may remain
-   unfinished. This blocked experiment also ends with **COMPLETED**.
-3. `avoid` (default): implement `StudentObstacleSupervisor.command` to add a
-   detour around the isolated box. Use side observations to choose a turn,
-   retain the turn direction and bypass progress, then return to nominal
-   goal control. Set DONE only inside both pose tolerances. Arrival gives
+2. `avoid`: implement `StudentObstacleSupervisor.command`. Reuse the front-stop
+   decision from Part I with the front-sector minimum, then add a detour around
+   the isolated box. Choose and store one intermediate pose from the side
+   observations. Call the same Lesson 3 pose controller for that pose, then
+   restore the final goal after intermediate position AND heading arrival. Set DONE only inside both pose tolerances. Arrival gives
    **DONE**; expiration of the duration gives **TIMEOUT**.
 
-Use **student** under **SUPERVISOR MODEL** for stop/avoid. Each student method
+Use **student** under **SUPERVISOR MODEL** for avoid. Each student method
 raises an explicit error until implemented. The supplied runtime provides
 state and the Lesson 3 adapter, without supplying the student's decision.
 Use the heading entry in the target controls to specify the final orientation,
@@ -97,28 +96,51 @@ not complete the task: the shared Lesson 3 controller must finish alignment.
 Reloading Lesson 4 also reloads saved Lesson 3 controller changes.
 
 `avoidance.py` exposes `ENTER_DISTANCE`, `EXIT_DISTANCE`,
-`TURN_ANGLE`, `TURN_TOLERANCE`, `TURN_GAIN`, `BYPASS_DISTANCE`, and `BYPASS_SPEED`.
-Both models use these settings. `LIDAR_MODEL` selects `reference` (default) or
-the completed `student` directions in programmatic sessions. In the desktop,
-**LIDAR DIRECTIONS** selects these independently of ideal/noisy **Sensor mode**.
-This lets you reuse your geometry with noisy range measurements.
+`TURN_ANGLE` and `BYPASS_DISTANCE`, the bearing offset and distance of the
+intermediate goal from the stop pose. Speeds, gains, arrival tolerances and wheel
+limits are those already implemented in Lesson 3.
+Both models use these settings. The supplied LiDAR works with either control
+model and both ideal and noisy range measurements.
+
+The supervisor uses GO, STOP, DETOUR and DONE. Its supplied state includes
+`self.detour_goal` (initially `None`) and `self.advance_allowed`. Compute the
+intermediate `(x, y, yaw)` once in STOP, using the stop pose, the selected side,
+`self.turn_angle` and `self.bypass_distance`; do not move it with the robot.
+In DETOUR use `self.goal_command(pose, self.detour_goal)`. After that call,
+`self.goal_controller_done` reports arrival at the active pose, including heading.
+Switching back to `self.goal_command(pose, goal)` automatically restarts the same
+controller for the final target. Only final-pose arrival sets supervisor DONE.
+
+Allow the initial pure rotation toward the checked side even while the front is
+obstructed. In DETOUR, initialize `advance_allowed` to False; set it False below
+`self.enter`, True at or above `self.exit`, and retain it between thresholds.
+If the pose controller proposes positive forward speed while advance is blocked,
+return `(0, 0)`. Keep the intermediate goal while waiting. A subsequent obstruction
+after returning to GO can require another intermediate pose.
 
 Each stage displays its purpose and the components it executes. Live measurements
-distinguish the central ray range from the three sector minima, show the current
-phase and command, and explain scan rotation, stopping and detour progress.
-The default GUI stage is **avoid**, which runs the complete reference supervisor.
+distinguish individual ray ranges from the three sector minima, show the current
+supervisor phase and command. During DETOUR they show the intermediate pose,
+its position and heading errors, forward-motion authorization, and the active
+TURN/DRIVE/ALIGN phase of the Lesson 3 controller. The scene marks the intermediate
+goal in purple and the final goal in orange. Use a 40-second duration for a full run.
+A thin pale circle on the floor follows the robot at radius `ENTER_DISTANCE`
+(`d_in`), showing the stop threshold in both the rangefinder and LiDAR activities.
+The default GUI stage is **sectors**, to verify the summary before the supervisor.
 
-Changing a stage, model, LiDAR implementation or sensor mode automatically
+Changing a stage, model or sensor mode automatically
 reloads saved code and resets the experiment. **Reload exercise** remains useful
 after saving changes while keeping the same modes. Both stage and model choices
 are remembered between launches. Estimation activities expose the same stage
 selector for **encoder**, **imu** and **both**.
 
-Compare front-only stopping with LiDAR stopping before implementing avoidance.
-Then predict and check each detour phase using the sector readings.
+Verify the sector summary on scans with known results: all misses; a nearby
+hit in one sector; and hits at the +/-30 degree boundaries, both in front.
+Use the minimum so that a close return cannot be hidden by larger ranges.
+Then predict and check each supervisor phase using these sector readings.
 Repeat identical conditions with noise. As an extension, edit the scene
 using `OBSTACLE_POSITION` and `OBSTACLE_SIZE` at the top of
-[avoidance.py](avoidance.py). These settings apply to all three stages and both
+[avoidance.py](avoidance.py). These settings apply to both exercises and both
 controller models. To test a wide wall, try `OBSTACLE_SIZE = (0.4, 3.0, 1.0)`
 and explain the result. Click **Reload exercise** after saving.
 This local detour is designed for the supplied box and does not guarantee
@@ -142,7 +164,9 @@ and acquisitions to a companion `_sensors.csv` file. Existing files are
 overwritten. Sensor columns are `time_s`, `range_i_m`, `true_range_i_m`, and
 `hit_i` in bearing order. The front-stop activity has one ray and leaves
 unobserved left/right sector fields empty. Control records include goal error,
-phase, nominal-controller phase, target heading, heading error and wheel scaling. A control sample
+supervisor and pose-controller phases, final-goal errors, active-target pose and
+errors, `advance_allowed`, and wheel scaling. `target_*` always identifies the
+final goal; `active_target_*` identifies the pose currently assigned to Lesson 3. A control sample
 uses the scan available before the physics step whose resulting pose is logged.
 
 Compare the same scene and duration with **reference** after your own attempt.
@@ -152,14 +176,10 @@ for comparison mirror the exercise filenames:
 
 | Exercise | Reference implementation |
 | --- | --- |
-| `lidar.py` | [references/lidar.py](../../sim/references/lidar.py): `ReferenceLidar.directions` |
 | `rangefinder.py` | [references/rangefinder.py](../../sim/references/rangefinder.py): `ReferenceRangeStop.command` |
 | `avoidance.py` | [references/avoidance.py](../../sim/references/avoidance.py): `ReferenceSectors.summarize`, `ReferenceObstacleSupervisor.command` |
 | `estimation.py` (additional activity) | [references/estimation.py](../../sim/references/estimation.py): `ReferenceOdometry.update`, `ReferenceInertial.update` |
 
 The simulator's **reference** mode uses these implementations. Their method
-signatures match the student methods. The LiDAR solution explicitly rotates ray
-directions with `R_w_b @ u_s`, following the notation of EDR.02 and EDR.04.
-Directions use only rotation; the homogeneous transformations of observed points
-use the additional coordinate 1. See the [instructor guide](../../sim/references/README.md)
-for the correspondence between the code and the notes.
+signatures match the student methods. See the
+[instructor guide](../../sim/references/README.md) for implementation details.

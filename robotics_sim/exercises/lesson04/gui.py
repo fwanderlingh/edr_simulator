@@ -27,9 +27,9 @@ SENSOR_EXERCISES = (
 )
 
 AVOIDANCE_STAGES = {
-    "sectors": "Inspect sector distances. A supplied command rotates the robot at 0.3 rad/s; the supervisor command is inactive.",
+    "sectors": "Exercise 1: compute front, left and right minima from the supplied scan. The robot rotates at 0.3 rad/s; the supervisor command is inactive.",
     "stop": "Test stopping with the front-sector minimum and the completed rangefinder controller. No detour is executed.",
-    "avoid": "Run the complete supervisor: reach the goal, stop for obstacles and execute the detour.",
+    "avoid": "Exercise 2: choose an intermediate pose from your sectors, then reuse the Lesson 3 controller for both intermediate and final goals.",
 }
 ESTIMATION_STAGES = {
     "encoder": "Test encoder odometry; the IMU estimate uses the reference implementation.",
@@ -167,11 +167,19 @@ class SensorActivity:
         self.stop()
 
     @property
+    def active_target(self):
+        if self.has_goal and self.controller.phase == "DETOUR":
+            return self.controller.detour_goal
+        return self.target
+
+    @property
     def extra_columns(self):
         if self.has_goal:
             return ("target_x_m", "target_y_m", "goal_error_m", "phase", "front_m",
                     "left_m", "right_m", "stage", "nominal_phase", "wheel_scale",
                     "target_yaw_rad", "goal_heading_error_rad",
+                    "active_target_x_m", "active_target_y_m", "active_target_yaw_rad",
+                    "active_goal_error_m", "active_heading_error_rad", "advance_allowed",
                     "left_rad_s", "right_rad_s", "outcome")
         return ("enc_x_m", "enc_y_m", "enc_yaw_rad", "enc_speed_m_s", "enc_yaw_rate_rad_s",
                 "imu_x_m", "imu_y_m", "imu_yaw_rad", "imu_vx_m_s", "imu_vy_m_s",
@@ -182,12 +190,16 @@ class SensorActivity:
     def extra_values(self):
         pose = self.robot.pose()
         if self.has_goal:
+            active = self.active_target
             ranges = tuple(self.used_sectors[key] if self.used_sectors and self.used_sectors[key] is not None else ""
                            for key in ("front", "left", "right"))
             return (self.target[0], self.target[1], math.hypot(self.target[0] - pose.x, self.target[1] - pose.y),
                     self.controller.phase, *ranges,
                     self.stage, self.pose_controller.phase, self.wheel_scale,
                     self.target[2], wrap(self.target[2] - pose.yaw),
+                    *active, math.hypot(active[0] - pose.x, active[1] - pose.y),
+                    wrap(active[2] - pose.yaw),
+                    int(self.controller.advance_allowed) if self.controller.phase == "DETOUR" else "",
                     *self.robot.wheel_velocities, self.outcome)
         return (self.odom.x, self.odom.y, self.odom.yaw, self.odom.speed, self.odom.yaw_rate,
                 self.imu.x, self.imu.y, self.imu.yaw, self.imu.vx, self.imu.vy,
@@ -207,7 +219,7 @@ class SensorActivity:
             return "Complete StudentSectors.summarize in avoidance.py. The scan rotation is supplied; command is not called."
         if self.stage == "stop":
             return "Reuse StudentRangeStop.command in rangefinder.py with the front-sector minimum from StudentSectors.summarize."
-        return "Complete StudentSectors.summarize and StudentObstacleSupervisor.command in avoidance.py. Nominal motion reuses Lesson 3."
+        return "Complete command in avoidance.py: select a fixed intermediate goal, then reuse goal_command for both targets."
 
     @property
     def motion_feedback(self):
@@ -218,6 +230,10 @@ class SensorActivity:
         if self.stage == "sectors":
             return "Supplied scan rotation; supervisor command is inactive."
         phase = self.controller.phase
+        if phase == "DETOUR":
+            if self.pose_controller.phase == "DRIVE" and not self.controller.advance_allowed:
+                return "Advance paused by hysteresis; the stored intermediate goal is unchanged."
+            return "The Lesson 3 controller is reaching the stored intermediate pose."
         if phase == "GO" and self.pose_controller.phase == "TURN":
             return "The nominal controller is turning toward the goal."
         if phase == "GO" and self.pose_controller.phase == "ALIGN":
@@ -232,8 +248,6 @@ class SensorActivity:
                 return "Neither lateral sector reaches the release threshold."
         return {"GO": "Nominal control toward the goal.",
                 "STOP": "Stopped; the controller evaluates whether to resume or turn.",
-                "TURN": "Detour rotation toward the stored heading.",
-                "PASS": "Bypass segment before returning to the goal.",
                 "DONE": "The controller reports completion."}.get(phase, "Phase defined by the selected controller.")
 
     @property
@@ -243,7 +257,7 @@ class SensorActivity:
             command = self.robot.command
             lines = [f"Goal pose: ({self.target[0]:.2f} m, {self.target[1]:.2f} m, {self.target[2]:.3f} rad)",
                      "Sensor: front rangefinder" if self.front_only else
-                     f"Stage: {self.stage} | Lidar: {self.lidar_model}",
+                     f"Stage: {self.stage}",
                      f"Phase: {self.controller.phase}", self.motion_feedback,
                      f"Command: v={command.vx:.3f} m/s | omega={command.omega:.3f} rad/s"]
             if not self.front_only and self.used_sectors is not None:
@@ -253,18 +267,18 @@ class SensorActivity:
                 lines.append("Sectors: press Start or Step to compute the first summary.")
             if self.stage != "sectors":
                 lines.append(f"Stop below {self.controller.enter:g} m | release from {self.controller.exit:g} m")
-            if self.controller.phase == "TURN":
-                lines.append(f"Turn target: {self.controller.turn_yaw:.3f} rad")
-            elif self.controller.phase == "PASS":
+            if self.controller.phase == "DETOUR":
+                gx, gy, gt = self.active_target
                 pose = self.robot.pose()
-                start = self.controller.pass_start
-                progress = math.hypot(pose.x - start[0], pose.y - start[1])
-                lines.append(f"Bypass progress: {progress:.3f} / {self.controller.bypass_distance:g} m")
+                lines.extend([f"Intermediate goal: ({gx:.2f} m, {gy:.2f} m, {gt:.3f} rad)",
+                              f"Intermediate error: {math.hypot(gx - pose.x, gy - pose.y):.3f} m | "
+                              f"heading: {wrap(gt - pose.yaw):.3f} rad",
+                              "Advance: " + ("allowed" if self.controller.advance_allowed else "waiting for front release")])
             lines.extend([f"Goal error: {values[2]:.3f} m",
                           f"Heading error: {wrap(self.target[2] - self.robot.pose().yaw):.3f} rad",
                           "Lesson 3 controller: inactive in sectors" if self.stage == "sectors" else
                           f"Lesson 3 controller: {self.model_name} | phase: {self.pose_controller.phase}"
-                          if self.controller.phase == "GO" else "Lesson 3 controller: inactive",
+                          if self.controller.phase in ("GO", "DETOUR") else "Lesson 3 controller: inactive",
                           f"Wheels limit: {self.wheel_max:g} rad/s", f"Outcome: {self.outcome}"])
             return "\n".join(lines)
         return (f"Encoder ({self.odom.x:.3f}, {self.odom.y:.3f}) m\n"

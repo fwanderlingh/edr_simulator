@@ -69,6 +69,23 @@ def test_empty_experiment_has_actionable_message():
         create_experiment_figure({"task": "drive_goal", "columns": (), "samples": ()})
 
 
+def test_avoidance_plot_distinguishes_intermediate_and_final_goals(tmp_path):
+    session = ActivitySession("4", "sensor_avoidance", sensor_stage="avoid", duration=35, dt=.05)
+    try:
+        session.start()
+        while session.state == "Running":
+            session.step()
+        assert session.outcome == "DONE"
+        snapshot = snapshot_of(session, tmp_path)
+    finally:
+        session.close()
+    figure = create_experiment_figure(snapshot)
+    FigureCanvasAgg(figure).draw()
+    assert any(item.get_label() == "Intermediate goals" for item in figure.axes[0].collections)
+    assert {line.get_label() for line in figure.axes[1].lines} == {
+        "Distance to goal", "Distance to active goal"}
+
+
 def test_sensor_plot_uses_acquisition_times_and_preserves_miss_flags():
     snapshot = dict(task="sensor_encoders", title="Ranges", lesson="4",
         columns=("time_s", "x_m", "y_m", "z_m", "roll_rad", "pitch_rad", "yaw_rad"),

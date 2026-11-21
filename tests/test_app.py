@@ -40,14 +40,15 @@ def test_lesson4_stages_use_the_same_ui_with_explicit_model_labels(tmp_path, mon
         assert "Sectors [m]" in app.values.get()
         assert app.session.sim.steps == 1
 
-        app.avoidance_stage.set("stop")
+        assert tuple(app.stage_selector.cget("values")) == ("sectors", "avoid")
+        app.avoidance_stage.set("avoid")
         monkeypatch.setattr(rangefinder.StudentRangeStop, "command", ReferenceRangeStop.command)
         monkeypatch.setattr(avoidance.StudentObstacleSupervisor, "command", ReferenceObstacleSupervisor.command)
         monkeypatch.setattr(control.StudentPoseController, "wheel_command", ReferencePoseController.wheel_command)
         app.load_task()
         app.single_step()
         assert app.model_heading.cget("text") == "SUPERVISOR MODEL"
-        assert "Stage: stop" in app.values.get()
+        assert "Stage: avoid" in app.values.get()
         assert app.session.laboratory.pose_controller.__class__ is control.StudentPoseController
         app.task.set(TASKS["4"]["sensor_front_stop"])
         app.load_task()
@@ -55,7 +56,6 @@ def test_lesson4_stages_use_the_same_ui_with_explicit_model_labels(tmp_path, mon
         assert app.model_heading.cget("text") == "STOP CONTROLLER MODEL"
         assert "front rangefinder" in app.values.get()
         assert not app.stage_controls.grid_info()
-        assert not app.lidar_controls.grid_info()
         assert "Encoder" not in app.values.get() and "Gyro" not in app.values.get()
     finally:
         app.close()
@@ -116,7 +116,8 @@ def test_modes_reload_saved_code_and_keep_the_selected_stage_visible(tmp_path):
     import tkinter as tk
     from unittest.mock import patch
     import robotics_sim.app as application
-    from robotics_sim.exercises.lesson04 import avoidance, lidar
+    from robotics_sim.exercises.lesson04 import avoidance
+    from robotics_sim.sim.references import lidar as lidar_reference
     from robotics_sim.preferences import load_preferences
     from robotics_sim.session import TASKS
 
@@ -125,20 +126,17 @@ def test_modes_reload_saved_code_and_keep_the_selected_stage_visible(tmp_path):
     source += ("\nfrom robotics_sim.sim.references.avoidance import ReferenceSectors\n"
                "StudentSectors.summarize = ReferenceSectors.summarize\n")
     saved_avoidance.write_text(source + "RELOAD_MARKER = 1\n", encoding="utf-8")
-    saved_lidar = tmp_path / "lidar.py"
-    saved_lidar.write_text(Path(lidar.__file__).read_text(encoding="utf-8") +
-                          "\nfrom robotics_sim.sim.references.lidar import ReferenceLidar\n"
-                          "StudentLidar.directions = ReferenceLidar.directions\n", encoding="utf-8")
 
     root = tk.Tk()
     root.withdraw()
     settings = tmp_path / "modes.json"
     with patch.object(avoidance, "__file__", str(saved_avoidance)), \
-         patch.object(lidar, "__file__", str(saved_lidar)), \
          patch.object(application, "reload_lesson", wraps=application.reload_lesson) as reload:
         app = application.SimulatorApp(root, lesson="4", duration=30, dt=.05, settings_path=settings)
         try:
             app.task.set(TASKS["4"]["sensor_avoidance"])
+            assert app.avoidance_stage.get() == "sectors"
+            app.avoidance_stage.set("avoid")
             app.load_task()
             assert app.stage_selector.get() == app.session.laboratory.stage == "avoid"
             assert app.model_selector.get() == "reference"
@@ -178,12 +176,9 @@ def test_modes_reload_saved_code_and_keep_the_selected_stage_visible(tmp_path):
             assert reload.call_count == 3 and avoidance.RELOAD_MARKER == 2
             assert app.session.sensors.lidar.noisy and app.session.sim.time == 0
 
-            app.lidar_selector.set("student")
-            app.lidar_selector.event_generate("<<ComboboxSelected>>")
-            root.update()
-            assert reload.call_count == 4
-            assert type(app.session.sensors.lidar) is lidar.StudentLidar
-            assert "Stage: sectors | Lidar: student" in app.values.get()
+            assert type(app.session.sensors.lidar) is lidar_reference.ReferenceLidar
+            assert "Stage: sectors" in app.values.get()
+            assert "LiDAR directions:" not in app.edit_file.cget("text")
 
             saved_avoidance.write_text(source + "\ndef broken(\n", encoding="utf-8")
             app.sensor_selector.set("ideal")
@@ -203,7 +198,7 @@ def test_modes_reload_saved_code_and_keep_the_selected_stage_visible(tmp_path):
             assert not app.session.sensors.lidar.noisy
             app._save_settings()
             saved = load_preferences(settings)
-            assert saved["avoidance_stage"] == "sectors" and saved["lidar_model"] == "student"
+            assert saved["avoidance_stage"] == "sectors" and "lidar_model" not in saved
         finally:
             app.close()
 
@@ -713,61 +708,67 @@ def test_lesson2_exceptions_are_handled_during_startup_and_rendering(tmp_path):
 
 
 @desktop_process
-def test_saved_lidar_student_mode_is_not_reset_by_the_default_front_stop(tmp_path):
+def test_saved_sensor_programming_options_migrate_to_the_supplied_lidar(tmp_path):
     import json
     import tkinter as tk
     from unittest.mock import patch
     import robotics_sim.app as application
     from robotics_sim.exercises.lesson04 import lidar
-    from robotics_sim.exercises.lesson04.sensors.lidar import LidarSensor
+    from robotics_sim.sim.references.lidar import ReferenceLidar
 
     settings = tmp_path / "saved-lidar.json"
-    settings.write_text(json.dumps({"lesson": "4", "task": "sensor_lidar", "sensor_mode": "student"}))
+    settings.write_text(json.dumps({"lesson": "4", "task": "sensor_lidar", "sensor_mode": "student",
+                                    "lidar_model": "student", "avoidance_stage": "stop"}))
     root = tk.Tk()
     root.withdraw()
-    # Supply only the tested sensor implementation, also in the public clone.
-    with patch.object(lidar.StudentLidar, "directions", LidarSensor.directions), \
+    # An unfinished legacy sensor must not prevent observation on a student clone.
+    with patch.object(lidar.StudentLidar, "directions", side_effect=NotImplementedError), \
          patch.object(application, "ActivitySession", wraps=application.ActivitySession) as build:
         app = application.SimulatorApp(root, settings_path=settings)
         try:
             assert build.call_count == 1
             assert build.call_args.args == ("4", "sensor_lidar")
-            assert build.call_args.kwargs["sensor_mode"] == "student"
+            assert build.call_args.kwargs["sensor_mode"] == "ideal"
             assert app.session.task == "sensor_lidar" and app.session.state == "Ready"
-            assert app.sensor_mode.get() == app.session.sensor_mode == "student"
-            assert isinstance(app.session.sensors.lidar, lidar.StudentLidar)
-            assert "Central ray (world): (1.000, 0.000, 0.000)" in app.values.get()
+            assert app.sensor_mode.get() == app.session.sensor_mode == "ideal"
+            assert isinstance(app.session.sensors.lidar, ReferenceLidar)
+            assert app.avoidance_stage.get() == "sectors"
+            assert tuple(app.sensor_selector.cget("values")) == ("ideal", "noisy")
+            assert app.implementation_heading.cget("text") == "OBSERVATION GUIDE"
+            assert "Rays [m]: right (-90 deg)=" in app.values.get()
+            assert "front (0 deg)=" in app.values.get() and "left (+90 deg)=" in app.values.get()
             assert not app._notice
         finally:
             app.close()
 
 
 @desktop_process
-def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(tmp_path):
+def test_sensor_error_while_loading_keeps_startup_and_previous_activity_usable(tmp_path):
     import json
     import tkinter as tk
     from unittest.mock import patch
     from robotics_sim.app import SimulatorApp
-    from robotics_sim.exercises.lesson04 import lidar
+    from robotics_sim.exercises.lesson04 import activity
+    from robotics_sim.sim.references import lidar as lidar_reference
     from robotics_sim.session import LESSONS, TASKS
 
     settings = tmp_path / "loading-error.json"
-    settings.write_text(json.dumps({"lesson": "4", "task": "sensor_lidar", "sensor_mode": "student"}))
-    saved = tmp_path / "lidar.py"
+    settings.write_text(json.dumps({"lesson": "4", "task": "sensor_lidar", "sensor_mode": "ideal"}))
+    saved = tmp_path / "activity.py"
+    source = Path(activity.__file__).read_text(encoding="utf-8")
     root = tk.Tk()
     root.withdraw()
-    with patch.object(lidar.StudentLidar, "directions", side_effect=RuntimeError("bad scan directions")), \
-         patch.object(lidar, "__file__", str(saved)), \
+    with patch.object(activity, "setup_sensors", side_effect=RuntimeError("bad sensor setup")), \
+         patch.object(activity, "__file__", str(saved)), \
          patch("robotics_sim.app.messagebox.showerror") as showerror:
         app = SimulatorApp(root, settings_path=settings)
         try:
             assert app.session.lesson == "1" and app.session.task == "straight"
-            assert "RuntimeError: bad scan directions" in app.status.get()
+            assert "RuntimeError: bad sensor setup" in app.status.get()
             assert showerror.call_count == 1
             assert app._reload_target == ("4", "sensor_lidar")
             startup_fallback = app.session
-            # The current lesson default is a working reference front stop;
-            # it does not evaluate StudentLidar and must remain accessible.
+            # Front stop has a separate setup and must remain accessible.
             app.lesson.set(LESSONS["4"])
             app.select_lesson()
             assert app.session.task == "sensor_front_stop" and not app._notice
@@ -775,25 +776,22 @@ def test_student_error_while_loading_keeps_startup_and_previous_activity_usable(
             assert showerror.call_count == 1
             previous = app.session
             app.task.set(TASKS["4"]["sensor_lidar"])
-            app.sensor_mode.set("student")
+            app.sensor_mode.set("ideal")
             app.load_task()
             assert app.session is previous
             assert app.lesson_id == "4" and app.task.get() == TASKS["4"]["sensor_front_stop"]
             assert showerror.call_count == 2
             assert previous.world.physics.connected
             assert app._reload_target == ("4", "sensor_lidar")
-            assert "RuntimeError: bad scan directions" in app.status.get()
+            assert "RuntimeError: bad sensor setup" in app.status.get()
             app._render()
             root.update()
-            # Simulate saving a repair without depending on completed exercises:
-            # the public student clone has an unfinished lidar implementation.
-            saved.write_text("from .sensors.lidar import LidarSensor\n"
-                             "class StudentLidar(LidarSensor):\n    pass\n", encoding="utf-8")
-            # Reload also retries the activity whose student sensor failed to load.
+            saved.write_text(source, encoding="utf-8")
+            # Reload also retries the activity whose sensor failed to load.
             app.reload_button.invoke()
             assert app.session.lesson == "4" and app.session.task == "sensor_lidar"
-            assert app.sensor_mode.get() == app.session.sensor_mode == "student"
-            assert isinstance(app.session.sensors.lidar, lidar.StudentLidar)
+            assert app.sensor_mode.get() == app.session.sensor_mode == "ideal"
+            assert isinstance(app.session.sensors.lidar, lidar_reference.ReferenceLidar)
             assert app.session is not previous and not app._notice
             assert showerror.call_count == 2
         finally:
@@ -1013,7 +1011,6 @@ def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
     from robotics_sim.app import SimulatorApp, enable_high_dpi
     from robotics_sim.session import LESSONS, TASKS
     from robotics_sim.exercises.lesson03.waypoint import StudentWaypointController
-    from robotics_sim.exercises.lesson04 import avoidance
 
     enable_high_dpi()
     root = tk.Tk()
@@ -1059,11 +1056,24 @@ def test_practical_goals_sensors_and_arm_share_the_desktop_app(tmp_path):
         assert "front rangefinder" in app.values.get()
         assert app.session.sensors.time > 0
         assert str(app.model_heading.cget("text")) == "STOP CONTROLLER MODEL"
-        with patch.object(avoidance, "AVOIDANCE_STAGE", "avoid"):
-            choose("4", "sensor_avoidance")
+        app.avoidance_stage.set("avoid")
+        choose("4", "sensor_avoidance")
+        app.single_step()
+        assert app.session.laboratory.stage == "avoid"
+        assert "Goal error" in app.values.get()
+        assert str(app.model_heading.cget("text")) == "SUPERVISOR MODEL"
+        for _ in range(100):
+            if app.session.laboratory.controller.phase == "DETOUR":
+                break
             app.single_step()
-            assert "Goal error" in app.values.get()
-            assert str(app.model_heading.cget("text")) == "SUPERVISOR MODEL"
+        app._render()
+        assert app.session.laboratory.controller.phase == "DETOUR"
+        assert "Intermediate goal:" in app.values.get()
+        assert "Lesson 3 controller: reference | phase:" in app.values.get()
+        assert any(app.canvas.itemcget(i, "text") == "Intermediate goal"
+                   for i in app.canvas.find_withtag("label-text"))
+        finish()
+        assert app.session.outcome == "DONE"
 
         choose("5", "arm_control")
         finish()
