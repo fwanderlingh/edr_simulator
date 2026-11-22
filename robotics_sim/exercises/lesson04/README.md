@@ -22,7 +22,7 @@ front distance to interrupt nominal motion and retain STOP until the release
 threshold is met. The goal is always `(x, y, yaw)`, as in Lesson 3. Set DONE
 and return zero only when both position and final-heading tolerances are met.
 
-The editable settings are `ENTER_DISTANCE = 0.65 m` and `EXIT_DISTANCE = 0.8 m`.
+The editable settings are `D_IN = 0.65 m` and `D_OUT = 0.8 m`.
 Distances are measured from the centre of the robot,
 so the stopping margin must include its footprint and motion between samples.
 One ray supports this aligned scene; it does not observe lateral clearance.
@@ -95,7 +95,7 @@ in degrees in the GUI and radians in exercise code. Position arrival alone does
 not complete the task: the shared Lesson 3 controller must finish alignment.
 Reloading Lesson 4 also reloads saved Lesson 3 controller changes.
 
-`avoidance.py` exposes `ENTER_DISTANCE`, `EXIT_DISTANCE`,
+`avoidance.py` exposes `D_IN`, `D_OUT`,
 `TURN_ANGLE` and `BYPASS_DISTANCE`, the bearing offset and distance of the
 intermediate goal from the stop pose. Speeds, gains, arrival tolerances and wheel
 limits are those already implemented in Lesson 3.
@@ -111,11 +111,12 @@ In DETOUR use `self.goal_command(pose, self.detour_goal)`. After that call,
 Switching back to `self.goal_command(pose, goal)` automatically restarts the same
 controller for the final target. Only final-pose arrival sets supervisor DONE.
 
-Allow the initial pure rotation toward the checked side even while the front is
+Choose the side with the larger sector minimum (left on a tie) and enter DETOUR
+without a lateral distance threshold. Allow the initial pure rotation even while the front is
 obstructed. In DETOUR, initialize `advance_allowed` to False; set it False below
-`self.enter`, True at or above `self.exit`, and retain it between thresholds.
+`self.d_in`, True at or above `self.d_out`, and retain it between thresholds.
 If the pose controller proposes positive forward speed while advance is blocked,
-return `(0, 0)`. Keep the intermediate goal while waiting. A subsequent obstruction
+return `(0, omega_c)`, preserving the angular command. Keep the intermediate goal while waiting. A subsequent obstruction
 after returning to GO can require another intermediate pose.
 
 Each stage displays its purpose and the components it executes. Live measurements
@@ -124,7 +125,7 @@ supervisor phase and command. During DETOUR they show the intermediate pose,
 its position and heading errors, forward-motion authorization, and the active
 TURN/DRIVE/ALIGN phase of the Lesson 3 controller. The scene marks the intermediate
 goal in purple and the final goal in orange. Use a 40-second duration for a full run.
-A thin pale circle on the floor follows the robot at radius `ENTER_DISTANCE`
+A thin pale circle on the floor follows the robot at radius `D_IN`
 (`d_in`), showing the stop threshold in both the rangefinder and LiDAR activities.
 The default GUI stage is **sectors**, to verify the summary before the supervisor.
 

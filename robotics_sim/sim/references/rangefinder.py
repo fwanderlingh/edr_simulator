@@ -26,9 +26,9 @@ class ReferenceRangeStop(ObstacleSupervisor):
         if self.phase == "DONE":
             return 0.0, 0.0
         # First select the state, then calculate its command (EDR.04 FSM).
-        if self.phase == "GO" and d < self.enter:
+        if self.phase == "GO" and d < self.d_in:
             self.phase = "STOP"
-        elif self.phase == "STOP" and d >= self.exit:
+        elif self.phase == "STOP" and d >= self.d_out:
             self.reset_goal_controller()
             self.phase = "GO"
 

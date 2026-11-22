@@ -68,7 +68,7 @@ class ReferenceObstacleSupervisor(ObstacleSupervisor):
         right_distance = sectors["right"]
 
         # GO: use the nominal controller until the front becomes obstructed.
-        if self.phase == "GO" and front_distance < self.enter:
+        if self.phase == "GO" and front_distance < self.d_in:
             self.phase = "STOP"
             return 0.0, 0.0
         if self.phase == "STOP":
@@ -76,13 +76,8 @@ class ReferenceObstacleSupervisor(ObstacleSupervisor):
             # This method implements the avoid stage, just as students are asked.
             if left_distance >= right_distance:
                 side = 1
-                side_distance = left_distance
             else:
                 side = -1
-                side_distance = right_distance
-
-            if side_distance < self.exit:
-                return 0.0, 0.0
             # One fixed pose, expressed in the world, for the existing controller.
             heading = wrap(pose.yaw + side * self.turn_angle)
             self.detour_goal = (pose.x + self.bypass_distance * cos(heading),
@@ -93,21 +88,20 @@ class ReferenceObstacleSupervisor(ObstacleSupervisor):
             # Reuse TURN/DRIVE/ALIGN and both arrival tolerances from Lesson 3.
             command = self.goal_command(pose, self.detour_goal)
             if self.goal_controller_done:
-                self.detour_goal = None
+                # self.detour_goal = None
                 self.phase = "GO"
-                if front_distance < self.enter:
+                if front_distance < self.d_in:
                     self.phase = "STOP"
                     return 0.0, 0.0
                 # The different target automatically restarts the pose controller.
                 return self.goal_command(pose, goal)
 
-            # Hysteresis gates forward motion. Allow the initial turn even while
-            # the original obstacle remains in front; the side was checked above.
-            if front_distance < self.enter:
+            # Hysteresis gates forward motion while preserving angular control.
+            if front_distance < self.d_in:
                 self.advance_allowed = False
-            elif front_distance >= self.exit:
+            elif front_distance >= self.d_out:
                 self.advance_allowed = True
             if command[0] > 0 and not self.advance_allowed:
-                return 0.0, 0.0
+                return 0.0, command[1]
             return command
         return self.goal_command(pose, goal)

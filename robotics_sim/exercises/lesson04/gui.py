@@ -240,12 +240,10 @@ class SensorActivity:
             return "Final orientation alignment by the Lesson 3 pose controller."
         if phase == "STOP" and self.used_sectors is not None:
             front = self.used_sectors["front"]
-            if front < self.controller.enter:
+            if front < self.controller.d_in:
                 return "Front below the stop threshold."
-            if self.stage == "stop" and front < self.controller.exit:
+            if self.stage == "stop" and front < self.controller.d_out:
                 return "STOP retained by hysteresis: front is below the release threshold."
-            if not self.front_only and max(self.used_sectors["left"], self.used_sectors["right"]) < self.controller.exit:
-                return "Neither lateral sector reaches the release threshold."
         return {"GO": "Nominal control toward the goal.",
                 "STOP": "Stopped; the controller evaluates whether to resume or turn.",
                 "DONE": "The controller reports completion."}.get(phase, "Phase defined by the selected controller.")
@@ -266,7 +264,7 @@ class SensorActivity:
             elif not self.front_only:
                 lines.append("Sectors: press Start or Step to compute the first summary.")
             if self.stage != "sectors":
-                lines.append(f"Stop below {self.controller.enter:g} m | release from {self.controller.exit:g} m")
+                lines.append(f"Stop below {self.controller.d_in:g} m | release from {self.controller.d_out:g} m")
             if self.controller.phase == "DETOUR":
                 gx, gy, gt = self.active_target
                 pose = self.robot.pose()

@@ -83,7 +83,10 @@ def test_sector_boundaries_and_minimum_of_multiple_returns():
     }
 
 
-@pytest.mark.parametrize("left,right,turn_direction", [(4, 0.7, 1), (0.7, 4, -1), (4, 4, 1)])
+@pytest.mark.parametrize("left,right,turn_direction", [
+    (4, 0.7, 1), (0.7, 4, -1), (4, 4, 1),
+    (0.7, 0.6, 1), (0.6, 0.7, -1), (0.6, 0.6, 1),
+])
 def test_supervisor_stops_then_turns_toward_the_clearer_side(left, right, turn_direction):
     controller = ReferenceObstacleSupervisor()
     sectors = {"front": 0.5, "left": left, "right": right}
@@ -96,12 +99,16 @@ def test_supervisor_stops_then_turns_toward_the_clearer_side(left, right, turn_d
     assert controller.detour_goal == pytest.approx((0, turn_direction, turn_direction * math.pi / 2))
 
 
-def test_supervisor_remains_stopped_when_neither_side_has_enough_space():
+def test_supervisor_turns_with_both_sides_close_but_keeps_forward_motion_blocked():
     controller = ReferenceObstacleSupervisor()
     sectors = {"front": 0.5, "left": 0.6, "right": 0.7}
     assert controller.command(Pose(), (3, 0, 0), sectors) == (0, 0)
-    assert controller.command(Pose(), (3, 0, 0), sectors) == (0, 0)
-    assert controller.phase == "STOP"
+    v, omega = controller.command(Pose(), (3, 0, 0), sectors)
+    assert v == 0 and omega < 0
+    assert controller.phase == "DETOUR"
+    assert controller.command(Pose(yaw=-math.pi / 2), (3, 0, 0), sectors) == (0, 0)
+    assert controller.phase == "DETOUR"
+    assert not controller.advance_allowed
 
 
 def test_detour_keeps_one_world_goal_and_reuses_the_same_pose_controller():
@@ -128,7 +135,7 @@ def test_detour_keeps_one_world_goal_and_reuses_the_same_pose_controller():
         controller.command(Pose(x=1, y=-1, yaw=2.9), goal, clear)
         assert controller.phase == "DETOUR" and nominal.phase == "ALIGN"
         controller.command(Pose(x=1, y=-1, yaw=-math.pi), goal, clear)
-        assert controller.phase == "GO" and controller.detour_goal is None
+        assert controller.phase == "GO"
         assert nominal.goal == goal and select.call_count == 3
         assert [call.args[0] for call in select.call_args_list] == [goal, intermediate, goal]
 
@@ -141,12 +148,16 @@ def test_detour_allows_rotation_and_gates_advance_with_hysteresis():
     v, omega = controller.command(Pose(), goal, sectors)
     assert v == 0 and omega > 0  # The front obstacle must not prevent the detour turn.
     intermediate = controller.detour_goal
-    pose = Pose(yaw=math.pi / 2)
+    pose = Pose(yaw=math.pi / 2 - .04)
+    nominal_command = controller.goal_command(pose, intermediate)
+    assert controller.nominal.controller.phase == "DRIVE"
+    assert nominal_command[0] > 0 and nominal_command[1] > 0
     for distance, allowed in ((.7, False), (.8, True), (.7, True), (.5, False), (.7, False), (.8, True)):
         sectors["front"] = distance
         command = controller.command(pose, goal, sectors)
         assert controller.advance_allowed is allowed
         assert (command[0] > 0) is allowed
-        if not allowed:
-            assert command == (0, 0)
+        assert command[1] == pytest.approx(nominal_command[1])
+        if allowed:
+            assert command[0] == pytest.approx(nominal_command[0])
         assert controller.phase == "DETOUR" and controller.detour_goal is intermediate

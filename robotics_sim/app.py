@@ -1111,7 +1111,7 @@ class SimulatorApp:
             ground_paths = (([(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)], "#b5660b"),)
         elif self.session.task in ("sensor_front_stop", "sensor_avoidance"):
             pose = self.session.robot.pose()
-            radius = laboratory.controller.enter
+            radius = laboratory.controller.d_in
             circle = [(pose.x + radius * math.cos(angle), pose.y + radius * math.sin(angle), 0.002)
                       for angle in np.linspace(0, 2 * math.pi, 97)]
             ground_paths = ((circle, "#94aebc", 0.015),)

@@ -44,22 +44,25 @@ coordinata omogenea.
 
 In `rangefinder.py`, `rho` è l'errore di distanza dal goal, `self.eps_pos` la
 tolleranza di posizione, `self.eps_angle` la tolleranza di orientamento e
-`self.enter`/`self.exit` le soglie dell'isteresi. Il goal è sempre `(x, y, yaw)`;
+`self.d_in`/`self.d_out` le soglie dell'isteresi. Il goal è sempre `(x, y, yaw)`;
 si usa `gx, gy, gt = goal`, come nel controllore di EDR.03. DONE richiede entrambe
 le tolleranze e il controllo nominale conserva l'allineamento finale ALIGN.
 Le transizioni seguono la FSM degli appunti: GO, STOP e DONE, con priorità al
 raggiungimento dell'obiettivo. Le misure sono assunte sempre valide e disponibili;
 non sono previsti controlli sull'età del dato.
 
-In `avoidance.py`, il supervisore usa GO, STOP, DETOUR e DONE. All'uscita da STOP
-memorizza una posa intermedia in `detour_goal`; `goal_command` riusa la stessa
+In `avoidance.py`, il supervisore usa GO, STOP, DETOUR e DONE. In STOP sceglie
+il lato con il minimo di settore maggiore (sinistra in caso di parità), senza
+richiedere una soglia laterale. Memorizza una posa intermedia in `detour_goal`
+e passa in DETOUR; `goal_command` riusa la stessa
 istanza del controllore di EDR.03 per raggiungerla e poi ripristinare il goal
 finale. `goal_controller_done` è l'esito del controllore per la posa attiva e
 non va confuso con DONE del supervisore, riservato all'obiettivo finale.
 Durante DETOUR, `advance_allowed` conserva l'isteresi del fronte e impedisce
-il comando di avanzamento quando manca il margine, permettendo la rotazione
-iniziale verso il lato già verificato. Non ci sono guadagni o velocità aggiuntivi
-per l'aggiramento: il supervisore restituisce il comando di EDR.03 oppure zero.
+il comando di avanzamento quando manca il margine, mantenendo il comando
+angolare anche durante l'attesa. Non ci sono guadagni o velocità aggiuntivi
+per l'aggiramento: il supervisore usa il comando di EDR.03, annullando la sola
+velocità lineare quando l'avanzamento è bloccato.
 
 `sensors.py` conserva gli import precedenti per compatibilità; le implementazioni
 da consultare e modificare sono nei file elencati nella tabella.

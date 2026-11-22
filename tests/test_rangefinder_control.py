@@ -148,13 +148,13 @@ def test_lidar_stop_reuses_the_completed_rangefinder_exercise(monkeypatch):
 
 
 def test_front_stop_reads_editable_thresholds(monkeypatch):
-    monkeypatch.setattr(rangefinder, "ENTER_DISTANCE", .9)
-    monkeypatch.setattr(rangefinder, "EXIT_DISTANCE", 1.0)
+    monkeypatch.setattr(rangefinder, "D_IN", .9)
+    monkeypatch.setattr(rangefinder, "D_OUT", 1.0)
     session = ActivitySession("4", "sensor_front_stop", duration=6)
     try:
         finish(session)
         assert session.robot.pose().x < .5
-        assert session.laboratory.controller.enter == .9
+        assert session.laboratory.controller.d_in == .9
     finally:
         session.close()
 

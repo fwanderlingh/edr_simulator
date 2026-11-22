@@ -143,7 +143,7 @@ class ExerciseChecks:
             lidar = sensors.lidar
             if lab.front_only:
                 data = [dict(zip(session.columns, row)) for row in session.samples]
-                stopped = any(row["front_m"] != "" and row["front_m"] < lab.controller.enter
+                stopped = any(row["front_m"] != "" and row["front_m"] < lab.controller.d_in
                               and row["left_rad_s"] == row["right_rad_s"] == 0 for row in data)
                 return (
                     ("Rangefinder stop experiment completed", completed),
@@ -164,7 +164,7 @@ class ExerciseChecks:
                 return (("Sector observation completed", completed), sector_check, wheel_check)
             if lab.stage == "stop":
                 data = [dict(zip(session.columns, row)) for row in session.samples]
-                stopped = any(row["front_m"] != "" and row["front_m"] < lab.controller.enter
+                stopped = any(row["front_m"] != "" and row["front_m"] < lab.controller.d_in
                               and row["left_rad_s"] == row["right_rad_s"] == 0 for row in data)
                 return (("Stop experiment completed", completed),
                         ("Robot stopped for a nearby obstacle", stopped), sector_check, wheel_check)
