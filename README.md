@@ -123,6 +123,12 @@ measurements, so export first if you need to keep them. The duration applies on
 reset or when selecting another task. Close the window or choose **File > Exit**
 to quit.
 
+Resizing the window keeps the activity running. Scene updates are combined into
+the regular frame refresh, while physics and measurements continue with the same
+fixed timestep. Each frame also completes its pending paint work, so a busy
+resize event queue cannot defer all drawing until the drag ends. An activity
+that was paused stays paused.
+
 The scene occupies the main workspace. The scrollable panel on the right groups
 live measurements, the experiment description and the files to edit. An
 **Exercise checks** card lists checks for the selected exercise: green checkmarks

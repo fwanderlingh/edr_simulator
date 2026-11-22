@@ -45,8 +45,11 @@ completed `StudentPoseController` from Lesson 3 through a supplied wheel/body
 adapter. The same instance, gains, pose tolerances and `WHEEL_MAX` are used,
 including the final-heading ALIGN phase. The goal heading is passed unchanged.
 Call `self.reset_goal_controller()` when restarting after an interruption.
-The runtime owns sampling, command conversion and common wheel saturation;
-the student method owns the decision and `self.phase`.
+The runtime owns sampling and command conversion, and applies wheel speeds
+without rescaling. Common wheel saturation belongs to the Lesson 3 pose
+controller; the wheel-limit check reports any excess instead of correcting it.
+The CSV field `wheel_scale` records the factor reported by that pose controller.
+The student method owns the decision and `self.phase`.
 
 Save, click **Reload exercise**, select **student** under **STOP CONTROLLER
 MODEL**, and start with **Sensor mode: ideal**. The Lesson 3 student controller

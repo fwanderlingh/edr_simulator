@@ -40,6 +40,7 @@ class PoseCommandAdapter:
         if target != self.target:
             self.controller.set_goal(target)
             self.target = target
+        self.controller.scale = 1.0  # The exercise records any common saturation.
         left, right = self.controller.wheel_command(pose, self.radius, self.width)
         if not all(math.isfinite(w) for w in (left, right)):
             raise ValueError("Lesson 3 wheel_command must return finite wheel references.")

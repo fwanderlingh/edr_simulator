@@ -147,6 +147,8 @@ class SimulatorApp:
     def _window_changed(self, event):
         if event.widget is not self.root or self.closed:
             return
+        # Canvas Configure events only mark the scene dirty. The regular frame
+        # timer coalesces them without pausing or resetting the physics clock.
         self._capture_window_geometry()
         self._queue_save()
 
@@ -918,6 +920,12 @@ class SimulatorApp:
         if self._dirty:
             self._render()
             self._dirty = False
+            # Canvas drawing is deferred to idle callbacks. A continuous stream
+            # of resize events can starve those callbacks even while physics and
+            # _render keep running, hiding every intermediate robot pose. Flush
+            # layout/painting before advancing another frame; unlike update(),
+            # this does not dispatch input or another simulation timer.
+            self.root.update_idletasks()
         # Budget includes our work; do not add a full frame delay after drawing.
         remaining = 1 / 60 - (time.perf_counter() - now)
         self._timer = self.root.after(max(1, round(remaining * 1000)), self._tick)

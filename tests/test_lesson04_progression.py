@@ -126,10 +126,38 @@ def test_nominal_motion_calls_student_lesson3_and_keeps_its_phase(monkeypatch):
         assert len(calls) == 2 and calls[0][0] is calls[1][0] is lab.pose_controller
         assert calls[0][3] == .37 and lab.wheel_max == .75
         assert lab.pose_controller.phase == "DRIVE"
-        # New body commands from the supervisor use the SAME editable wheel limit.
+        # Missing saturation in Lesson 3 must remain visible in the applied wheels.
+        session.step(single=True)
+        assert session.robot.wheel_velocities == pytest.approx((1, 2))
+        assert lab.wheel_scale == 1.0
+        assert not next(passed for label, passed in ExerciseChecks(session).evaluate()
+                        if label.startswith("Wheel speeds stay within"))
+        # An oversized supervisor command must also be applied without rescaling.
         monkeypatch.setattr(lab.controller, "command", lambda *args: (10, 3))
         session.step(single=True)
-        assert max(map(abs, session.robot.wheel_velocities)) == pytest.approx(.75)
+        assert session.robot.wheel_velocities == pytest.approx(session.robot.motor_model.inverse(10, 3))
+        assert max(map(abs, session.robot.wheel_velocities)) > lab.wheel_max
+        assert not next(passed for label, passed in ExerciseChecks(session).evaluate()
+                        if label.startswith("Wheel speeds stay within"))
+    finally:
+        session.close()
+
+
+@pytest.mark.parametrize("task", ["sensor_front_stop", "sensor_avoidance"])
+def test_lesson3_saturation_is_applied_once_and_reported(monkeypatch, task):
+    monkeypatch.setattr(control, "WHEEL_MAX", .75)
+    monkeypatch.setattr(avoidance, "AVOIDANCE_STAGE", "avoid")
+    session = ActivitySession("4", task)
+    try:
+        session.step(single=True)
+        lab = session.laboratory
+        assert session.robot.wheel_velocities == pytest.approx((.75, .75))
+        assert 0 < lab.wheel_scale < 1
+        assert lab.wheel_scale == lab.pose_controller.scale
+        data = dict(zip(session.columns, session.samples[-1]))
+        assert data["wheel_scale"] == lab.pose_controller.scale
+        assert next(passed for label, passed in ExerciseChecks(session).evaluate()
+                    if label.startswith("Wheel speeds stay within"))
     finally:
         session.close()
 

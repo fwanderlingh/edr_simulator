@@ -65,8 +65,9 @@ class StudentObstacleSupervisor(ObstacleSupervisor):
         sector. This method is called only in avoid, to add the detour.
         Set self.phase = 'DONE' and return zero only within both pose tolerances.
         Keep the Lesson 3 final-heading alignment; timeouts are external.
-        The supplied adapter converts/saturates body commands for the wheels;
-        it does not call or replace your decision method.
+        The runtime converts body commands to wheel speeds without rescaling;
+        common saturation belongs to the Lesson 3 pose controller. The checks
+        report wheel-limit violations instead of correcting them.
         """
         # TODO: implement the behavior described above.
         raise NotImplementedError(

@@ -112,6 +112,54 @@ def desktop_process(test):
 
 
 @desktop_process
+def test_busy_resize_presents_frames_before_the_event_queue_settles(tmp_path):
+    import tkinter as tk
+    from robotics_sim.app import SimulatorApp
+
+    root = tk.Tk()
+    app = SimulatorApp(root, lesson="1", duration=10,
+                       settings_path=tmp_path / "resize.json")
+    try:
+        root.update()
+        original_render = app._render
+        presented = []
+
+        def render():
+            original_render()
+            # Canvas paints are idle callbacks too. A marker queued after the
+            # drawing must run during the resize, before the queue settles.
+            root.after_idle(lambda: presented.append(app.session.sim.time))
+
+        app._render = render
+        app.toggle_running()
+        deadline = time.perf_counter() + .5
+        results = {}
+
+        def resize():
+            if time.perf_counter() < deadline:
+                width = 1000 + (results.get("resizes", 0) % 200)
+                results["resizes"] = results.get("resizes", 0) + 1
+                root.geometry(f"{width}x760")
+                # Always leave another event pending, as happens during a
+                # sustained interactive resize. No idle opportunity is given
+                # by this producer until the measurement is complete.
+                root.after(0, resize)
+            else:
+                results["presented"] = tuple(presented)
+                results["sim_time"] = app.session.sim.time
+                root.quit()
+
+        root.after(0, resize)
+        root.mainloop()
+        assert results["resizes"] > 1
+        assert len(results["presented"]) >= 2
+        assert results["presented"][-1] > results["presented"][0]
+        assert results["sim_time"] > 0
+    finally:
+        app.close()
+
+
+@desktop_process
 def test_modes_reload_saved_code_and_keep_the_selected_stage_visible(tmp_path):
     import tkinter as tk
     from unittest.mock import patch

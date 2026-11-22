@@ -137,9 +137,9 @@ class SensorActivity:
         if len(command) != 2 or not all(math.isfinite(v) for v in command):
             raise ValueError("Supervisor.command must return finite (v, omega).")
         wl, wr = robot.motor_model.inverse(*command)
-        peak = max(abs(wl), abs(wr))
-        self.wheel_scale = min(1.0, self.wheel_max / peak) if peak else 1.0
-        robot.set_wheel_velocities(self.wheel_scale * wl, self.wheel_scale * wr)
+        # Report the Lesson 3 saturation factor without correcting its output.
+        self.wheel_scale = self.pose_controller.scale
+        robot.set_wheel_velocities(wl, wr)
 
     def after_step(self, time, step, dt, *, final=False):
         self.sensors.advance(time, step, dt, final=final)
